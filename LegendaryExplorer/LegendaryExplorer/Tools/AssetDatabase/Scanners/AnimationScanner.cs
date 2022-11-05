@@ -42,7 +42,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase.Scanners
                         if (pSeq != null)
                         {
                             aSeq = pSeq.Value.Instanced;
-                            aGrp = e.Export.ObjectName.Instanced.Replace($"{aSeq}_", null);
+                            aGrp = e.Export.ObjectName.Instanced.Replace($"_{aSeq}", null);
                         }
 
                         var pLength = e.Properties.GetProp<FloatProperty>("SequenceLength");

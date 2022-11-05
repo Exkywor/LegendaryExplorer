@@ -41,19 +41,19 @@ namespace LegendaryExplorerCore.Packages
         private readonly List<EntryTreeNode> exports;
         private readonly List<EntryTreeNode> root;
 
-        public EntryTreeNode this[int index]
+        public EntryTreeNode this[int uIndex]
         {
             get
             {
-                if (index > 0 && index <= exports.Count)
+                if (uIndex > 0 && uIndex <= exports.Count)
                 {
-                    return exports[index - 1];
+                    return exports[uIndex - 1];
                 }
 
-                index = -index - 1;
-                if (index >= 0 && index < imports.Count)
+                uIndex = -uIndex - 1;
+                if (uIndex >= 0 && uIndex < imports.Count)
                 {
-                    return imports[index];
+                    return imports[uIndex];
                 }
 
                 return null;
@@ -106,11 +106,15 @@ namespace LegendaryExplorerCore.Packages
             }
         }
 
-        public List<IEntry> FlattenTreeOf(IEntry entry) => FlattenTreeOf(entry.UIndex);
+        public List<IEntry> FlattenTreeOf(IEntry entry, bool includeRoot = true) => FlattenTreeOf(entry.UIndex, includeRoot);
 
-        public List<IEntry> FlattenTreeOf(int uIndex)
+        public List<IEntry> FlattenTreeOf(int uIndex, bool includeRoot = true)
         {
-            var entries = new List<IEntry> {this[uIndex].Data};
+            var entries = new List<IEntry>();
+            if (includeRoot)
+            {
+                entries.Add(this[uIndex].Data);
+            }
             foreach (int i in this[uIndex])
             {
                 entries.AddRange(FlattenTreeOf(i));

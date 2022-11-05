@@ -25,6 +25,7 @@ using LegendaryExplorerCore.Gammtek.Extensions;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Memory;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Unreal;
 
 namespace LegendaryExplorerCore.Gammtek.IO
 {
@@ -830,6 +831,13 @@ namespace LegendaryExplorerCore.Gammtek.IO
                     span[14],
                     span[15]);
             }
+        }
+
+        public static NameReference ToName(ReadOnlySpan<byte> span, IMEPackage pcc)
+        {
+            int nameIdx = ToInt32(span, pcc.Endian);
+            int num = ToInt32(span[4..], pcc.Endian);
+            return new NameReference(pcc.GetNameEntry(nameIdx), num);
         }
 
         #endregion

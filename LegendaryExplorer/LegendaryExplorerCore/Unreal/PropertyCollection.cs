@@ -1887,7 +1887,7 @@ namespace LegendaryExplorerCore.Unreal
             {
                 for (int i = 0; i < Count; i++)
                 {
-                    if (!Values[i].Equivalent(arrayProperty))
+                    if (!Values[i].Equivalent(arrayProperty[i]))
                     {
                         return false;
                     }

@@ -3,22 +3,28 @@ using System.Collections.Generic;
 
 namespace LegendaryExplorerCore.Unreal.BinaryConverters
 {
-    public class TreeNode<T, U> : IEnumerable<U>
+    public class TreeNode<TData, TChild> : IEnumerable<TChild>
     {
-        public readonly T Data;
-        public readonly List<U> Children;
+        public readonly TData Data;
+        public readonly List<TChild> Children;
 
-        public TreeNode(T data)
+        public TreeNode(TData data)
         {
             Data = data;
-            Children = new List<U>();
+            Children = new List<TChild>();
         }
 
-        public void Add(U item) => Children.Add(item);
+        public void Add(TChild item) => Children.Add(item);
 
-        public IEnumerator<U> GetEnumerator() => Children.GetEnumerator();
+        public IEnumerator<TChild> GetEnumerator() => Children.GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public void Deconstruct(out TData data, out List<TChild> children)
+        {
+            data = Data;
+            children = Children;
+        }
     }
     public class TreeNode<T> : IEnumerable<TreeNode<T>>
     {

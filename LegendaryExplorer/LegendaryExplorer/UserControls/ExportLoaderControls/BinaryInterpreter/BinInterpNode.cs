@@ -59,13 +59,13 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
         {
             if (Name != null && Name.StartsWith("_"))
             {
-                if (int.TryParse(Name.Substring(1), out var dataOffset)) // remove _
+                if (int.TryParse(Name[1..], out int dataOffset)) // remove _
                 {
                     return dataOffset;
                 }
             }
 
-            return 0;
+            return -1;
         }
 
         /// <summary>

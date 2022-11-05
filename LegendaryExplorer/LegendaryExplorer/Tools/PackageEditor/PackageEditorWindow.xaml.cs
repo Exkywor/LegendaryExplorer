@@ -2619,7 +2619,18 @@ namespace LegendaryExplorer.Tools.PackageEditor
                         try
                         {
                             if (package != null) return (object)Pcc.CompareToPackage(package);
-                            if (diskPath != null) return (object)Pcc.CompareToPackage(diskPath);
+                            if (diskPath != null)
+                            {
+                                var diff = PackageDiff.Create(Pcc, MEPackageHandler.OpenMEPackage(diskPath, forceLoadFromDisk: true));
+                                var list = new List<EntryStringPair>();
+                                list.AddRange(diff.ChangedEntries.Select(ed => new EntryStringPair(ed.A, $"Changed #{ed.A.UIndex} {ed.A.InstancedFullPath}")));
+                                list.AddRange(diff.AOnlyEntries.Select(entry => new EntryStringPair(entry, $"Export only exists in this file #{entry.UIndex} {entry.InstancedFullPath}")));
+                                list.AddRange(diff.BOnlyEntries.Select(entry => new EntryStringPair(entry, $"Export only exists in other file #{entry.UIndex} {entry.InstancedFullPath}")));
+                                list.AddRange(diff.AOnlyNames.Select(name => new EntryStringPair($"Name only exists in this file: {name}")));
+                                list.AddRange(diff.BOnlyNames.Select(name => new EntryStringPair($"Name only exists in other file: {name}")));
+                                return list;
+                                //return (object)Pcc.CompareToPackage(diskPath);
+                            }
                             if (packageStream != null) return (object)Pcc.CompareToPackage(packageStream);
                             return "CompareToPackageWrapper() requires at least one parameter be set!";
                         }
@@ -2632,13 +2643,13 @@ namespace LegendaryExplorer.Tools.PackageEditor
                         IsBusy = false;
                         if (result.Result is string errorMessage)
                         {
-                            MessageBox.Show(errorMessage, "Error comparing packages");
+                            MessageBox.Show(errorMessage, "Error comparing packages", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                         else if (result.Result is List<EntryStringPair> results)
                         {
                             if (Enumerable.Any(results))
                             {
-                                ListDialog ld = new ListDialog(results, "Changed exports/imports/names between files",
+                                var ld = new ListDialog(results, "Changed exports/imports/names between files",
                                         "The following exports, imports, and names are different between the files.", this)
                                 { DoubleClickEntryHandler = entryDoubleClick };
                                 ld.Show();

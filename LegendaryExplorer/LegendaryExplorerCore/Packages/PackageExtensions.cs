@@ -657,7 +657,7 @@ namespace LegendaryExplorerCore.Packages
         /// <returns></returns>
         public static List<IEntry> GetAllDescendants(this IEntry entry)
         {
-            return entry.FileRef.Tree.FlattenTreeOf(entry);
+            return entry.FileRef.Tree.FlattenTreeOf(entry, false);
         }
 
         public static Dictionary<IEntry, List<string>> GetEntriesThatReferenceThisOne(this IEntry baseEntry)

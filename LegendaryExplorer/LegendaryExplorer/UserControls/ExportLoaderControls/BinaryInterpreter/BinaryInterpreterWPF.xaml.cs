@@ -579,6 +579,18 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 {
                     int n = EndianReader.ToInt32(data, toci, CurrentLoadedExport.FileRef.Endian);
                     subNodes.Add(new BinInterpNode(toci, $"TemplateOwnerClass: #{n} {CurrentLoadedExport.FileRef.GetEntryString(n)}", NodeType.StructLeafObject) { Length = 4 });
+                    IEntry parent = CurrentLoadedExport.Parent;
+                    while (parent is not null)
+                    {
+                        if (parent is ExportEntry { IsDefaultObject: true })
+                        {
+                            string templateNameString = Pcc.GetNameEntry(EndianReader.ToInt32(data, toci + 4, CurrentLoadedExport.FileRef.Endian));
+                            var templateName = new NameReference(templateNameString, EndianReader.ToInt32(data, toci + 8, CurrentLoadedExport.FileRef.Endian));
+                            subNodes.Add(new BinInterpNode(toci + 4, $"TemplateName: {templateName.Instanced}", NodeType.StructLeafName) { Length = 8 });
+                            break;
+                        }
+                        parent = parent.Parent;
+                    }
                 }
 
                 string className = CurrentLoadedExport.ClassName;
@@ -950,7 +962,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             {
                 case BinInterpNode bitve:
                     int dataOffset = bitve.GetOffset();
-                    if (dataOffset > 0)
+                    if (dataOffset >= 0)
                     {
                         BinaryInterpreter_Hexbox.SelectionStart = dataOffset;
                         BinaryInterpreter_Hexbox.SelectionLength = 1;
@@ -963,7 +975,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                     {
                         case NodeType.ArrayLeafObject:
                         case NodeType.StructLeafObject:
-                            if (dataOffset != 0)
+                            if (dataOffset >= 0)
                             {
                                 Value_TextBox.Text = EndianReader.ToInt32(CurrentLoadedExport.DataReadOnly, dataOffset, CurrentLoadedExport.FileRef.Endian).ToString();
                                 SupportedEditorSetElements.Add(Value_TextBox);
@@ -1039,12 +1051,12 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                             case FloatProperty fp:
                             case IntProperty ip:
                                 {
-                                    if (uptve.Parent.Property is StructProperty p && p.IsImmutable)
+                                    if (uptve.Parent.Property is StructProperty { IsImmutable: true })
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 4);
                                         return;
                                     }
-                                    else if (uptve.Parent.Property is ArrayProperty<IntProperty> || uptve.Parent.Property is ArrayProperty<FloatProperty> || uptve.Parent.Property is ArrayProperty<ObjectProperty>)
+                                    if (uptve.Parent.Property is ArrayProperty<IntProperty> or ArrayProperty<FloatProperty> or ArrayProperty<ObjectProperty>)
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 4);
                                         return;
@@ -1054,12 +1066,12 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                                 break;
                             case NameProperty np:
                                 {
-                                    if (uptve.Parent.Property is StructProperty p && p.IsImmutable)
+                                    if (uptve.Parent.Property is StructProperty { IsImmutable: true })
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 8);
                                         return;
                                     }
-                                    else if (uptve.Parent.Property is ArrayProperty<NameProperty>)
+                                    if (uptve.Parent.Property is ArrayProperty<NameProperty>)
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 8);
                                         return;
