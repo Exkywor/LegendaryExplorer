@@ -1,4 +1,5 @@
 ﻿using LegendaryExplorer.Dialogs;
+using LegendaryExplorer.Tools.AssetDatabase;
 using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.GameFilesystem;
@@ -16,6 +17,8 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace LegendaryExplorer.Tools.PackageEditor.Experiments
@@ -1949,6 +1952,248 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
 
                 fxaExport.WriteBinary(faceFXAnimSet);
+            }
+        }
+
+        /// <summary>
+        /// Clones or links a list of animations to the selected sequence. Adding new BioDynamicAnimSet objects if necessary.
+        /// </summary>
+        /// <param name="pew">Current PE widow.</param>
+        public static async Task AddAnimsToSequence(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+
+            if (pew.SelectedItem.Entry.ClassName is not "Sequence")
+            {
+                ShowError("Selected export is not a Sequence");
+                return;
+            }
+
+            if (MessageBoxResult.No == MessageBox.Show("For the experiment to work properly, a database for the target game must be already generated" +
+                "and the game files must not have been altered since that moment.\nProceed with the experiment?",
+                "Is the AssetDB up to date?", MessageBoxButton.YesNo))
+            {
+                return;
+            }
+
+            string animsString = PromptDialog.Prompt(null, "Comma separated list of full names of animations to clone/link (case sensitive):", "Animation names");
+            if (string.IsNullOrEmpty(animsString))
+            {
+                ShowError("Invalid new name.");
+                return;
+            }
+            IEnumerable<string> animNames = animsString.Split(",").Select(name => name.Trim());
+
+            AssetDB db = new();
+            Dictionary<string, AnimationRecord> animations = new();
+            List<(string, string)> files = new();
+
+            // Load the DB, and get the list of files and animations
+            string dbPath = AssetDatabaseWindow.GetDBPath(pew.Pcc.Game);
+            if (File.Exists(dbPath))
+            {
+                await AssetDatabaseWindow.LoadDatabase(dbPath, pew.Pcc.Game, db, CancellationToken.None);
+                if (db.DatabaseVersion != AssetDatabaseWindow.dbCurrentBuild)
+                {
+                    ShowError($"{pew.Pcc.Game} Asset Database is out of date! Please regenerate it in the Asset Database tool. This could take about 10 minutes");
+                    return;
+                }
+
+                foreach (AnimationRecord rec in db.Animations)
+                {
+                    if (!rec.IsAmbPerf)
+                    {
+                        try { animations[rec.AnimData] = rec; }
+                        catch { }
+                    }
+                }
+
+                foreach (FileNameDirKeyPair kp in db.FileList)
+                {
+                    files.Add((kp.FileName, db.ContentDir[kp.DirectoryKey]));
+                }
+            }
+            else
+            {
+                ShowError($"Generate an {pew.Pcc.Game} asset database in the Asset Database tool. This could take about 10 minutes");
+                return;
+            }
+
+            ExportEntry sequence = (ExportEntry)pew.SelectedItem.Entry;
+
+            ArrayProperty<ObjectProperty> animSets = sequence.GetProperty<ArrayProperty<ObjectProperty>>(
+                $"{(pew.Pcc.Game.IsGame3() ? "m_aSFXSharedAnimSets" : "m_aBioDynAnimSets")}");
+            if (animSets == null)
+            {
+                animSets = new ArrayProperty<ObjectProperty>(
+                    new List<ObjectProperty>(),
+                    $"{(pew.Pcc.Game.IsGame3() ? "m_aSFXSharedAnimSets" : "m_aBioDynAnimSets")}");
+            }
+
+            List<string> notCloned = new();
+            foreach (string animName in animNames)
+            {
+                // Get an animation that matches the provided name
+                animations.TryGetValue(animName, out AnimationRecord animRec);
+
+                if (animRec == null)
+                {
+                    notCloned.Add(animName);
+                    continue;
+                }
+
+                // Try to get the required animation if it's found in the pcc.
+                // If it's an import, we'll use the definition of the import for the properties,
+                // but reference the import itself in the BioDynamicAnimSet
+                ExportEntry animation = null;
+                bool isImport = false;
+                IEntry import = null;
+
+                Dictionary<IEntry, List<string>> animReferences = pew.Pcc.FindUsagesOfName(animName);
+                if (animReferences.Count > 0)
+                {
+                    IEntry tempAnim = animReferences.Keys.ToList().First();
+
+                    if (tempAnim is ImportEntry)
+                    {
+                        animation = EntryImporter.ResolveImport((ImportEntry)tempAnim);
+                        isImport = true;
+                        import = tempAnim;
+                    }
+                    else
+                    {
+                        animation = (ExportEntry)tempAnim;
+                    }
+                }
+
+                // If the animation is not in the file, find it in the usages and clone it
+                if (animation == null)
+                {
+                    MEPackage donorPcc = null;
+                    foreach (AnimUsage usage in animRec.Usages)
+                    {
+                        if (usage.IsInMod) { continue; }
+
+                        (string file, string dir) = files.ElementAt(usage.FileKey);
+
+                        if (dir is "Unknown" or "unknown") { continue; }
+
+                        string path = dir is "BioGame" or "biogame" or "Biogame"
+                            ? Path.Combine(MEDirectories.GetCookedPath(pew.Pcc.Game), file)
+                            : Path.Combine(MEDirectories.GetDLCPath(pew.Pcc.Game), dir, "CookedPCConsole", file);
+
+                        donorPcc = (MEPackage)MEPackageHandler.OpenMEPackage(path);
+
+                        if (!donorPcc.TryGetUExport(usage.UIndex, out animation))
+                        {
+                            donorPcc.Release();
+                            donorPcc.Dispose();
+                            continue;
+                        }
+
+                        EntryExporter.ExportExportToPackage(animation, pew.Pcc, out IEntry tempAnimation);
+                        animation = (ExportEntry)tempAnimation; // Gotta use a temp var since it didn't let me cast to ExportEntry in the cloning
+                        break; // Stop, now that we have the animation
+                    }
+                }
+                // Check again if it is still null
+                if (animation == null)
+                {
+                    notCloned.Add(animName);
+                    continue;
+                }
+
+                string seqName = animation.GetProperty<NameProperty>("SequenceName").Value;
+                string animSetName = animName.Replace($"_{seqName}", "");
+                string animSetObjName = $"KIS_DYN_{animSetName}";
+
+                ExportEntry bioDynAnimationSet = null;
+
+                // Check if the list of sets in the sequence references an existant bioDynAnimationSet, and if so, get it
+                foreach (ObjectProperty setRef in animSets)
+                {
+                    if (setRef == null || setRef.Value == 0) { continue; }
+
+                    ExportEntry set = null;
+                    if (pew.Pcc.TryGetUExport(setRef.Value, out set))
+                    {
+                        if (set.ObjectName.Name.Contains(animSetName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            bioDynAnimationSet = set;
+                            break;
+                        }
+                    }
+                }
+
+                // Create the bioDynAnimationSet if not found in the sequence
+                // We don't add the animation to the Sequences or binary yet, to avoid copying code
+                if (bioDynAnimationSet == null)
+                {
+                    PropertyCollection props = new()
+            {
+                new NameProperty(animSetName, "m_nmOriginSetName"),
+                new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"),
+                animation.GetProperty<ObjectProperty>("m_pBioAnimSetData")
+            };
+
+                    BioDynamicAnimSet binary = BioDynamicAnimSet.Create();
+
+                    bioDynAnimationSet = CreateExport(pew.Pcc, animSetObjName, "BioDynamicAnimSet", sequence, props, binary);
+                    animSets.Add(new ObjectProperty(bioDynAnimationSet.UIndex));
+                }
+
+                ArrayProperty<ObjectProperty> sequences = bioDynAnimationSet.GetProperty<ArrayProperty<ObjectProperty>>("Sequences");
+                if (sequences == null) { sequences = new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"); }
+
+                // Check if the animation is not referenced by the Sequences property, and if so,
+                // add it and update the binary
+                if (!sequences.Any(seqRef => seqRef.Value == (isImport ? import.UIndex : animation.UIndex)))
+                {
+                    // If the animation is in the file as an import, reference
+                    // the import instea of the external animation
+                    sequences.Add(new ObjectProperty(isImport ? import.UIndex : animation.UIndex));
+
+                    // Update the binary data
+                    BioDynamicAnimSet binary = BioDynamicAnimSet.Create();
+                    foreach (ObjectProperty seqRef in sequences)
+                    {
+                        if (pew.Pcc.TryGetEntry(seqRef.Value, out IEntry entry))
+                        {
+                            string name = "";
+
+                            if (entry is ImportEntry)
+                            {
+                                // Get the name by removing KIS_DYN_ from the animSet, and then
+                                // removing that from the entry name
+                                string entrySeqName = bioDynAnimationSet.ObjectName.Name[8..];
+                                name = entry.ObjectName.Name.Replace($"{entrySeqName}_", "");
+                            }
+                            else
+                            {
+                                name = ((ExportEntry)entry).GetProperty<NameProperty>("SequenceName").Value;
+                            }
+                            binary.SequenceNamesToUnkMap.Add(name, 1);
+                        }
+                    }
+                    bioDynAnimationSet.WritePropertyAndBinary(sequences, binary);
+                }
+            }
+            sequence.WriteProperty(animSets);
+
+            if (notCloned.Count == animNames.Count())
+            {
+                ShowError("The experiment was unable to clone/link any of the animations.\n" +
+                    "Check that the provided names are correct and that the Asset Database is up do date.");
+            }
+            else if (notCloned.Count > 0)
+            {
+                MessageBox.Show($"Cloned/linked {animNames.Count() - notCloned.Count} animations successfully.\n\n" +
+                    $"The following animations could not be cloned/linked: {string.Join(", ", notCloned)}",
+                    "Success", MessageBoxButton.OK);
+            }
+            else
+            {
+                MessageBox.Show("Cloned/linked all animations successfully", "Success", MessageBoxButton.OK);
             }
         }
 

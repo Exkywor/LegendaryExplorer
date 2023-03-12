@@ -1459,6 +1459,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         {
             PackageEditorExperimentsO.UpdateWwiseBankIDExperiment(GetPEWindow());
         }
+
+        private void AddAnimsToSequence_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.AddAnimsToSequence(GetPEWindow());
+        }
         #endregion
 
         // EXPERIMENTS: CHONKY DB---------------------------------------------------------
