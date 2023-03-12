@@ -8,6 +8,7 @@ using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Matinee;
 using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
@@ -2195,6 +2196,33 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             {
                 MessageBox.Show("Cloned/linked all animations successfully", "Success", MessageBoxButton.OK);
             }
+        }
+
+        /// <summary>
+        /// By SirCxyrtyx
+        /// </summary>
+        /// <param name="pcc"></param>
+        /// <param name="name"></param>
+        /// <param name="className"></param>
+        /// <param name="parent"></param>
+        /// <param name="properties"></param>
+        /// <param name="binary"></param>
+        /// <param name="prePropBinary"></param>
+        /// <param name="super"></param>
+        /// <param name="archetype"></param>
+        /// <returns></returns>
+        private static ExportEntry CreateExport(IMEPackage pcc, NameReference name, string className, IEntry parent, PropertyCollection properties = null, ObjectBinary binary = null, byte[] prePropBinary = null, IEntry super = null, IEntry archetype = null)
+        {
+            IEntry classEntry = className.CaseInsensitiveEquals("Class") ? null : EntryImporter.EnsureClassIsInFile(pcc, className, new RelinkerOptionsPackage());
+
+            var exp = new ExportEntry(pcc, parent, name, prePropBinary, properties, binary, binary is UClass)
+            {
+                Class = classEntry,
+                SuperClass = super,
+                Archetype = archetype
+            };
+            pcc.AddExport(exp);
+            return exp;
         }
 
         // HELPER FUNCTIONS
