@@ -1970,9 +1970,9 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 return;
             }
 
-            if (MessageBoxResult.No == MessageBox.Show("For the experiment to work properly, a database for the target game must be already generated" +
+            if (MessageBoxResult.No == MessageBox.Show("For the experiment to work properly, a database for the target game must be already generated " +
                 "and the game files must not have been altered since that moment.\nProceed with the experiment?",
-                "Is the AssetDB up to date?", MessageBoxButton.YesNo))
+                "AssetDB up to date?", MessageBoxButton.YesNo))
             {
                 return;
             }
@@ -1980,7 +1980,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             string animsString = PromptDialog.Prompt(null, "Comma separated list of full names of animations to clone/link (case sensitive):", "Animation names");
             if (string.IsNullOrEmpty(animsString))
             {
-                ShowError("Invalid new name.");
+                ShowError("Invalid animation names.");
                 return;
             }
             IEnumerable<string> animNames = animsString.Split(",").Select(name => name.Trim());
@@ -2055,9 +2055,9 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 {
                     IEntry tempAnim = animReferences.Keys.ToList().First();
 
-                    if (tempAnim is ImportEntry)
+                    if (tempAnim is ImportEntry entry)
                     {
-                        animation = EntryImporter.ResolveImport((ImportEntry)tempAnim);
+                        animation = EntryImporter.ResolveImport(entry);
                         isImport = true;
                         import = tempAnim;
                     }
@@ -2073,7 +2073,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     MEPackage donorPcc = null;
                     foreach (AnimUsage usage in animRec.Usages)
                     {
-                        if (usage.IsInMod) { continue; }
+                        if (usage.IsInMod) { continue; } // Get only usages in the vanilla files
 
                         (string file, string dir) = files.ElementAt(usage.FileKey);
 
@@ -2085,7 +2085,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                         donorPcc = (MEPackage)MEPackageHandler.OpenMEPackage(path);
 
-                        if (!donorPcc.TryGetUExport(usage.UIndex, out animation))
+                        if (!donorPcc.TryGetUExport(usage.UIndex, out animation)) // Release the resource if we couldn't get the animation
                         {
                             donorPcc.Release();
                             donorPcc.Dispose();
@@ -2097,7 +2097,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         break; // Stop, now that we have the animation
                     }
                 }
-                // Check again if it is still null
+                // Check again if it is still null, which would mean that the animation was not in the file, nor was it found externally.
                 if (animation == null)
                 {
                     notCloned.Add(animName);
@@ -2105,8 +2105,8 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
 
                 string seqName = animation.GetProperty<NameProperty>("SequenceName").Value;
-                string animSetName = animName.Replace($"_{seqName}", "");
-                string animSetObjName = $"KIS_DYN_{animSetName}";
+                string animSetName = animName.Replace($"_{seqName}", ""); // Strip the sequence name from the provided animation name
+                string animSetObjName = $"KIS_DYN_{animSetName}"; // TODO: Find a way to properly get the name
 
                 ExportEntry bioDynAnimationSet = null;
 
@@ -2131,11 +2131,11 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 if (bioDynAnimationSet == null)
                 {
                     PropertyCollection props = new()
-            {
-                new NameProperty(animSetName, "m_nmOriginSetName"),
-                new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"),
-                animation.GetProperty<ObjectProperty>("m_pBioAnimSetData")
-            };
+                    {
+                        new NameProperty(animSetName, "m_nmOriginSetName"),
+                        new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"),
+                        animation.GetProperty<ObjectProperty>("m_pBioAnimSetData")
+                    };
 
                     BioDynamicAnimSet binary = BioDynamicAnimSet.Create();
 
@@ -2144,14 +2144,14 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
 
                 ArrayProperty<ObjectProperty> sequences = bioDynAnimationSet.GetProperty<ArrayProperty<ObjectProperty>>("Sequences");
-                if (sequences == null) { sequences = new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"); }
+                sequences ??= new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences");
 
                 // Check if the animation is not referenced by the Sequences property, and if so,
                 // add it and update the binary
                 if (!sequences.Any(seqRef => seqRef.Value == (isImport ? import.UIndex : animation.UIndex)))
                 {
                     // If the animation is in the file as an import, reference
-                    // the import instea of the external animation
+                    // the import instead of the actual external definition of the import
                     sequences.Add(new ObjectProperty(isImport ? import.UIndex : animation.UIndex));
 
                     // Update the binary data
@@ -2189,12 +2189,12 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             else if (notCloned.Count > 0)
             {
                 MessageBox.Show($"Cloned/linked {animNames.Count() - notCloned.Count} animations successfully.\n\n" +
-                    $"The following animations could not be cloned/linked: {string.Join(", ", notCloned)}",
+                    $"The following animations could not be cloned/linked: {string.Join(", ", notCloned)}.",
                     "Success", MessageBoxButton.OK);
             }
             else
             {
-                MessageBox.Show("Cloned/linked all animations successfully", "Success", MessageBoxButton.OK);
+                MessageBox.Show("Cloned/linked all animations successfully.", "Success", MessageBoxButton.OK);
             }
         }
 
