@@ -6,7 +6,6 @@ using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Matinee;
-using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
@@ -577,7 +576,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             string baldMorphName = game.IsGame3() ? "BioChar_CitHub.Faces.HMM_Deco_1" :
                 game.IsGame2() ? "BIOG_Hench_FAC.HMM.hench_wilson" : "BIOA_UNC_FAC.HMM.Plot.FRE32_BioticLeader";
 
-            MorphMaleHair(pew,"bald", baldPccPath, baldMorphName);
+            MorphMaleHair(pew, "bald", baldPccPath, baldMorphName);
         }
 
         /// <summary>
@@ -596,7 +595,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             string rollinMorphName = game.IsGame3() ? "BioChar_CitHub.Faces.cit_news_announcer" :
                 game.IsGame2() ? "BIOA_STA_FAC.HMM.Plot.rp107_keeler" : "BIOA_STA_FAC.HMM.Plot.rp107_keeler";
 
-            MorphMaleHair(pew,"rollins", rollinPccPath, rollinMorphName);
+            MorphMaleHair(pew, "rollins", rollinPccPath, rollinMorphName);
         }
 
         /// <summary>
@@ -2024,12 +2023,9 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             ArrayProperty<ObjectProperty> animSets = sequence.GetProperty<ArrayProperty<ObjectProperty>>(
                 $"{(pew.Pcc.Game.IsGame3() ? "m_aSFXSharedAnimSets" : "m_aBioDynAnimSets")}");
-            if (animSets == null)
-            {
-                animSets = new ArrayProperty<ObjectProperty>(
+            animSets ??= new ArrayProperty<ObjectProperty>(
                     new List<ObjectProperty>(),
                     $"{(pew.Pcc.Game.IsGame3() ? "m_aSFXSharedAnimSets" : "m_aBioDynAnimSets")}");
-            }
 
             List<string> notCloned = new();
             foreach (string animName in animNames)
@@ -2046,7 +2042,9 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 // Try to get the required animation if it's found in the pcc.
                 // If it's an import, we'll use the definition of the import for the properties,
                 // but reference the import itself in the BioDynamicAnimSet
+                // We'll keep a reference ot the BioDynAnimSet in case we need it
                 ExportEntry animation = null;
+                ExportEntry tempBioDynamicAnimSet = null;
                 bool isImport = false;
                 IEntry import = null;
 
@@ -2065,15 +2063,25 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     {
                         animation = (ExportEntry)tempAnim;
                     }
+
+                    // Save the reference of the BioDynAnimSet
+                    List<IEntry> references = animation.GetEntriesThatReferenceThisOne()
+                        .Where(kvp => kvp.Key.ClassName == "BioDynamicAnimSet")
+                        .Select(kvp => kvp.Key).ToList();
+
+                    if (references.Count != 0) { tempBioDynamicAnimSet = (ExportEntry)references.First(); }
                 }
 
                 // If the animation is not in the file, find it in the usages and clone it
+                // We also keep a reference to the BioDynAnimSet that references it, in case we need to clone it later
+                MEPackage donorPcc = null;
+                ExportEntry externalBioDynamicAnimSet = null;
+
                 if (animation == null)
                 {
-                    MEPackage donorPcc = null;
-                    foreach (AnimUsage usage in animRec.Usages)
+                    foreach (AnimUsage usage in animRec.Usages) // Get only usages in the vanilla files
                     {
-                        if (usage.IsInMod) { continue; } // Get only usages in the vanilla files
+                        if (usage.IsInMod) { continue; }
 
                         (string file, string dir) = files.ElementAt(usage.FileKey);
 
@@ -2085,22 +2093,32 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                         donorPcc = (MEPackage)MEPackageHandler.OpenMEPackage(path);
 
-                        if (!donorPcc.TryGetUExport(usage.UIndex, out animation)) // Release the resource if we couldn't get the animation
+                        // Release the resource if we couldn't get the animation
+                        if (!donorPcc.TryGetUExport(usage.UIndex, out ExportEntry externalAnimation))
                         {
                             donorPcc.Release();
                             donorPcc.Dispose();
                             continue;
                         }
 
-                        EntryExporter.ExportExportToPackage(animation, pew.Pcc, out IEntry tempAnimation);
-                        animation = (ExportEntry)tempAnimation; // Gotta use a temp var since it didn't let me cast to ExportEntry in the cloning
+                        // Save the reference of the BioDynAnimSet
+                        List<IEntry> references = externalAnimation.GetEntriesThatReferenceThisOne()
+                            .Where(kvp => kvp.Key.ClassName == "BioDynanmicAnimSet")
+                            .Select(kvp => kvp.Key).ToList();
+
+                        if (references.Count != 0) { externalBioDynamicAnimSet = (ExportEntry)references.First(); }
+
+                        EntryExporter.ExportExportToPackage(externalAnimation, pew.Pcc, out IEntry tempEntry);
+                        animation = (ExportEntry)tempEntry; // Gotta use a temp var since it didn't let me cast to ExportEntry in the cloning
                         break; // Stop, now that we have the animation
                     }
                 }
-                // Check again if it is still null, which would mean that the animation was not in the file, nor was it found externally.
+                // Check again if it is still null which would mean that the animation was not in the file, nor was it found externally
                 if (animation == null)
                 {
                     notCloned.Add(animName);
+                    donorPcc.Release();
+                    donorPcc.Dispose();
                     continue;
                 }
 
@@ -2108,9 +2126,9 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 string animSetName = animName.Replace($"_{seqName}", ""); // Strip the sequence name from the provided animation name
                 string animSetObjName = $"KIS_DYN_{animSetName}"; // TODO: Find a way to properly get the name
 
-                ExportEntry bioDynAnimationSet = null;
+                ExportEntry bioDynamicAnimSet = null;
 
-                // Check if the list of sets in the sequence references an existant bioDynAnimationSet, and if so, get it
+                // Check if the list of sets in the sequence references an existing bioDynAnimationSet, and if so, get it
                 foreach (ObjectProperty setRef in animSets)
                 {
                     if (setRef == null || setRef.Value == 0) { continue; }
@@ -2120,7 +2138,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     {
                         if (set.ObjectName.Name.Contains(animSetName, StringComparison.OrdinalIgnoreCase))
                         {
-                            bioDynAnimationSet = set;
+                            bioDynamicAnimSet = set;
                             break;
                         }
                     }
@@ -2128,8 +2146,25 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                 // Create the bioDynAnimationSet if not found in the sequence
                 // We don't add the animation to the Sequences or binary yet, to avoid copying code
-                if (bioDynAnimationSet == null)
+                //if (bioDynamicAnimSet == null)
+                //{
+                //    PropertyCollection props = new()
+                //    {
+                //        new NameProperty(animSetName, "m_nmOriginSetName"),
+                //        new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"),
+                //        animation.GetProperty<ObjectProperty>("m_pBioAnimSetData")
+                //    };
+                //
+                //    bioDynamicAnimSet = CreateExport(pew.Pcc, animSetObjName, "BioDynamicAnimSet", sequence, props, BioDynamicAnimSet.Create());
+                //    animSets.Add(new ObjectProperty(bioDynamicAnimSet.UIndex));
+                //}
+
+                // Check if there's a BioDynAnimSet in the file that can be cloned
+                if (tempBioDynamicAnimSet != null)
                 {
+                    bioDynamicAnimSet = EntryCloner.CloneEntry(tempBioDynamicAnimSet);
+                    bioDynamicAnimSet.idxLink = sequence.UIndex;
+
                     PropertyCollection props = new()
                     {
                         new NameProperty(animSetName, "m_nmOriginSetName"),
@@ -2137,13 +2172,34 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         animation.GetProperty<ObjectProperty>("m_pBioAnimSetData")
                     };
 
-                    BioDynamicAnimSet binary = BioDynamicAnimSet.Create();
+                    bioDynamicAnimSet.WritePropertiesAndBinary(props, BioDynamicAnimSet.Create());
+                    animSets.Add(new ObjectProperty(bioDynamicAnimSet.UIndex));
+                }
+                else if (externalBioDynamicAnimSet != null)
+                {
+                    // We clean the external AnimSet before cloning to avoid bringing anything unnecessary
+                    PropertyCollection props = new()
+                    {
+                        new NameProperty(animSetName, "m_nmOriginSetName"),
+                        new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"),
+                        animation.GetProperty<ObjectProperty>("m_pBioAnimSetData")
+                    };
+                    externalBioDynamicAnimSet.WritePropertiesAndBinary(props, BioDynamicAnimSet.Create());
 
-                    bioDynAnimationSet = CreateExport(pew.Pcc, animSetObjName, "BioDynamicAnimSet", sequence, props, binary);
-                    animSets.Add(new ObjectProperty(bioDynAnimationSet.UIndex));
+                    EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.AddSingularAsChild, externalBioDynamicAnimSet, pew.Pcc, sequence,
+                        true, new RelinkerOptionsPackage(), out IEntry tempEntry);
+                    bioDynamicAnimSet = (ExportEntry)tempEntry;
+                    animSets.Add(new ObjectProperty(bioDynamicAnimSet.UIndex));
+                }
+                else
+                {
+                    notCloned.Add(animName);
+                    donorPcc.Release();
+                    donorPcc.Dispose();
+                    continue;
                 }
 
-                ArrayProperty<ObjectProperty> sequences = bioDynAnimationSet.GetProperty<ArrayProperty<ObjectProperty>>("Sequences");
+                ArrayProperty<ObjectProperty> sequences = bioDynamicAnimSet.GetProperty<ArrayProperty<ObjectProperty>>("Sequences");
                 sequences ??= new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences");
 
                 // Check if the animation is not referenced by the Sequences property, and if so,
@@ -2166,7 +2222,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                             {
                                 // Get the name by removing KIS_DYN_ from the animSet, and then
                                 // removing that from the entry name
-                                string entrySeqName = bioDynAnimationSet.ObjectName.Name[8..];
+                                string entrySeqName = bioDynamicAnimSet.ObjectName.Name[8..];
                                 name = entry.ObjectName.Name.Replace($"{entrySeqName}_", "");
                             }
                             else
@@ -2176,7 +2232,14 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                             binary.SequenceNamesToUnkMap.Add(name, 1);
                         }
                     }
-                    bioDynAnimationSet.WritePropertyAndBinary(sequences, binary);
+                    bioDynamicAnimSet.WritePropertyAndBinary(sequences, binary);
+                }
+
+                // We release the donnor PCC in case we had it opened for possible cloning
+                if (donorPcc != null)
+                {
+                    donorPcc.Release();
+                    donorPcc.Dispose();
                 }
             }
             sequence.WriteProperty(animSets);
@@ -2198,6 +2261,8 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             }
         }
 
+        // HELPER FUNCTIONS
+        #region Helper functions
         /// <summary>
         /// By SirCxyrtyx
         /// </summary>
@@ -2210,7 +2275,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         /// <param name="prePropBinary"></param>
         /// <param name="super"></param>
         /// <param name="archetype"></param>
-        /// <returns></returns>
+        /// <returns>New ExportEntry</returns>
         private static ExportEntry CreateExport(IMEPackage pcc, NameReference name, string className, IEntry parent, PropertyCollection properties = null, ObjectBinary binary = null, byte[] prePropBinary = null, IEntry super = null, IEntry archetype = null)
         {
             IEntry classEntry = className.CaseInsensitiveEquals("Class") ? null : EntryImporter.EnsureClassIsInFile(pcc, className, new RelinkerOptionsPackage());
@@ -2225,8 +2290,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             return exp;
         }
 
-        // HELPER FUNCTIONS
-        #region Helper functions
         /// <summary>
         /// Checks if a dest position is within a given distance of the origin.
         /// </summary>
