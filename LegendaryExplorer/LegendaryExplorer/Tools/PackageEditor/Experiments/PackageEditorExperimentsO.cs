@@ -2079,9 +2079,9 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                 if (animation == null)
                 {
-                    foreach (AnimUsage usage in animRec.Usages) // Get only usages in the vanilla files
+                    foreach (AnimUsage usage in animRec.Usages) 
                     {
-                        if (usage.IsInMod) { continue; }
+                        if (usage.IsInMod) { continue; } // Get only usages in the vanilla files
 
                         (string file, string dir) = files.ElementAt(usage.FileKey);
 
@@ -2103,10 +2103,17 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                         // Save the reference of the BioDynAnimSet
                         List<IEntry> references = externalAnimation.GetEntriesThatReferenceThisOne()
-                            .Where(kvp => kvp.Key.ClassName == "BioDynanmicAnimSet")
+                            .Where(kvp => kvp.Key.ClassName == "BioDynamicAnimSet")
                             .Select(kvp => kvp.Key).ToList();
 
-                        if (references.Count != 0) { externalBioDynamicAnimSet = (ExportEntry)references.First(); }
+                        if (references.Count == 0)
+                        {
+                            donorPcc.Release();
+                            donorPcc.Dispose();
+                            continue;
+                        }
+
+                        externalBioDynamicAnimSet = (ExportEntry)references.First();
 
                         EntryExporter.ExportExportToPackage(externalAnimation, pew.Pcc, out IEntry tempEntry);
                         animation = (ExportEntry)tempEntry; // Gotta use a temp var since it didn't let me cast to ExportEntry in the cloning
@@ -2117,8 +2124,11 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 if (animation == null)
                 {
                     notCloned.Add(animName);
-                    donorPcc.Release();
-                    donorPcc.Dispose();
+                    if (donorPcc != null)
+                    {
+                        donorPcc.Release();
+                        donorPcc.Dispose();
+                    }
                     continue;
                 }
 
@@ -2177,25 +2187,36 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
                 else if (externalBioDynamicAnimSet != null)
                 {
-                    // We clean the external AnimSet before cloning to avoid bringing anything unnecessary
-                    PropertyCollection props = new()
+                    // We do two writes to the AnimSet before cloning:
+                    // One to remove any reference to everything, in practice making it a new object.
+                    // One to write the new information. This must be done AFTER cloning, so that the ObjectProperties
+                    // reference the entries in this file, rather than the external one.
+                    PropertyCollection props = new() ;
+                    externalBioDynamicAnimSet.WritePropertiesAndBinary(props, BioDynamicAnimSet.Create());
+
+                    EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.AddSingularAsChild, externalBioDynamicAnimSet, pew.Pcc, sequence,
+                        true, new RelinkerOptionsPackage(), out IEntry tempEntry);
+
+                    props = new()
                     {
                         new NameProperty(animSetName, "m_nmOriginSetName"),
                         new ArrayProperty<ObjectProperty>(new List<ObjectProperty>(), "Sequences"),
                         animation.GetProperty<ObjectProperty>("m_pBioAnimSetData")
                     };
-                    externalBioDynamicAnimSet.WritePropertiesAndBinary(props, BioDynamicAnimSet.Create());
 
-                    EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.AddSingularAsChild, externalBioDynamicAnimSet, pew.Pcc, sequence,
-                        true, new RelinkerOptionsPackage(), out IEntry tempEntry);
                     bioDynamicAnimSet = (ExportEntry)tempEntry;
+                    bioDynamicAnimSet.WriteProperties(props);
+
                     animSets.Add(new ObjectProperty(bioDynamicAnimSet.UIndex));
                 }
                 else
                 {
                     notCloned.Add(animName);
-                    donorPcc.Release();
-                    donorPcc.Dispose();
+                    if (donorPcc != null)
+                    {
+                        donorPcc.Release();
+                        donorPcc.Dispose();
+                    }
                     continue;
                 }
 
