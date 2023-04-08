@@ -40,6 +40,21 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
             DialogueEditorExperimentsE.CloneNodeAndSequence(GetDEWindow());
         }
 
+        private void LinkNodesFree_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.LinkNodesFree(GetDEWindow());
+        }
+
+        private void LinkNodesStrRef_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.LinkNodesStrRef(GetDEWindow());
+        }
+
+        private void CreateNodesSequence_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.CreateNodesSequence(GetDEWindow());
+        }
+
         #endregion
 
     }
