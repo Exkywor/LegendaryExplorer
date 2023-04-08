@@ -1,4 +1,5 @@
-﻿using LegendaryExplorer.Dialogs;
+﻿using DocumentFormat.OpenXml.InkML;
+using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
@@ -483,6 +484,70 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             }
         }
 
+        /// <summary>
+        /// Links all nodes in the conversation that don't have an ExportID to the free ConvNodes in the sequence.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void LinkNodesFree(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedConv == null) { return; }
+
+
+        }
+
+        /// <summary>
+        /// Links all nodes in the conversation that don't have an ExportID to the free ConvNodes that have a matching StringRef in the sequence.
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void LinkNodesStrRef(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedConv == null) { return; }
+
+        }
+
+        /// <summary>
+        /// Create the basic sequence elements for all nodes that don't have one.
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void CreateNodesSequence(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedConv == null) { return; }
+
+        }
+
+        /// <summary>
+        /// Filter the nodes to get only those that fit need to have sequence elements, but don't have them.
+        /// Also get a list of ExportIDs that are in use by the nodes NOT in the return list.
+        /// </summary>
+        /// <param name="nodes">Nodes to filter.</param>
+        /// <returns>Filtered nodes, ExportIDs in use.</returns>
+        private static (List<DialogueNodeExtended>, List<int>) FilterNodes(ObservableCollectionExtended<DialogueNodeExtended> nodes)
+        {
+            return (null, null);
+        }
+
+        /// <summary>
+        /// Get a list of ExportIDs, InterpDatas, and StringRefs of all the ConvNodes in the sequence.
+        /// </summary>
+        /// <param name="sequence">Sequence to get the elements from.</param>
+        /// <param name="getStrRef">Whether to collect the StringRef.</param>
+        /// <returns>List of (ExportID, Linked InterpData, StringRef)</returns>
+        private static List<(int, ExportEntry, string)> GetConvNodeElements(ExportEntry sequence, bool getStrRef)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Filter a list of (ExportID, Linked InterpData, StringRef) by a list of used ExportIDs.
+        /// </summary>
+        /// <param name="elements">Elements to filter.</param>
+        /// <param name="usedIDs">List to filter ExportIDs by.</param>
+        /// <returns>Filtered list of (ExportID, Linked InterpData, StringRef).</returns>
+        private static List<(int, ExportEntry, string)> FilterElementsByIDs(List<(int, ExportEntry, string)> elements, List<int> usedIDs)
+        {
+            return null;
+        }
+
+        // HELPER FUNCTIONS
+        #region Helper functions
         private static int promptForID(string msg, string err)
         {
             if (PromptDialog.Prompt(null, msg) is string strID)
@@ -508,7 +573,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             // cloneSequence(exp);
             return exp;
         }
-
         #endregion
     }
 }
