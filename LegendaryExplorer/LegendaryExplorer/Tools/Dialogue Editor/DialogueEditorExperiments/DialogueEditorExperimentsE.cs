@@ -283,9 +283,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             List<(int, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
 
             // Assign ExportIDs to the dialogue nodes, and write the new StrRefIDs to the VOElements tracks
-            for (int i = 0; i < elements.Count; i++)
+            for (int i = 0; i < nodes.Count; i++)
             {
-                if (i > nodes.Count) {
+                if (i >= elements.Count) {
                     // Store a list of nodes that couldn't get an ExportID
                     remainingNodes.AddRange(nodes.GetRange(i, nodes.Count - 1));
                     break;
@@ -303,7 +303,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 // TODO: Prompt for an ExportID base range to create missing ones
             }
 
-            dew.RecreateNodesToProperties(dew.SelectedConv);
+            conversation.SerializeNodes(true);
             dew.ForceRefreshCommand.Execute(null);
 
             MessageBox.Show("Linked all nodes without an ExportID.", "Success", MessageBoxButton.OK);
@@ -334,14 +334,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 .ToDictionary(el => el.Item3, el => el.Item1); // Key: StrRefID, Val: ExportID
 
             // Assign ExportIDs to the dialogue nodes that match the StrRefID
-            for (int i = 0; i < exportIDs.Count; i++)
+            foreach (DialogueNodeExtended node in nodes)
             {
-                if (i > nodes.Count) {
-                    break;
-                }
-
-                DialogueNodeExtended node = nodes[i];
-
                 if (exportIDs.TryGetValue(node.LineStrRef, out int exportID)) {
                     node.ExportID = exportID;
                 } else
@@ -350,7 +344,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 }
             }
 
-            dew.RecreateNodesToProperties(dew.SelectedConv);
+            conversation.SerializeNodes(true);
             dew.ForceRefreshCommand.Execute(null);
 
             string message = $"{nodes.Count - notMatchedNodes.Count} nodes matched.";
