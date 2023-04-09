@@ -287,13 +287,19 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             {
                 if (i >= elements.Count) {
                     // Store a list of nodes that couldn't get an ExportID
-                    remainingNodes.AddRange(nodes.GetRange(i, nodes.Count - 1));
+
+                    if ((nodes.Count - elements.Count > 0))
+                    {
+                        remainingNodes.AddRange(nodes.GetRange(i, nodes.Count - 1));
+                    }
                     break;
                 }
 
                 DialogueNodeExtended node = nodes[i];
                 (int exportID, ExportEntry VOElements, int _) = elements[i];
-                node.ExportID = exportID;
+
+                IntProperty nExportID = new(exportID, "nExportID");
+                node.NodeProp.Properties.AddOrReplaceProp(nExportID);
                 VOElements.WriteProperty(new IntProperty(node.LineStrRef, "m_nStrRefID"));
             }
 
@@ -303,7 +309,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 // TODO: Prompt for an ExportID base range to create missing ones
             }
 
-            conversation.SerializeNodes(true);
+            dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
 
             MessageBox.Show("Linked all nodes without an ExportID.", "Success", MessageBoxButton.OK);
@@ -337,7 +343,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             foreach (DialogueNodeExtended node in nodes)
             {
                 if (exportIDs.TryGetValue(node.LineStrRef, out int exportID)) {
-                    node.ExportID = exportID;
+                    IntProperty nExportID = new(exportID, "nExportID");
+                    node.NodeProp.Properties.AddOrReplaceProp(nExportID);
                 } else
                 {
                     notMatchedNodes.Add(node.IsReply ? $"R{node.NodeCount}" : $"E{node.NodeCount}");
