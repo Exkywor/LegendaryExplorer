@@ -266,7 +266,47 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
+            ConversationExtended conversation = dew.SelectedConv;
 
+            List<int> usedIDs = new();
+            List<DialogueNodeExtended> nodes = new();
+            List<DialogueNodeExtended> remainingNodes = new();
+
+            (List<DialogueNodeExtended> entryNodes, List<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
+            (List<DialogueNodeExtended> replyNodes, List<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
+
+            nodes.AddRange(entryNodes);
+            nodes.AddRange(replyNodes);
+            usedIDs.AddRange(usedEntryIDs);
+            usedIDs.AddRange(usedReplyIDs);
+
+            List<(int, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
+
+            // Assign ExportIDs to the dialogue nodes, and write the new StrRefIDs to the VOElements tracks
+            for (int i = 0; i < elements.Count; i++)
+            {
+                if (i > nodes.Count) {
+                    // Store a list of nodes that couldn't get an ExportID
+                    remainingNodes.AddRange(nodes.GetRange(i, nodes.Count - 1));
+                    break;
+                }
+
+                DialogueNodeExtended node = nodes[i];
+                (int exportID, ExportEntry VOElements, int _) = elements[i];
+                node.ExportID = exportID;
+                VOElements.WriteProperty(new IntProperty(node.LineStrRef, "m_nStrRefID"));
+            }
+
+            foreach (DialogueNodeExtended node in remainingNodes)
+            {
+                // TODO: Create the required sequence elements
+                // TODO: Prompt for an ExportID base range to create missing ones
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show("Linked all nodes without an ExportID.", "Success", MessageBoxButton.OK);
         }
 
         /// <summary>
@@ -276,6 +316,50 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
+            ConversationExtended conversation = dew.SelectedConv;
+
+            List<int> usedIDs = new();
+            List<DialogueNodeExtended> nodes = new();
+            List<string> notMatchedNodes = new();
+
+            (List<DialogueNodeExtended> entryNodes, List<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
+            (List<DialogueNodeExtended> replyNodes, List<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
+
+            nodes.AddRange(entryNodes);
+            nodes.AddRange(replyNodes);
+            usedIDs.AddRange(usedEntryIDs);
+            usedIDs.AddRange(usedReplyIDs);
+
+            Dictionary<int, int> exportIDs = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs)
+                .ToDictionary(el => el.Item3, el => el.Item1); // Key: StrRefID, Val: ExportID
+
+            // Assign ExportIDs to the dialogue nodes that match the StrRefID
+            for (int i = 0; i < exportIDs.Count; i++)
+            {
+                if (i > nodes.Count) {
+                    break;
+                }
+
+                DialogueNodeExtended node = nodes[i];
+
+                if (exportIDs.TryGetValue(node.LineStrRef, out int exportID)) {
+                    node.ExportID = exportID;
+                } else
+                {
+                    notMatchedNodes.Add(node.IsReply ? $"R{node.NodeCount}" : $"E{node.NodeCount}");
+                }
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            string message = $"{nodes.Count - notMatchedNodes.Count} nodes matched.";
+            if (notMatchedNodes.Count > 0)
+            {
+                message = $"{message} The following nodes' StrRefIDs were not found in any InterpData: {string.Join(", ", notMatchedNodes)}";
+            }
+
+            MessageBox.Show(message, "Success", MessageBoxButton.OK);
         }
 
         /// <summary>
@@ -295,6 +379,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <returns>Filtered nodes, ExportIDs in use.</returns>
         private static (List<DialogueNodeExtended>, List<int>) FilterNodes(ObservableCollectionExtended<DialogueNodeExtended> nodes)
         {
+            if (nodes == null) { return (null, null); }
+
             List<int> usedIDs = new();
             List<DialogueNodeExtended> filteredNodes = new();
             foreach (DialogueNodeExtended node in nodes)
@@ -370,7 +456,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 }
 
                 // Only consider as valid ExportIDs that lead to InterpDatas
-                if (interpData == null) { continue; } 
+                if (interpData == null) { continue; }
 
                 // Store the StrRefID in the VOElements track, if one exists
 
