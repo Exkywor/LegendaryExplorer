@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.InkML;
-using LegendaryExplorer.Dialogs;
+﻿using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
@@ -483,7 +482,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 MessageBox.Show($"Node cloned and given the ExportID: {newID}.", "Success", MessageBoxButton.OK);
             }
         }
+        #endregion
 
+        #region Link Nodes
         /// <summary>
         /// Links all nodes in the conversation that don't have an ExportID to the free ConvNodes in the sequence.
         /// </summary>
@@ -521,30 +522,141 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <returns>Filtered nodes, ExportIDs in use.</returns>
         private static (List<DialogueNodeExtended>, List<int>) FilterNodes(ObservableCollectionExtended<DialogueNodeExtended> nodes)
         {
-            return (null, null);
+            List<int> usedIDs = new();
+            List<DialogueNodeExtended> filteredNodes = new();
+            foreach (DialogueNodeExtended node in nodes)
+            {
+                // Check that there's at least one FaceFX and store its strRef
+                string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
+
+                // Validate nodes that are meant to have data (not autocontinues or dialogend)
+                // and that have proper audio data (strRef matches the FaceFX)
+                if (!string.IsNullOrEmpty(faceFX)
+                    && node.LineStrRef != -1
+                    && node.ReplyType == EReplyTypes.REPLY_STANDARD //
+                    && node.ExportID == -1
+                    && faceFX.Contains($"{node.LineStrRef}")
+                    )
+                {
+                    if (node.ExportID == -1) { filteredNodes.Add(node); }
+                    else { usedIDs.Add(node.ExportID); }
+                }
+            }
+
+            return (filteredNodes, usedIDs);
         }
 
         /// <summary>
-        /// Get a list of ExportIDs, InterpDatas, and StringRefs of all the ConvNodes in the sequence.
+        /// Get a list of ExportIDs, InterpDatas, and StrRefIDs of all the ConvNodes in the sequence.
         /// </summary>
         /// <param name="sequence">Sequence to get the elements from.</param>
-        /// <param name="getStrRef">Whether to collect the StringRef.</param>
-        /// <returns>List of (ExportID, Linked InterpData, StringRef)</returns>
-        private static List<(int, ExportEntry, string)> GetConvNodeElements(ExportEntry sequence, bool getStrRef)
+        /// <param name="conversation">BioConversation to operate on.</param>
+        /// <param name="usedIDs">List of ExportIDs that are already in use.</param>
+        /// <returns>List of (ExportID, VOElements track, StrRefID)</returns>
+        private static List<(int, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, List<int> usedIDs)
         {
-            return null;
+            IMEPackage pcc = sequence.FileRef;
+
+            List<(int, ExportEntry, int)> elements = new();
+
+            List<IEntry> convNodes = SeqTools.GetAllSequenceElements(sequence)
+                .Where(el => el.ClassName == "BioSeqEvt_ConvNode").ToList();
+
+            foreach (ExportEntry node in convNodes)
+            {
+                IntProperty m_nNodeID = node.GetProperty<IntProperty>("m_nNodeID");
+                // Skip nodes that don't have an ExportID, or an ExportID that is already in use
+                if (m_nNodeID == null || usedIDs.Contains(m_nNodeID.Value)) { continue; }
+
+                ExportEntry VOElements = null;
+                int strRefID;
+
+                // Find the interp data
+                ExportEntry interpData = null;
+                List<ExportEntry> searchingExports = new() { node };
+
+                ExportEntry seqActInterp = conversation.recursiveFindSeqActInterp(searchingExports, new List<ExportEntry>(), 10);
+                ArrayProperty<StructProperty> varLinksProp = seqActInterp.GetProperty<ArrayProperty<StructProperty>>("VariableLinks");
+
+                if (varLinksProp != null)
+                {
+                    foreach (StructProperty prop in varLinksProp)
+                    {
+                        string desc = prop.GetProp<StrProperty>("LinkDesc").Value; //ME3/ME2/ME1
+                        if (desc == "Data") //ME3/ME1
+                        {
+                            ArrayProperty<ObjectProperty> linkedVars = prop.GetProp<ArrayProperty<ObjectProperty>>("LinkedVariables");
+                            if (linkedVars != null && linkedVars.Count > 0)
+                            {
+                                int datalink = linkedVars[0].Value;
+                                interpData = sequence.FileRef.GetUExport(datalink);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // Only consider as valid ExportIDs that lead to InterpDatas
+                if (interpData == null) { continue; } 
+
+                // Store the StrRefID in the VOElements track, if one exists
+
+                (strRefID, VOElements) = GetVOStrRefIDAndTrack(sequence.FileRef, interpData);
+
+                // Only consider as valid InterpDatas that contain a VOElements track
+                if (VOElements == null) { continue; }
+
+                elements.Add((m_nNodeID.Value, VOElements, strRefID));
+            }
+
+            return elements;
         }
 
         /// <summary>
-        /// Filter a list of (ExportID, Linked InterpData, StringRef) by a list of used ExportIDs.
+        /// Get the StrRefID of the VOElements track and the track itself of an InterpData, if they exist.
         /// </summary>
-        /// <param name="elements">Elements to filter.</param>
-        /// <param name="usedIDs">List to filter ExportIDs by.</param>
-        /// <returns>Filtered list of (ExportID, Linked InterpData, StringRef).</returns>
-        private static List<(int, ExportEntry, string)> FilterElementsByIDs(List<(int, ExportEntry, string)> elements, List<int> usedIDs)
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="interpData">InterpData to find the value on.</param>
+        /// <returns>(StrRefID, VOElement track), if they exist.</returns>
+        private static (int, ExportEntry) GetVOStrRefIDAndTrack(IMEPackage pcc, ExportEntry interpData)
         {
-            return null;
+            int strRefID = 0;
+
+            ArrayProperty<ObjectProperty> interpGroups = interpData.GetProperty<ArrayProperty<ObjectProperty>>("InterpGroups");
+
+            if (interpGroups == null) { return (0, null); }
+
+            foreach (ObjectProperty groupRef in interpGroups)
+            {
+                if (!pcc.TryGetUExport(groupRef.Value, out ExportEntry group)) { continue; }
+
+                // Skip non Conversation groups
+                NameProperty GroupName = group.GetProperty<NameProperty>("GroupName");
+                if (GroupName == null || GroupName.Value != "Conversation") { continue; }
+
+                ArrayProperty<ObjectProperty> interpTracks = group.GetProperty<ArrayProperty<ObjectProperty>>("InterpTracks");
+                if (interpTracks == null) { continue; }
+
+                foreach (ObjectProperty trackRef in interpTracks)
+                {
+                    if (!pcc.TryGetUExport(trackRef.Value, out ExportEntry track)) { continue; }
+
+                    // Find the VO track
+                    if (track.ClassName == "BioEvtSysTrackVOElements")
+                    {
+                        IntProperty m_nStrRefID = track.GetProperty<IntProperty>("m_nStrRefID");
+                        if (m_nStrRefID != null)
+                        {
+                            strRefID = m_nStrRefID.Value;
+                            return (strRefID, track);
+                        }
+                    }
+                }
+            }
+
+            return (0, null);
         }
+        #endregion
 
         // HELPER FUNCTIONS
         #region Helper functions
@@ -573,6 +685,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             // cloneSequence(exp);
             return exp;
         }
+
         #endregion
     }
 }

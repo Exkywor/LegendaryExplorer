@@ -333,7 +333,7 @@ namespace LegendaryExplorerCore.Dialogue
         /// <param name="nodesSearched">List of nodes already visited</param>
         /// <param name="searchDepthRemaining">How many layers deep should be searched</param>
         /// <returns>Export of class SeqAct_Interp, or null if not found</returns>
-        private ExportEntry recursiveFindSeqActInterp(List<ExportEntry> nodesToSearch, List<ExportEntry> nodesSearched, int searchDepthRemaining)
+        public ExportEntry recursiveFindSeqActInterp(List<ExportEntry> nodesToSearch, List<ExportEntry> nodesSearched, int searchDepthRemaining)
         {
             if (searchDepthRemaining <= 0)
                 return null; // NOT FOUND, NO FURTHER SEARCH
