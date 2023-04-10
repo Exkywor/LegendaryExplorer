@@ -7,6 +7,7 @@ using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -507,12 +508,13 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             usedIDs.AddRange(usedEntryIDs);
             usedIDs.AddRange(usedReplyIDs);
 
-            List<(int, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
+            List<(int, ExportEntry, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
 
             // Assign ExportIDs to the dialogue nodes, and write the new StrRefIDs to the VOElements tracks
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (i >= elements.Count) {
+                if (i >= elements.Count)
+                {
                     // Store a list of nodes that couldn't get an ExportID
 
                     if ((nodes.Count - elements.Count > 0))
@@ -523,10 +525,18 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 }
 
                 DialogueNodeExtended node = nodes[i];
-                (int exportID, ExportEntry VOElements, int _) = elements[i];
+                (int exportID, ExportEntry VOElements, ExportEntry interp, int _) = elements[i];
 
+                // Write the new ExportID
                 IntProperty nExportID = new(exportID, "nExportID");
                 node.NodeProp.Properties.AddOrReplaceProp(nExportID);
+                // Write the StringRef
+                ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
+                {
+                    new StrProperty(node.Line.Length <= 32 ? node.Line : string.Concat(node.Line.AsSpan(0, 29), "..."))
+                };
+                interp.WriteProperty(m_aObjComment);
+                // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
                 VOElements.WriteProperty(new IntProperty(node.LineStrRef, "m_nStrRefID"));
             }
 
@@ -563,16 +573,28 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             usedIDs.AddRange(usedEntryIDs);
             usedIDs.AddRange(usedReplyIDs);
 
-            Dictionary<int, int> exportIDs = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs)
-                .ToDictionary(el => el.Item3, el => el.Item1); // Key: StrRefID, Val: ExportID
+            Dictionary<int, (int, ExportEntry)> exportIDs = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs)
+                .ToDictionary(el => el.Item4, el => (el.Item1, el.Item3)); // Key: StrRefID, Val: (ExportID, Interp)
 
             // Assign ExportIDs to the dialogue nodes that match the StrRefID
             foreach (DialogueNodeExtended node in nodes)
             {
-                if (exportIDs.TryGetValue(node.LineStrRef, out int exportID)) {
+                if (exportIDs.TryGetValue(node.LineStrRef, out (int, ExportEntry) el))
+                {
+                    (int exportID, ExportEntry interp) = el;
+
+                    // Write the new ExportID
                     IntProperty nExportID = new(exportID, "nExportID");
                     node.NodeProp.Properties.AddOrReplaceProp(nExportID);
-                } else
+                    // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
+                    ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
+                    {
+                        new StrProperty(node.Line.Length <= 32 ? node.Line : string.Concat(node.Line.AsSpan(0, 29), "..."))
+                    };
+                    // Write the StringRef
+                    interp.WriteProperty(m_aObjComment);
+                }
+                else
                 {
                     notMatchedNodes.Add(node.IsReply ? $"R{node.NodeCount}" : $"E{node.NodeCount}");
                 }
@@ -634,17 +656,17 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
 
         /// <summary>
-        /// Get a list of ExportIDs, InterpDatas, and StrRefIDs of all the ConvNodes in the sequence.
+        /// Get a list of ExportIDs, VOElements track, Interp, and StrRefIDs of all the ConvNodes in the sequence.
         /// </summary>
         /// <param name="sequence">Sequence to get the elements from.</param>
         /// <param name="conversation">BioConversation to operate on.</param>
         /// <param name="usedIDs">List of ExportIDs that are already in use.</param>
-        /// <returns>List of (ExportID, VOElements track, StrRefID)</returns>
-        private static List<(int, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, List<int> usedIDs)
+        /// <returns>List of (ExportID, VOElements track, Interp, StrRefID)</returns>
+        private static List<(int, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, List<int> usedIDs)
         {
             IMEPackage pcc = sequence.FileRef;
 
-            List<(int, ExportEntry, int)> elements = new();
+            List<(int, ExportEntry, ExportEntry, int)> elements = new();
 
             List<IEntry> convNodes = SeqTools.GetAllSequenceElements(sequence)
                 .Where(el => el.ClassName == "BioSeqEvt_ConvNode").ToList();
@@ -663,6 +685,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 List<ExportEntry> searchingExports = new() { node };
 
                 ExportEntry seqActInterp = conversation.recursiveFindSeqActInterp(searchingExports, new List<ExportEntry>(), 10);
+                if (seqActInterp == null) { continue; }
+
                 ArrayProperty<StructProperty> varLinksProp = seqActInterp.GetProperty<ArrayProperty<StructProperty>>("VariableLinks");
 
                 if (varLinksProp != null)
@@ -693,7 +717,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 // Only consider as valid InterpDatas that contain a VOElements track
                 if (VOElements == null) { continue; }
 
-                elements.Add((m_nNodeID.Value, VOElements, strRefID));
+                elements.Add((m_nNodeID.Value, VOElements, seqActInterp, strRefID));
             }
 
             return elements;
