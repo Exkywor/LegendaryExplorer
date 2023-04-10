@@ -346,8 +346,14 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             usedIDs.AddRange(usedEntryIDs);
             usedIDs.AddRange(usedReplyIDs);
 
-            Dictionary<int, (int, ExportEntry)> exportIDs = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs)
-                .ToDictionary(el => el.Item4, el => (el.Item1, el.Item3)); // Key: StrRefID, Val: (ExportID, Interp)
+            // Key: StrRefID, Val: (ExportID, Interp)
+            Dictionary<int, (int, ExportEntry)> exportIDs = new();
+            foreach (var el in GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs))
+            {
+                // We do it like this instead of using ToDictionary to avoid errors with duplicate keys
+                (int ExportID, ExportEntry _, ExportEntry interp, int StrRefID) = el;
+                exportIDs[StrRefID] = (ExportID, interp);
+            }
 
             // Assign ExportIDs to the dialogue nodes that match the StrRefID
             foreach (DialogueNodeExtended node in nodes)
@@ -379,7 +385,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             string message = $"{nodes.Count - notMatchedNodes.Count} nodes matched.";
             if (notMatchedNodes.Count > 0)
             {
-                message = $"{message} The following nodes' StrRefIDs were not found in any InterpData: {string.Join(", ", notMatchedNodes)}";
+                message = $"{message} The following nodes' StrRefIDs were not found in any InterpData: \n{string.Join(", ", notMatchedNodes)}";
             }
 
             MessageBox.Show(message, "Success", MessageBoxButton.OK);
