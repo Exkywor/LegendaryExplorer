@@ -15,8 +15,8 @@
     <MenuItem Header="Exkywor's buttons for lazy people">
         <MenuItem Header="Change Native Node StringRef" Click="UpdateNativeNodeStringRef_Click" ToolTip="Updates a native node's VOElements, FXA, and Wwisestream stringrefs."/>
         <MenuItem Header="Clone Node and Sequence" Click="CloneNodeAndSequence_Click" ToolTip="Clones a dialogue node along with its linked sequence, and give it a unique ID."/>
-        <MenuItem Header="Link Nodes to Free ExportIDs" Click="LinkNodesFree_Click" ToolTip="Links all nodes in the conversation that don't have an ExportID to the free ConvNodes in the sequence."/>
-        <MenuItem Header="Link Nodes to ExportIDs by String Reference" Click="LinkNodesStrRef_Click" ToolTip="Links all nodes in the conversation that don't have an ExportID to the free ConvNodes that have a matching StringRef in the sequence."/>
+        <MenuItem Header="Link Nodes to Free ExportIDs" Click="LinkNodesFree_Click" ToolTip="Links all audio nodes in the conversation without an ExportID to the free ConvNodes in the sequence."/>
+        <MenuItem Header="Link Nodes to ExportIDs by String Reference" Click="LinkNodesStrRef_Click" ToolTip="Links all audio nodes in the conversation without an ExportID to the free ConvNodes that have a matching StringRef in the sequence."/>
         <MenuItem Header="Create Sequence Elements for Nodes" Click="CreateNodesSequence_Click" ToolTip="Create the basic sequence elements for all nodes that don't have one."/>
     </MenuItem>
 </MenuItem>

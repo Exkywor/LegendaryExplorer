@@ -2,10 +2,12 @@
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
+using LegendaryExplorerCore.Matinee;
 using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
+using LegendaryExplorerCore.Unreal.ObjectInfo;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -260,12 +262,16 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
         #region Link Nodes
         /// <summary>
-        /// Links all nodes in the conversation that don't have an ExportID to the free ConvNodes in the sequence.
+        /// Links all audio nodes in the conversation without an ExportID to the free ConvNodes in the sequence.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
         public static void LinkNodesFree(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
+
+            int convNodeIDBase = promptForInt("New ExportIDs base for extra IDs that may be need to be created:",
+                "Not a valid base. It must be positive integer", -1, "New NodeID range");
+            if (convNodeIDBase == -1) { return; }
 
             ConversationExtended conversation = dew.SelectedConv;
 
@@ -301,8 +307,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 (int exportID, ExportEntry VOElements, ExportEntry interp, int _) = elements[i];
 
                 // Write the new ExportID
-                IntProperty nExportID = new(exportID, "nExportID");
-                node.NodeProp.Properties.AddOrReplaceProp(nExportID);
+                node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
                 // Write the StringRef
                 ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
                 {
@@ -311,12 +316,14 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 interp.WriteProperty(m_aObjComment);
                 // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
                 VOElements.WriteProperty(new IntProperty(node.LineStrRef, "m_nStrRefID"));
+
+                usedIDs.Add(exportID); // Mark the ExportID as used
             }
 
-            foreach (DialogueNodeExtended node in remainingNodes)
+            // Create the sequence objects for any nodes that are left without an ExportID
+            if (remainingNodes.Any())
             {
-                // TODO: Create the required sequence elements
-                // TODO: Prompt for an ExportID base range to create missing ones
+                CreateNodesSequence(dew.Pcc, conversation, convNodeIDBase, nodes, usedIDs);
             }
 
             dew.RecreateNodesToProperties(dew.SelectedConv);
@@ -326,17 +333,32 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
 
         /// <summary>
-        /// Links all nodes in the conversation that don't have an ExportID to the free ConvNodes that have a matching StringRef in the sequence.
+        /// Links all audio nodes in the conversation without an ExportID to the free ConvNodes that have a matching StringRef in the sequence.
+        /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
         public static void LinkNodesStrRef(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
+            int convNodeIDBase = 0;
+
+            bool createObjsForNotMatched = MessageBoxResult.Yes == MessageBox.Show(
+                "Generate new sequence objects with a basic VO track and new ExportIDs for nodes that don't have a match?",
+                "Generate new sequence objects", MessageBoxButton.YesNo);
+
+            if (createObjsForNotMatched)
+            {
+                convNodeIDBase = promptForInt("New ExportIDs base for new IDs that may be needed:",
+                    "Not a valid base. It must be positive integer", -1, "New NodeID range");
+                if (convNodeIDBase == -1) { return; }
+            }
+
             ConversationExtended conversation = dew.SelectedConv;
 
             List<int> usedIDs = new();
             List<DialogueNodeExtended> nodes = new();
-            List<string> notMatchedNodes = new();
+            List<DialogueNodeExtended> notMatchedNodes = new();
+            List<string> notMatchedNodesNames = new(); // Used for the result message
 
             (List<DialogueNodeExtended> entryNodes, List<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
             (List<DialogueNodeExtended> replyNodes, List<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
@@ -363,8 +385,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                     (int exportID, ExportEntry interp) = el;
 
                     // Write the new ExportID
-                    IntProperty nExportID = new(exportID, "nExportID");
-                    node.NodeProp.Properties.AddOrReplaceProp(nExportID);
+                    node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
                     // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
                     ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
                     {
@@ -372,29 +393,200 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                     };
                     // Write the StringRef
                     interp.WriteProperty(m_aObjComment);
+
+                    usedIDs.Add(exportID); // Mark the ExportID as used
                 }
                 else
                 {
-                    notMatchedNodes.Add(node.IsReply ? $"R{node.NodeCount}" : $"E{node.NodeCount}");
+                    notMatchedNodes.Add(node);
+                    notMatchedNodesNames.Add(node.IsReply ? $"R{node.NodeCount}" : $"E{node.NodeCount}");
                 }
             }
 
-            conversation.SerializeNodes(true);
+            // Create the sequence objects for any nodes that are left without an ExportID
+            if (createObjsForNotMatched)
+            {
+                CreateNodesSequence(dew.Pcc, conversation, convNodeIDBase, notMatchedNodes, usedIDs);
+                // Clear the not matched nodes
+                notMatchedNodes = new();
+                notMatchedNodesNames = new();
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
 
             string message = $"{nodes.Count - notMatchedNodes.Count} nodes matched.";
-            if (notMatchedNodes.Count > 0)
+            if (notMatchedNodesNames.Any())
             {
-                message = $"{message} The following nodes' StrRefIDs were not found in any InterpData: \n{string.Join(", ", notMatchedNodes)}";
+                message = $"{message} The following nodes' StrRefIDs were not found in any InterpData: \n{string.Join(", ", notMatchedNodesNames)}";
             }
 
             MessageBox.Show(message, "Success", MessageBoxButton.OK);
         }
 
         /// <summary>
-        /// Create the basic sequence elements for all nodes that don't have one.
+        /// Wrapper for CreateNodesSequence so it can used as an experiment.
+        /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void CreateNodesSequence(DialogueEditorWindow dew)
+        public static void CreateNodesSequenceExperiment(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedConv == null) { return; }
+
+            int convNodeIDBase = promptForInt("New ExportIDs base:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
+            if (convNodeIDBase == -1) { return; }
+
+            List<int> usedIDs = new();
+            List<DialogueNodeExtended> nodes = new();
+
+            (List<DialogueNodeExtended> entryNodes, List<int> usedEntryIDs) = FilterNodes(dew.SelectedConv.EntryList);
+            (List<DialogueNodeExtended> replyNodes, List<int> usedReplyIDs) = FilterNodes(dew.SelectedConv.ReplyList);
+
+            nodes.AddRange(entryNodes);
+            nodes.AddRange(replyNodes);
+            usedIDs.AddRange(usedEntryIDs);
+            usedIDs.AddRange(usedReplyIDs);
+
+            CreateNodesSequence(dew.Pcc, dew.SelectedConv, convNodeIDBase, nodes, usedIDs);
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            string txtCount = nodes.Count == 1 ? "one audio node" : $"{nodes.Count} nodes";
+            MessageBox.Show($"Successfully created the sequence objects for {txtCount}.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Create the basic sequence objects for all the audio nodes that don't have an ExportID.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="conversation">Conversation to create the objects for.</param>
+        /// <param name="convNodeIDBase">Base ID for the new ExportIDs.</param>
+        /// <param name="nodes">Nodes to generate the sequence objects for.</param>
+        /// <param name="usedIDs">ExportIDs in use.</param>
+
+        public static void CreateNodesSequence(IMEPackage pcc, ConversationExtended conversation, int convNodeIDBase,
+            List<DialogueNodeExtended> nodes, List<int> usedIDs)
+        {
+            List<int> newExportIDs = GenerateIDs(convNodeIDBase, nodes.Count, usedIDs);
+            List<ExportEntry> newExports = new(); // Sequence objects to add
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                DialogueNodeExtended node = nodes[i];
+                int exportID = newExportIDs[i];
+
+                // Write the new ExportID
+                node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
+
+                // Create the required sequence elements and add it to the new exports list
+                newExports.AddRange(CreateDialogueNodeSequence(pcc, exportID, conversation.BioConvo.GetProp<IntProperty>("m_nResRefID").Value,
+                    node.LineStrRef, node.Line));
+            }
+
+            if (newExports.Any())
+            {
+                KismetHelper.AddObjectsToSequence((ExportEntry)conversation.Sequence, false, newExports.ToArray());
+            }
+        }
+
+        /// <summary>
+        /// Generate a list of IDs starting at base, of the given length, and skip IDs that are in the usedIDs list.
+        /// </summary>
+        /// <param name="baseID">Base num for the list.</param>
+        /// <param name="length">Target length of the list.</param>
+        /// <param name="usedIDs">IDs to skip.</param>
+        /// <returns>Generated IDs.</returns>
+        private static List<int> GenerateIDs(int baseID, int length, List<int> usedIDs)
+        {
+            List<int> ids = new();
+
+            int count = 0;
+            while (count < length)
+            {
+                if (usedIDs != null && !usedIDs.Contains(baseID))
+                {
+                    ids.Add(baseID);
+                    count++;
+                }
+                baseID++;
+            }
+
+            return ids;
+        }
+
+        /// <summary>
+        /// Create all the required sequence elements for a dialogue node. IT DOES NOT ADD THE EXPORTS TO THE SEQUENCE.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="nodeID">Node's ExportID.</param>
+        /// <param name="convResRefID">Conversation's ID.</param>
+        /// <param name="strRefID">Node's StrRefID.</param>
+        /// <param name="line">Text of the Node's StrRefID.</param>
+        /// <returns>List of created exports.</returns>
+        private static List<ExportEntry> CreateDialogueNodeSequence(IMEPackage pcc, int nodeID, int convResRefID, int strRefID, string line)
+        {
+            List<ExportEntry> exports = new();
+
+            // Create ConvNode
+            ExportEntry convNode = SequenceObjectCreator.CreateSequenceObject(pcc, "BioSeqEvt_ConvNode");
+            PropertyCollection convNodeProps = SequenceObjectCreator.GetSequenceObjectDefaults(pcc, "BioSeqEvt_ConvNode", pcc.Game);
+            convNodeProps.AddOrReplaceProp(new IntProperty(nodeID, "m_nNodeID"));
+            convNodeProps.AddOrReplaceProp(new IntProperty(convResRefID, "m_nConvResRefID"));
+            convNode.WriteProperties(convNodeProps);
+            exports.Add(convNode);
+
+            // Create Interp
+            ExportEntry interp = SequenceObjectCreator.CreateSequenceObject(pcc, "SeqAct_Interp");
+            PropertyCollection interpProps = SequenceObjectCreator.GetSequenceObjectDefaults(pcc, "SeqAct_Interp", pcc.Game);
+            interpProps.AddOrReplaceProp(new ArrayProperty<StrProperty>("m_aObjComment")
+            {
+                new StrProperty(line.Length <= 32 ? line : string.Concat(line.AsSpan(0, 29), "..."))
+            });
+            // Add Conversation variable link
+            ArrayProperty<StructProperty> variableLinks = interpProps.GetProp<ArrayProperty<StructProperty>>("VariableLinks");
+            PropertyCollection props = GlobalUnrealObjectInfo.getDefaultStructValue(pcc.Game, "SeqVarLink", true);
+            props.AddOrReplaceProp(new StrProperty("Conversation", "LinkDesc"));
+            int index = pcc.FindImport("Engine.SeqVar_Object").UIndex;
+            props.AddOrReplaceProp(new ObjectProperty(index, "ExpectedType"));
+            props.AddOrReplaceProp(new IntProperty(1, "MinVars"));
+            props.AddOrReplaceProp(new IntProperty(255, "MaxVars"));
+            variableLinks.Add(new StructProperty("SeqVarLink", props));
+            interpProps.AddOrReplaceProp(variableLinks);
+            interp.WriteProperties(interpProps);
+            exports.Add(interp);
+
+            // Create EndCurrentConvNode
+            ExportEntry endNode = SequenceObjectCreator.CreateSequenceObject(pcc, "BioSeqAct_EndCurrentConvNode");
+            PropertyCollection endNodeProps = SequenceObjectCreator.GetSequenceObjectDefaults(pcc, "BioSeqAct_EndCurrentConvNode", pcc.Game);
+            endNode.WriteProperties(endNodeProps);
+            exports.Add(endNode);
+
+            // Create InterpData
+            ExportEntry interpData = SequenceObjectCreator.CreateSequenceObject(pcc, "InterpData");
+            PropertyCollection interpDataProps = SequenceObjectCreator.GetSequenceObjectDefaults(pcc, "InterpData", pcc.Game);
+            interpData.WriteProperties(interpDataProps);
+            // Add Conversation group and VOElements track with its StrRefID
+            ExportEntry conversationGroup = MatineeHelper.AddNewGroupToInterpData(interpData, "Conversation");
+            ExportEntry VOElements = MatineeHelper.AddNewTrackToGroup(conversationGroup, "BioEvtSysTrackVOElements");
+            VOElements.WriteProperty(new IntProperty(strRefID, "m_nStrRefID"));
+            VOElements.WriteProperty(new ArrayProperty<StructProperty>("m_aTrackKeys"));
+
+            exports.Add(interpData);
+
+            // Connect elements
+            KismetHelper.CreateOutputLink(convNode, "Started", interp, 0);
+            KismetHelper.CreateOutputLink(interp, "Completed", endNode, 0);
+            KismetHelper.CreateOutputLink(interp, "Reversed", endNode, 0);
+            KismetHelper.CreateVariableLink(interp, "Data", interpData);
+
+            return exports;
+        }
+
+        /// <summary>
+        /// Update all the Interp comments and VOElements' StrRefIDs that are linked to the audio nodes of the selected conversation.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void UpdateVOsAndComments(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
@@ -476,7 +668,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                         if (desc == "Data") //ME3/ME1
                         {
                             ArrayProperty<ObjectProperty> linkedVars = prop.GetProp<ArrayProperty<ObjectProperty>>("LinkedVariables");
-                            if (linkedVars != null && linkedVars.Count > 0)
+                            if (linkedVars != null && linkedVars.Any())
                             {
                                 int datalink = linkedVars[0].Value;
                                 interpData = sequence.FileRef.GetUExport(datalink);
@@ -563,6 +755,29 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 return ID;
             }
             return 0;
+        }
+
+        /// <summary>
+        /// Prompts the user for an int, verifying that the int is valid.
+        /// </summary>
+        /// <param name="msg">Message to display for the prompt.</param>
+        /// <param name="err">Error message to display.</param>
+        /// <param name="biggerThan">Number the input must be bigger than. If not provided -2,147,483,648 will be used.</param>
+        /// <param name="title">Title for the prompt.</param>
+        /// <returns>The input int.</returns>
+        private static int promptForInt(string msg, string err, int biggerThan = -2147483648, string title = "")
+        {
+            if (PromptDialog.Prompt(null, msg, title) is string stringPrompt)
+            {
+                int intPrompt;
+                if (string.IsNullOrEmpty(stringPrompt) || !int.TryParse(stringPrompt, out intPrompt) || !(intPrompt > biggerThan))
+                {
+                    MessageBox.Show(err, "Warning", MessageBoxButton.OK);
+                    return -1;
+                }
+                return intPrompt;
+            }
+            return -1;
         }
 
         // From SequenceEditorWPF.xaml.cs
