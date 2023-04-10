@@ -52,7 +52,7 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
 
         private void CreateNodesSequence_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.CreateNodesSequence(GetDEWindow());
+            DialogueEditorExperimentsE.CreateNodesSequenceExperiment(GetDEWindow());
         }
 
         #endregion
