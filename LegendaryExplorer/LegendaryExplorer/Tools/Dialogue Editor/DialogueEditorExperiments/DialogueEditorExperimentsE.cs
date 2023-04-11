@@ -276,17 +276,17 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             ConversationExtended conversation = dew.SelectedConv;
 
-            List<int> usedIDs = new();
+            HashSet<int> usedIDs = new();
             List<DialogueNodeExtended> nodes = new();
             List<DialogueNodeExtended> remainingNodes = new();
 
-            (List<DialogueNodeExtended> entryNodes, List<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
-            (List<DialogueNodeExtended> replyNodes, List<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
+            (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
+            (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
 
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
-            usedIDs.AddRange(usedEntryIDs);
-            usedIDs.AddRange(usedReplyIDs);
+            usedIDs.UnionWith(usedEntryIDs);
+            usedIDs.UnionWith(usedReplyIDs);
 
             List<(int, ExportEntry, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
 
@@ -312,7 +312,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 // Write the StringRef
                 ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
                 {
-                    new StrProperty(node.Line.Length <= 32 ? node.Line : string.Concat(node.Line.AsSpan(0, 29), "..."))
+                    new StrProperty(node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
                 };
                 interp.WriteProperty(m_aObjComment);
                 // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
@@ -370,18 +370,18 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             ConversationExtended conversation = dew.SelectedConv;
 
-            List<int> usedIDs = new();
+            HashSet<int> usedIDs = new();
             List<DialogueNodeExtended> nodes = new();
             List<DialogueNodeExtended> notMatchedNodes = new();
             List<string> notMatchedNodesNames = new(); // Used for the result message
 
-            (List<DialogueNodeExtended> entryNodes, List<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
-            (List<DialogueNodeExtended> replyNodes, List<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
+            (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
+            (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
 
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
-            usedIDs.AddRange(usedEntryIDs);
-            usedIDs.AddRange(usedReplyIDs);
+            usedIDs.UnionWith(usedEntryIDs);
+            usedIDs.UnionWith(usedReplyIDs);
 
             // Key: StrRefID, Val: (ExportID, Interp)
             Dictionary<int, (int, ExportEntry)> exportIDs = new();
@@ -404,7 +404,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                     // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
                     ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
                     {
-                        new StrProperty(node.Line.Length <= 32 ? node.Line : string.Concat(node.Line.AsSpan(0, 29), "..."))
+                        new StrProperty(node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
                     };
                     // Write the StringRef
                     interp.WriteProperty(m_aObjComment);
@@ -450,16 +450,16 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             int convNodeIDBase = promptForInt("New ExportIDs base:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
             if (convNodeIDBase == -1) { return; }
 
-            List<int> usedIDs = new();
+            HashSet<int> usedIDs = new();
             List<DialogueNodeExtended> nodes = new();
 
-            (List<DialogueNodeExtended> entryNodes, List<int> usedEntryIDs) = FilterNodes(dew.SelectedConv.EntryList);
-            (List<DialogueNodeExtended> replyNodes, List<int> usedReplyIDs) = FilterNodes(dew.SelectedConv.ReplyList);
+            (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(dew.SelectedConv.EntryList);
+            (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(dew.SelectedConv.ReplyList);
 
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
-            usedIDs.AddRange(usedEntryIDs);
-            usedIDs.AddRange(usedReplyIDs);
+            usedIDs.UnionWith(usedEntryIDs);
+            usedIDs.UnionWith(usedReplyIDs);
 
             CreateNodesSequence(dew.Pcc, dew.SelectedConv, convNodeIDBase, nodes, usedIDs);
 
@@ -480,7 +480,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="usedIDs">ExportIDs in use.</param>
 
         public static void CreateNodesSequence(IMEPackage pcc, ConversationExtended conversation, int convNodeIDBase,
-            List<DialogueNodeExtended> nodes, List<int> usedIDs)
+            List<DialogueNodeExtended> nodes, HashSet<int> usedIDs)
         {
             List<int> newExportIDs = GenerateIDs(convNodeIDBase, nodes.Count, usedIDs);
             List<ExportEntry> newExports = new(); // Sequence objects to add
@@ -511,7 +511,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="length">Target length of the list.</param>
         /// <param name="usedIDs">IDs to skip.</param>
         /// <returns>Generated IDs.</returns>
-        private static List<int> GenerateIDs(int baseID, int length, List<int> usedIDs)
+        private static List<int> GenerateIDs(int baseID, int length, HashSet<int> usedIDs)
         {
             List<int> ids = new();
 
@@ -555,7 +555,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             PropertyCollection interpProps = SequenceObjectCreator.GetSequenceObjectDefaults(pcc, "SeqAct_Interp", pcc.Game);
             interpProps.AddOrReplaceProp(new ArrayProperty<StrProperty>("m_aObjComment")
             {
-                new StrProperty(line.Length <= 32 ? line : string.Concat(line.AsSpan(0, 29), "..."))
+                new StrProperty(line.Length <= 32 ? line : $"{line.AsSpan(0, 29)}...")
             });
             // Add Conversation variable link
             ArrayProperty<StructProperty> variableLinks = interpProps.GetProp<ArrayProperty<StructProperty>>("VariableLinks");
@@ -614,11 +614,11 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// </summary>
         /// <param name="nodes">Nodes to filter.</param>
         /// <returns>Filtered nodes, ExportIDs in use.</returns>
-        private static (List<DialogueNodeExtended>, List<int>) FilterNodes(ObservableCollectionExtended<DialogueNodeExtended> nodes)
+        private static (List<DialogueNodeExtended>, HashSet<int>) FilterNodes(ObservableCollectionExtended<DialogueNodeExtended> nodes)
         {
             if (nodes == null) { return (null, null); }
 
-            List<int> usedIDs = new();
+            HashSet<int> usedIDs = new();
             List<DialogueNodeExtended> filteredNodes = new();
             foreach (DialogueNodeExtended node in nodes)
             {
@@ -648,7 +648,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="conversation">BioConversation to operate on.</param>
         /// <param name="usedIDs">List of ExportIDs that are already in use.</param>
         /// <returns>List of (ExportID, VOElements track, Interp, StrRefID)</returns>
-        private static List<(int, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, List<int> usedIDs)
+        private static List<(int, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, HashSet<int> usedIDs)
         {
             IMEPackage pcc = sequence.FileRef;
 
