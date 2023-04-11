@@ -1,4 +1,5 @@
-﻿using LegendaryExplorer.Dialogs;
+﻿using DocumentFormat.OpenXml.EMMA;
+using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
@@ -522,10 +523,10 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 if (i >= elements.Count)
                 {
                     // Store a list of nodes that couldn't get an ExportID
-
-                    if ((nodes.Count - elements.Count > 0))
+                    int remainingCount = nodes.Count - elements.Count;
+                    if (remainingCount > 0)
                     {
-                        remainingNodes.AddRange(nodes.GetRange(i, nodes.Count - 1));
+                        remainingNodes.AddRange(nodes.GetRange(i, remainingCount));
                     }
                     break;
                 }
@@ -555,6 +556,20 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
+
+            // Code to check how many uses each ExportID has, to catch duplicates
+            //Dictionary<int, int> test = new();
+            //foreach (DialogueNodeExtended node in nodes)
+            //{
+            //    int exportID = node.NodeProp.GetProp<IntProperty>("nExportID");
+            //    if (test.TryGetValue(exportID, out int val))
+            //    {
+            //        test[exportID] = val++;
+            //    } else
+            //    {
+            //        test[exportID] = 1;
+            //    }
+            //}
 
             MessageBox.Show("Linked all nodes without an ExportID.", "Success", MessageBoxButton.OK);
         }
@@ -791,6 +806,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             // Create InterpData
             ExportEntry interpData = SequenceObjectCreator.CreateSequenceObject(pcc, "InterpData");
             PropertyCollection interpDataProps = SequenceObjectCreator.GetSequenceObjectDefaults(pcc, "InterpData", pcc.Game);
+            interpDataProps.AddOrReplaceProp(new FloatProperty(3, "InterpLength"));
             interpData.WriteProperties(interpDataProps);
             // Add Conversation group and VOElements track with its StrRefID
             ExportEntry conversationGroup = MatineeHelper.AddNewGroupToInterpData(interpData, "Conversation");
@@ -841,11 +857,10 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 if (!string.IsNullOrEmpty(faceFX)
                     && node.LineStrRef != -1
                     && node.ReplyType == EReplyTypes.REPLY_STANDARD //
-                    && node.ExportID == -1
                     && faceFX.Contains($"{node.LineStrRef}")
                     )
                 {
-                    if (node.ExportID == -1) { filteredNodes.Add(node); }
+                    if (node.ExportID == -1 || node.ExportID == 0) { filteredNodes.Add(node); }
                     else { usedIDs.Add(node.ExportID); }
                 }
             }
