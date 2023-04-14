@@ -55,6 +55,11 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
             DialogueEditorExperimentsE.CreateNodesSequenceExperiment(GetDEWindow());
         }
 
+        private void CreateSelectedNodeSequence_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.CreateSelectedNodeSequence(GetDEWindow());
+        }
+
         #endregion
 
     }

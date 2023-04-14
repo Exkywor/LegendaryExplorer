@@ -18,5 +18,6 @@
         <MenuItem Header="Link Nodes to Free ExportIDs" Click="LinkNodesFree_Click" ToolTip="Links all audio nodes in the conversation without an ExportID to the free ConvNodes in the sequence."/>
         <MenuItem Header="Link Nodes to ExportIDs by String Reference" Click="LinkNodesStrRef_Click" ToolTip="Links all audio nodes in the conversation without an ExportID to the free ConvNodes that have a matching StringRef in the sequence."/>
         <MenuItem Header="Create Sequence Elements for Nodes" Click="CreateNodesSequence_Click" ToolTip="Create the basic sequence elements for all nodes that don't have one."/>
+        <MenuItem Header="Create Sequence Elements for Selected Node" Click="CreateSelectedNodeSequence_Click" ToolTip="Create the basic sequence objects for the selected audio node, if it doesn't have an ExportID."/>
     </MenuItem>
 </MenuItem>

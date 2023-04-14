@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.EMMA;
-using LegendaryExplorer.Dialogs;
+﻿using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
@@ -468,6 +467,77 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             string txtCount = nodes.Count == 1 ? "one audio node" : $"{nodes.Count} nodes";
             MessageBox.Show($"Successfully created the sequence objects for {txtCount}.", "Success", MessageBoxButton.OK);
+        }
+
+
+        /// <summary>
+        /// Create the basic sequence objects for the selected audio node, if it doesn't have an ExportID.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void CreateSelectedNodeSequence(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedDialogueNode == null) { return; }
+
+            int exportID = promptForInt("New ExportID. If you input 0, a new ID will be generated:", "Not a valid ID. It must be positive integer", -1, "New NodeID");
+            if (exportID == -1) { return; }
+
+            DialogueNodeExtended node = dew.SelectedDialogueNode;
+
+            string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
+            string errMsg = "";
+            if (string.IsNullOrEmpty(faceFX) || !faceFX.Contains($"{node.LineStrRef}") || node.LineStrRef == -1)
+            {
+                errMsg = "The selected node does not contain valid audio data. Check it contains a LineStrRef, and that its FaceFX exists and points to it.";
+            }
+            if (node.ReplyType != EReplyTypes.REPLY_STANDARD)
+            {
+                errMsg = "The node type is not REPLY_STANDARD.";
+            }
+            if (node.Interpdata != null)
+            {
+                errMsg = "The selected node already points to an InterpData.";
+            }
+            if (!string.IsNullOrEmpty(errMsg))
+            {
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            // If the provided ID is 0, generate an ID not in use in the conversation
+            List<int> newExportIDs = new();
+            if (exportID == 0)
+            {
+                HashSet<int> usedIDs = new();
+                List<DialogueNodeExtended> nodes = new();
+
+                (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(dew.SelectedConv.EntryList);
+                (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(dew.SelectedConv.ReplyList);
+
+                nodes.AddRange(entryNodes);
+                nodes.AddRange(replyNodes);
+                usedIDs.UnionWith(usedEntryIDs);
+                usedIDs.UnionWith(usedReplyIDs);
+
+                newExportIDs = GenerateIDs(100, 1, usedIDs);
+                exportID = newExportIDs.First();
+            }
+
+            // Write the new ExportID
+            node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
+
+            // Create the required sequence elements and add it to the new exports list
+            List<ExportEntry> newExports = CreateDialogueNodeSequence(dew.Pcc, exportID, dew.SelectedConv.BioConvo.GetProp<IntProperty>("m_nResRefID").Value,
+                node.LineStrRef, node.Line);
+
+            if (newExports.Any())
+            {
+                KismetHelper.AddObjectsToSequence((ExportEntry)dew.SelectedConv.Sequence, false, newExports.ToArray());
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully created the sequence objects.", "Success", MessageBoxButton.OK);
         }
 
         /// <summary>
