@@ -1,4 +1,5 @@
-﻿using LegendaryExplorer.Dialogs;
+﻿using DocumentFormat.OpenXml.InkML;
+using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
@@ -285,13 +286,11 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             List<DialogueNodeExtended> nodes = new();
             List<DialogueNodeExtended> remainingNodes = new();
 
-            (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
-            (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
+            List<DialogueNodeExtended> entryNodes = FilterAudioNodes(conversation.EntryList, el => el.ExportID < 1, usedIDs);
+            List<DialogueNodeExtended> replyNodes = FilterAudioNodes(conversation.ReplyList, el => el.ExportID < 1, usedIDs);
 
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
-            usedIDs.UnionWith(usedEntryIDs);
-            usedIDs.UnionWith(usedReplyIDs);
 
             List<(int, ExportEntry, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
 
@@ -314,13 +313,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
                 // Write the new ExportID
                 node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
+                // Update the Interp comment
+                interp.WriteProperty(GenerateObjComment(node.Line));
                 // Write the StringRef
-                ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
-                {
-                    new StrProperty(node.Line == "No Data" ? "" : node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
-                };
-                interp.WriteProperty(m_aObjComment);
-                // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
                 VOElements.WriteProperty(new IntProperty(node.LineStrRef, "m_nStrRefID"));
 
                 usedIDs.Add(exportID); // Mark the ExportID as used
@@ -380,13 +375,11 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             List<DialogueNodeExtended> notMatchedNodes = new();
             List<string> notMatchedNodesNames = new(); // Used for the result message
 
-            (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(conversation.EntryList);
-            (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(conversation.ReplyList);
+            List<DialogueNodeExtended> entryNodes = FilterAudioNodes(conversation.EntryList, el => el.ExportID < 1, usedIDs);
+            List<DialogueNodeExtended> replyNodes = FilterAudioNodes(conversation.ReplyList, el => el.ExportID < 1, usedIDs);
 
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
-            usedIDs.UnionWith(usedEntryIDs);
-            usedIDs.UnionWith(usedReplyIDs);
 
             // Key: StrRefID, Val: (ExportID, Interp)
             Dictionary<int, (int, ExportEntry)> exportIDs = new();
@@ -406,13 +399,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
                     // Write the new ExportID
                     node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
-                    // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
-                    ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
-                    {
-                        new StrProperty(node.Line == "No Data" ? "" : node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
-                    };
-                    // Write the StringRef
-                    interp.WriteProperty(m_aObjComment);
+                    // Update the Interp comment
+                    interp.WriteProperty(GenerateObjComment(node.Line));
 
                     usedIDs.Add(exportID); // Mark the ExportID as used
                 }
@@ -458,13 +446,11 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             HashSet<int> usedIDs = new();
             List<DialogueNodeExtended> nodes = new();
 
-            (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(dew.SelectedConv.EntryList);
-            (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(dew.SelectedConv.ReplyList);
+            List<DialogueNodeExtended> entryNodes = FilterAudioNodes(dew.SelectedConv.EntryList, el => el.ExportID < 1, usedIDs);
+            List<DialogueNodeExtended> replyNodes = FilterAudioNodes(dew.SelectedConv.ReplyList, el => el.ExportID < 1, usedIDs);
 
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
-            usedIDs.UnionWith(usedEntryIDs);
-            usedIDs.UnionWith(usedReplyIDs);
 
             CreateNodesSequence(dew.Pcc, dew.SelectedConv, convNodeIDBase, nodes, usedIDs);
 
@@ -516,13 +502,11 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 HashSet<int> usedIDs = new();
                 List<DialogueNodeExtended> nodes = new();
 
-                (List<DialogueNodeExtended> entryNodes, HashSet<int> usedEntryIDs) = FilterNodes(dew.SelectedConv.EntryList);
-                (List<DialogueNodeExtended> replyNodes, HashSet<int> usedReplyIDs) = FilterNodes(dew.SelectedConv.ReplyList);
+                List<DialogueNodeExtended> entryNodes = FilterAudioNodes(dew.SelectedConv.EntryList, el => el.ExportID < 1, usedIDs);
+                List<DialogueNodeExtended> replyNodes = FilterAudioNodes(dew.SelectedConv.ReplyList, el => el.ExportID < 1, usedIDs);
 
                 nodes.AddRange(entryNodes);
                 nodes.AddRange(replyNodes);
-                usedIDs.UnionWith(usedEntryIDs);
-                usedIDs.UnionWith(usedReplyIDs);
 
                 newExportIDs = GenerateIDs(100, 1, usedIDs);
                 exportID = newExportIDs.First();
@@ -690,13 +674,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             foreach (DialogueNodeExtended node in nodes)
             {
-                string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
-                if (node.Interpdata != null
-                    && node.LineStrRef != -1
-                    && node.ReplyType == EReplyTypes.REPLY_STANDARD
-                    && faceFX.Contains($"{node.LineStrRef}")
-                    && node.ExportID > 0
-                    )
+                if (IsAudioNode(node) && node.ExportID > 0)
                 {
                     UpdateVOAndComment(node);
                     updateCount += 1;
@@ -760,15 +738,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             if (TryGetInterp(interpData, out ExportEntry interp))
             {
                 UpdateInterpDataStrRefID(interpData, node.LineStrRef);
+                // Update the Interp comment
+                interp.WriteProperty(GenerateObjComment(node.Line));
             }
-
-            // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
-            ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
-            {
-                new StrProperty(node.Line == "No Data" ? "" : node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
-            };
-            // Write the StringRef
-            interp.WriteProperty(m_aObjComment);
         }
 
         /// <summary>
@@ -800,36 +772,43 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
 
         /// <summary>
-        /// Filter the nodes to get only those that fit need to have sequence elements, but don't have them.
-        /// Also get a list of ExportIDs that are in use by the nodes NOT in the return list.
+        /// Filter the nodes, by the filter condition, to get only those that have valid audio information.
         /// </summary>
         /// <param name="nodes">Nodes to filter.</param>
-        /// <returns>Filtered nodes, ExportIDs in use.</returns>
-        private static (List<DialogueNodeExtended>, HashSet<int>) FilterNodes(ObservableCollectionExtended<DialogueNodeExtended> nodes)
+        /// <param name="filter">Filter to apply to the audio nodes.</param>
+        /// <param name="usedIDs">ExportIDs that exist in all the nodes. Useful for linking IDs or generating new ones.</param>
+        /// <returns>Filtered nodes.</returns>
+        private static List<DialogueNodeExtended> FilterAudioNodes(ObservableCollectionExtended<DialogueNodeExtended> nodes,
+            Func<DialogueNodeExtended, bool> filter,
+            HashSet<int> usedIDs = null)
         {
-            if (nodes == null) { return (null, null); }
+            if (nodes == null) { return null; }
 
-            HashSet<int> usedIDs = new();
             List<DialogueNodeExtended> filteredNodes = new();
             foreach (DialogueNodeExtended node in nodes)
             {
-                // Check that there's at least one FaceFX and store its strRef
-                string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
+                if (node.ExportID > 0 && usedIDs != null) { usedIDs.Add(node.ExportID); }
 
-                // Validate nodes that are meant to have data (not autocontinues or dialogend)
-                // and that have proper audio data (strRef matches the FaceFX)
-                if (!string.IsNullOrEmpty(faceFX)
-                    && node.LineStrRef != -1
-                    && node.ReplyType == EReplyTypes.REPLY_STANDARD //
-                    && faceFX.Contains($"{node.LineStrRef}")
-                    )
-                {
-                    if (node.ExportID == -1 || node.ExportID == 0) { filteredNodes.Add(node); }
-                    else { usedIDs.Add(node.ExportID); }
-                }
+                if (IsAudioNode(node) && filter(node)) { filteredNodes.Add(node); }
             }
 
-            return (filteredNodes, usedIDs);
+            return filteredNodes;
+        }
+
+        /// <summary>
+        /// Check if the given node is a valid audio node.
+        /// CONDITION: Has FaceFX. FaceFX matches LineRef. LineRef is not -1. Reply type is REPLY_STANDARD.
+        /// </summary>
+        /// <param name="node">Node to check.</param>
+        /// <returns>Whether it's an audio node or not.</returns>
+        private static bool IsAudioNode(DialogueNodeExtended node)
+        {
+            // Check that there's at least one FaceFX and store its strRef
+            string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
+
+            // Validate that the node is meant to have data (not autocontinues or dialogend)
+            // and that has proper audio data (strRef matches the FaceFX)
+            return !string.IsNullOrEmpty(faceFX) && node.LineStrRef != -1 && node.ReplyType == EReplyTypes.REPLY_STANDARD && faceFX.Contains($"{node.LineStrRef}");
         }
 
         /// <summary>
@@ -853,9 +832,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 IntProperty m_nNodeID = node.GetProperty<IntProperty>("m_nNodeID");
                 // Skip nodes that don't have an ExportID, or an ExportID that is already in use
                 if (m_nNodeID == null || usedIDs.Contains(m_nNodeID.Value)) { continue; }
-
-                ExportEntry VOElements = null;
-                int strRefID;
 
                 // Find the interp data
                 ExportEntry interpData = null;
@@ -888,7 +864,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 if (interpData == null) { continue; }
 
                 // Store the StrRefID in the VOElements track, if one exists
-                (strRefID, VOElements) = GetVOStrRefIDAndTrack(interpData);
+                int strRefID = GetVOStrRefID(interpData, out ExportEntry VOElements);
 
                 // Only consider as valid InterpDatas that contain a VOElements track
                 if (VOElements == null) { continue; }
@@ -903,26 +879,29 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Get the StrRefID of the VOElements track and the track itself of an InterpData, if they exist.
         /// </summary>
         /// <param name="interpData">InterpData to find the value on.</param>
-        /// <returns>(StrRefID, VOElement track), if they exist.</returns>
-        private static (int, ExportEntry) GetVOStrRefIDAndTrack(ExportEntry interpData)
+        /// <param name="VOTrack">VOElementes track, if it exists.</param>
+        /// <returns>StrRefID, if it exists.</returns>
+        private static int GetVOStrRefID(ExportEntry interpData, out ExportEntry VOTrack)
         {
+            VOTrack = null;
             if (!MatineeHelper.TryGetInterpGroup(interpData, "Conversation", out ExportEntry interpGroup))
             {
-                return (0, null);
+                return 0;
             }
 
             if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackVOElements", out ExportEntry interpTrack))
             {
-                return (0, null);
+                return 0;
             }
 
             IntProperty m_nStrRefID = interpTrack.GetProperty<IntProperty>("m_nStrRefID");
             if (m_nStrRefID == null)
             {
-                return (0, null);
+                return 0;
             }
 
-            return (m_nStrRefID.Value, interpTrack);
+            VOTrack = interpTrack;
+            return m_nStrRefID.Value;
         }
 
 
@@ -944,6 +923,20 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             }
 
             interpTrack.WriteProperty(new IntProperty(strRefID, "m_nStrRefID"));
+        }
+
+        /// <summary>
+        /// Generate an ObjComment array containing a single comment based on the given line,
+        /// concatenating the line at 29 characters and adding an ellipsis at the end
+        /// </summary>
+        /// <param name="line">Line to use to generate the comment.</param>
+        /// <returns>Generated ObjComment array.</returns>
+        private static ArrayProperty<StrProperty> GenerateObjComment(string line)
+        {
+            return new("m_aObjComment")
+            {
+                new StrProperty(line == "No Data" ? "" : line.Length <= 32 ? line : $"{line.AsSpan(0, 29)}...")
+            };
         }
         #endregion
 
