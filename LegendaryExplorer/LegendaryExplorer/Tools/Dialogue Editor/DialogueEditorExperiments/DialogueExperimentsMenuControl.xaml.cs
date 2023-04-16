@@ -60,6 +60,15 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
             DialogueEditorExperimentsE.CreateSelectedNodeSequence(GetDEWindow());
         }
 
+        private void UpdateVOsAndComments_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.UpdateVOsAndComments(GetDEWindow());
+        }
+        
+        private void UpdateVOAndComment_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.UpdateVOAndCommentExperiment(GetDEWindow());
+        }
         #endregion
 
     }

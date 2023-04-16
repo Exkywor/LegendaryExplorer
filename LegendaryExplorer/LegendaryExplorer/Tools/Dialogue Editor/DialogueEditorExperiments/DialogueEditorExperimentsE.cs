@@ -311,7 +311,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 // Write the StringRef
                 ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
                 {
-                    new StrProperty(node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
+                    new StrProperty(node.Line == "No Data" ? "" : node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
                 };
                 interp.WriteProperty(m_aObjComment);
                 // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
@@ -403,7 +403,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                     // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
                     ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
                     {
-                        new StrProperty(node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
+                        new StrProperty(node.Line == "No Data" ? "" : node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
                     };
                     // Write the StringRef
                     interp.WriteProperty(m_aObjComment);
@@ -625,7 +625,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             PropertyCollection interpProps = SequenceObjectCreator.GetSequenceObjectDefaults(pcc, "SeqAct_Interp", pcc.Game);
             interpProps.AddOrReplaceProp(new ArrayProperty<StrProperty>("m_aObjComment")
             {
-                new StrProperty(line.Length <= 32 ? line : $"{line.AsSpan(0, 29)}...")
+                new StrProperty(line == "No Data" ? "" : line.Length <= 32 ? line : $"{line.AsSpan(0, 29)}...")
             });
             // Add Conversation variable link
             ArrayProperty<StructProperty> variableLinks = interpProps.GetProp<ArrayProperty<StructProperty>>("VariableLinks");
@@ -676,6 +676,121 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
+            List<DialogueNodeExtended> nodes = new();
+            int updateCount = 0;
+
+            nodes.AddRange(dew.SelectedConv.EntryList);
+            nodes.AddRange(dew.SelectedConv.ReplyList);
+
+            foreach (DialogueNodeExtended node in nodes)
+            {
+                string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
+                if (node.Interpdata != null
+                    && node.LineStrRef != -1
+                    && node.ReplyType == EReplyTypes.REPLY_STANDARD
+                    && faceFX.Contains($"{node.LineStrRef}")
+                    && node.ExportID > 0
+                    )
+                {
+                    UpdateVOAndComment(node);
+                    updateCount += 1;
+                }
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            string txtCount = updateCount == 1 ? "one audio node" : $"{updateCount} nodes";
+            MessageBox.Show($"Successfully updated the StrRefID and Interp comment for {txtCount}.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Update the Interp comment and VOElement' StrRefID that are linked to the selected audio node.
+        /// Wrapper for UpdateVOAndComment so it can used as an experiment.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void UpdateVOAndCommentExperiment(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedDialogueNode == null) { return; }
+
+            DialogueNodeExtended node = dew.SelectedDialogueNode;
+
+            string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
+            string errMsg = "";
+            if (string.IsNullOrEmpty(faceFX) || !faceFX.Contains($"{node.LineStrRef}") || node.LineStrRef == -1)
+            {
+                errMsg = "The selected node does not contain valid audio data. Check it contains a LineStrRef, and that its FaceFX exists and points to it.";
+            }
+            if (node.ReplyType != EReplyTypes.REPLY_STANDARD)
+            {
+                errMsg = "The node type is not REPLY_STANDARD.";
+            }
+            if (node.Interpdata == null)
+            {
+                errMsg = "The selected node doesn't point to an InterpData.";
+            }
+            if (!string.IsNullOrEmpty(errMsg))
+            {
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            UpdateVOAndComment(node);
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully updated the StrRefID and Interp comment for the selected node.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Update the StrRefID of the node's InterpData and the comment of the Interp linking to it.
+        /// </summary>
+        /// <param name="node">Node to update</param>
+        private static void UpdateVOAndComment(DialogueNodeExtended node)
+        {
+            ExportEntry interpData = node.Interpdata;
+
+            if (TryGetInterp(interpData, out ExportEntry interp))
+            {
+                UpdateInterpDataStrRefID(interpData, node.LineStrRef);
+            }
+
+            // Update the Interp comment, concatenating the string at 29 characters and adding an ellipsis at the end
+            ArrayProperty<StrProperty> m_aObjComment = new("m_aObjComment")
+            {
+                new StrProperty(node.Line == "No Data" ? "" : node.Line.Length <= 32 ? node.Line : $"{node.Line.AsSpan(0, 29)}...")
+            };
+            // Write the StringRef
+            interp.WriteProperty(m_aObjComment);
+        }
+
+        /// <summary>
+        /// Try get the first Interp referencing the InterpData.
+        /// </summary>
+        /// <param name="interpData">InterpData to search on.</param>
+        /// <param name="interp">Referencing interp.</param>
+        /// <returns>Whether the Interp was found or not.</returns>
+        private static bool TryGetInterp(ExportEntry interpData, out ExportEntry interp)
+        {
+            interp = null;
+
+            Dictionary<IEntry, List<string>> refs = interpData.GetEntriesThatReferenceThisOne();
+
+            if (refs.Count == 0) { return false; }
+
+            IEntry entry = null;
+            foreach (IEntry e in refs.Keys)
+            {
+                if (e.ClassName == "SeqAct_Interp")
+                {
+                    entry = e;
+                    break;
+                }
+            }
+
+            interp = (ExportEntry)entry;
+            return true;
         }
 
         /// <summary>
@@ -767,8 +882,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 if (interpData == null) { continue; }
 
                 // Store the StrRefID in the VOElements track, if one exists
-
-                (strRefID, VOElements) = GetVOStrRefIDAndTrack(sequence.FileRef, interpData);
+                (strRefID, VOElements) = GetVOStrRefIDAndTrack(interpData);
 
                 // Only consider as valid InterpDatas that contain a VOElements track
                 if (VOElements == null) { continue; }
@@ -782,46 +896,48 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <summary>
         /// Get the StrRefID of the VOElements track and the track itself of an InterpData, if they exist.
         /// </summary>
-        /// <param name="pcc">Pcc to operate on.</param>
         /// <param name="interpData">InterpData to find the value on.</param>
         /// <returns>(StrRefID, VOElement track), if they exist.</returns>
-        private static (int, ExportEntry) GetVOStrRefIDAndTrack(IMEPackage pcc, ExportEntry interpData)
+        private static (int, ExportEntry) GetVOStrRefIDAndTrack(ExportEntry interpData)
         {
-            int strRefID = 0;
-
-            ArrayProperty<ObjectProperty> interpGroups = interpData.GetProperty<ArrayProperty<ObjectProperty>>("InterpGroups");
-
-            if (interpGroups == null) { return (0, null); }
-
-            foreach (ObjectProperty groupRef in interpGroups)
+            if (!MatineeHelper.TryGetInterpGroup(interpData, "Conversation", out ExportEntry interpGroup))
             {
-                if (!pcc.TryGetUExport(groupRef.Value, out ExportEntry group)) { continue; }
-
-                // Skip non Conversation groups
-                NameProperty GroupName = group.GetProperty<NameProperty>("GroupName");
-                if (GroupName == null || GroupName.Value != "Conversation") { continue; }
-
-                ArrayProperty<ObjectProperty> interpTracks = group.GetProperty<ArrayProperty<ObjectProperty>>("InterpTracks");
-                if (interpTracks == null) { continue; }
-
-                foreach (ObjectProperty trackRef in interpTracks)
-                {
-                    if (!pcc.TryGetUExport(trackRef.Value, out ExportEntry track)) { continue; }
-
-                    // Find the VO track
-                    if (track.ClassName == "BioEvtSysTrackVOElements")
-                    {
-                        IntProperty m_nStrRefID = track.GetProperty<IntProperty>("m_nStrRefID");
-                        if (m_nStrRefID != null)
-                        {
-                            strRefID = m_nStrRefID.Value;
-                            return (strRefID, track);
-                        }
-                    }
-                }
+                return (0, null);
             }
 
-            return (0, null);
+            if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackVOElements", out ExportEntry interpTrack))
+            {
+                return (0, null);
+            }
+
+            IntProperty m_nStrRefID = interpTrack.GetProperty<IntProperty>("m_nStrRefID");
+            if (m_nStrRefID == null)
+            {
+                return (0, null);
+            }
+
+            return (m_nStrRefID.Value, interpTrack);
+        }
+
+
+        /// <summary>
+        /// Update the StrRefID of the VOElements track of the InterpData. Creates any missing element.
+        /// </summary>
+        /// <param name="interpData">InterpData to update the value on.</param>
+        /// <param name="strRefID">StringRefID to set.</param>
+        private static void UpdateInterpDataStrRefID(ExportEntry interpData, int strRefID)
+        {
+            if (!MatineeHelper.TryGetInterpGroup(interpData, "Conversation", out ExportEntry interpGroup))
+            {
+                interpGroup = MatineeHelper.AddNewGroupToInterpData(interpData, "Conversation");
+            }
+
+            if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackVOElements", out ExportEntry interpTrack))
+            {
+                interpTrack = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackVOElements");
+            }
+
+            interpTrack.WriteProperty(new IntProperty(strRefID, "m_nStrRefID"));
         }
         #endregion
 
