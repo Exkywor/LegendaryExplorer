@@ -957,7 +957,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             ExportEntry interpData = node.Interpdata;
 
-            if (TryGetInterp(interpData, out ExportEntry interp))
+            if (interpData != null && TryGetInterp(interpData, out ExportEntry interp))
             {
                 UpdateInterpDataStrRefID(interpData, node.LineStrRef);
                 // Update the Interp comment
@@ -1155,6 +1155,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <returns>Generated ObjComment array.</returns>
         private static ArrayProperty<StrProperty> GenerateObjComment(string line)
         {
+            line = line.Trim('\"');
             return new("m_aObjComment")
             {
                 new StrProperty(line == "No Data" ? "" : line.Length <= 32 ? line : $"{line.AsSpan(0, 29)}...")
