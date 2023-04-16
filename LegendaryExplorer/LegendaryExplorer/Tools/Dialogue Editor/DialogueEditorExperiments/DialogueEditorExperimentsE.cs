@@ -1,4 +1,5 @@
 ﻿using LegendaryExplorer.Dialogs;
+using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
@@ -24,43 +25,48 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         // Changes the node's lineref and the parts of the FXA, WwiseStream, and referencing VOs that include it so it doesn't break
         public static void UpdateNativeNodeStringRef(DialogueEditorWindow dew)
         {
-            DialogueNodeExtended selectedDialogueNode = dew.SelectedDialogueNode;
+            DialogueNodeExtended node = dew.SelectedDialogueNode;
 
-            if (dew.Pcc != null && selectedDialogueNode != null)
+            if (dew.Pcc != null && node != null)
             {
                 // Need to check if currStringRef exists
-                var currStringRef = selectedDialogueNode.LineStrRef.ToString();
-                if (string.IsNullOrEmpty(currStringRef))
+                int currStrRefID = node.LineStrRef;
+                if (currStrRefID < 1)
                 {
                     MessageBox.Show("The selected node does not have a Line String Ref, which is required in order to programatically replace the required elements.", "Warning", MessageBoxButton.OK);
                     return;
                 }
 
-                var newStringRef = promptForRef("New line string ref:", "Not a valid line string ref.");
-                if (string.IsNullOrEmpty(newStringRef))
+                int newStrRefID = promptForID("New line string ref:", "Not a valid line string ref.");
+                if (newStrRefID < 1)
                 {
                     return;
                 }
 
-                if (currStringRef == newStringRef)
+                if (currStrRefID == newStrRefID)
                 {
                     MessageBox.Show("New StringRef matches the existing one.", "Warning", MessageBoxButton.OK);
                     return;
                 }
 
+                string currStringRef = currStrRefID.ToString();
+                string newStringRef = newStrRefID.ToString();
+
                 updateFaceFX(dew.FaceFXAnimSetEditorControl_M, currStringRef, newStringRef);
                 updateFaceFX(dew.FaceFXAnimSetEditorControl_F, currStringRef, newStringRef);
 
-                updateWwiseStream(selectedDialogueNode.WwiseStream_Male, currStringRef, newStringRef);
-                updateWwiseStream(selectedDialogueNode.WwiseStream_Female, currStringRef, newStringRef);
+                updateWwiseStream(node.WwiseStream_Male, currStringRef, newStringRef);
+                updateWwiseStream(node.WwiseStream_Female, currStringRef, newStringRef);
 
-                var pcc = dew.Pcc;
-                updateVOReferences(pcc, selectedDialogueNode.WwiseStream_Male, currStringRef, newStringRef);
-                updateVOReferences(pcc, selectedDialogueNode.WwiseStream_Female, currStringRef, newStringRef);
+                updateVOReferences(dew.Pcc, node.WwiseStream_Male, currStringRef, newStringRef);
+                updateVOReferences(dew.Pcc, node.WwiseStream_Female, currStringRef, newStringRef);
 
-                int intRef;
-                int.TryParse(newStringRef, out intRef);
-                selectedDialogueNode.LineStrRef = intRef;
+                node.LineStrRef = newStrRefID;
+                node.Line = TLKManagerWPF.GlobalFindStrRefbyID(node.LineStrRef, dew.Pcc);
+
+                UpdateVOAndComment(node);
+                dew.RecreateNodesToProperties(dew.SelectedConv);
+                dew.ForceRefreshCommand.Execute(null);
 
                 MessageBox.Show($"The node now points to {newStringRef}.", "Success", MessageBoxButton.OK);
             }
