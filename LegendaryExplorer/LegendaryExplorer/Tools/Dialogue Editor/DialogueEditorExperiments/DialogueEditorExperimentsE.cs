@@ -1,4 +1,5 @@
 ﻿using LegendaryExplorer.Dialogs;
+using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
@@ -29,7 +30,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="dew">Current DE window.</param>
         public static void UpdateNativeNodeStringRef(DialogueEditorWindow dew)
         {
-            DialogueNodeExtended selectedDialogueNode = dew.SelectedDialogueNode;
+            DialogueNodeExtended node = dew.SelectedDialogueNode;
 
             if (dew.Pcc == null || selectedDialogueNode == null) { return; }
 
