@@ -291,7 +291,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
 
-            List<(int, ExportEntry, ExportEntry, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
+            List<(int, ExportEntry, ExportEntry, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs, false);
 
             // Assign ExportIDs to the dialogue nodes, and write the new StrRefIDs to the VOElements tracks
             for (int i = 0; i < nodes.Count; i++)
@@ -818,8 +818,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="sequence">Sequence to get the elements from.</param>
         /// <param name="conversation">BioConversation to operate on.</param>
         /// <param name="usedIDs">List of ExportIDs that are already in use.</param>
+        /// <param name="ignoredNonVOs">Whether to ignore nodes that don't have a VOElements track.</param>
         /// <returns>List of (ExportID, VOElements track, InterpData, Interp, StrRefID)</returns>
-        private static List<(int, ExportEntry, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, HashSet<int> usedIDs)
+        private static List<(int, ExportEntry, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, HashSet<int> usedIDs, bool ignoredNonVOs = true)
         {
             IMEPackage pcc = sequence.FileRef;
 
@@ -867,8 +868,11 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 // Store the StrRefID in the VOElements track, if one exists
                 int strRefID = GetVOStrRefID(interpData, out ExportEntry VOElements);
 
-                // Only consider as valid InterpDatas that contain a VOElements track
-                if (VOElements == null) { continue; }
+                if (ignoredNonVOs)
+                {
+                    // Only consider as valid InterpDatas that contain a VOElements track
+                    if (VOElements == null) { continue; }
+                }
 
                 elements.Add((m_nNodeID.Value, VOElements, interpData, seqActInterp, strRefID));
             }
