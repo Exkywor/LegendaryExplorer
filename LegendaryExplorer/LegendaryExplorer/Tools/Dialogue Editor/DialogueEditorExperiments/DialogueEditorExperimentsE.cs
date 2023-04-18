@@ -752,6 +752,81 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
 
         /// <summary>
+        /// Add a Conversation group, and VOElements and SwitchCamera tracks to all audio nodes in the selected conversation.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void AddConversationDefaults(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedConv == null) { return; }
+
+            List<DialogueNodeExtended> nodes = new();
+
+            nodes.AddRange(dew.SelectedConv.EntryList);
+            nodes.AddRange(dew.SelectedConv.ReplyList);
+
+            foreach (DialogueNodeExtended node in nodes)
+            {
+                if (IsAudioNode(node) && node.ExportID > 0 && node.Interpdata != null)
+                {
+                    AddConversationDefaultsToInterpData(node.Interpdata);
+                }
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully added the default conversation elements to all audio nodes in the conversation.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Add a Conversation group, and VOElements and SwitchCamera tracks to the selected node.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void AddConversationDefaultsToNodeExperiment(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedDialogueNode == null) { return; }
+
+            DialogueNodeExtended node = dew.SelectedDialogueNode;
+
+            string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
+            string errMsg = "";
+            if (string.IsNullOrEmpty(faceFX) || !faceFX.Contains($"{node.LineStrRef}") || node.LineStrRef == -1)
+            {
+                errMsg = "The selected node does not contain valid audio data. Check it contains a LineStrRef, and that its FaceFX exists and points to it.";
+            }
+            if (node.ReplyType != EReplyTypes.REPLY_STANDARD)
+            {
+                errMsg = "The node type is not REPLY_STANDARD.";
+            }
+            if (node.Interpdata == null)
+            {
+                errMsg = "The selected node doesn't point to an InterpData.";
+            }
+            if (!string.IsNullOrEmpty(errMsg))
+            {
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            AddConversationDefaultsToInterpData(node.Interpdata);
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully added the default conversation elements to the selected node.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Add a Conversation group, and VOElements and SwitchCamera tracks to interpData.
+        /// </summary>
+        /// <param name="interpData">InterpData to add the elements to.</param>
+        private static void AddConversationDefaultsToInterpData(ExportEntry interpData)
+        {
+
+        }
+
+
+        /// <summary>
         /// Try get the first Interp referencing the InterpData.
         /// </summary>
         /// <param name="interpData">InterpData to search on.</param>

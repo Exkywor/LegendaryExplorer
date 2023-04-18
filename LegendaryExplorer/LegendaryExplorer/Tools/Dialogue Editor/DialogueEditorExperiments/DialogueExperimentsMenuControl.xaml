@@ -21,5 +21,7 @@
         <MenuItem Header="Create Sequence Elements for Selected Node" Click="CreateSelectedNodeSequence_Click" ToolTip="Create the basic sequence objects for the selected audio node, if it doesn't have an ExportID."/>
         <MenuItem Header="Update VOElements and Interp comment for Nodes" Click="UpdateVOsAndComments_Click" ToolTip="Update all the Interp comments and VOElements' StrRefIDs that are linked to the audio nodes of the selected conversation."/>
         <MenuItem Header="Update VOElements and Interp comment for Selected Node" Click="UpdateVOAndComment_Click" ToolTip="Update the Interp comment and VOElement' StrRefID that are linked to the selected audio node."/>
+        <MenuItem Header="Add Conversation Defaults to Conversation" Click="AddConversationDefaults_Click" ToolTip="Add a Conversation group, and VOElements and SwitchCamera tracks to all audio nodes in the selected conversation."/>
+        <MenuItem Header="Add Conversation Defaults to Selected Node" Click="AddConversationDefaultsToNode_Click" ToolTip="Add a Conversation group, and VOElements and SwitchCamera tracks to the selected node."/>
     </MenuItem>
 </MenuItem>

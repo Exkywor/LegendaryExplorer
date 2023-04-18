@@ -69,6 +69,16 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
         {
             DialogueEditorExperimentsE.UpdateVOAndCommentExperiment(GetDEWindow());
         }
+
+        private void AddConversationDefaults_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.AddConversationDefaults(GetDEWindow());
+        }
+
+        private void AddConversationDefaultsToNode_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.AddConversationDefaultsToNodeExperiment(GetDEWindow());
+        }
         #endregion
 
     }
