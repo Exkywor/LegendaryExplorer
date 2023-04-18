@@ -698,23 +698,14 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             DialogueNodeExtended node = dew.SelectedDialogueNode;
 
-            string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
-            string errMsg = "";
-            if (string.IsNullOrEmpty(faceFX) || !faceFX.Contains($"{node.LineStrRef}") || node.LineStrRef == -1)
+            if (!IsAudioNode(node, out string errMsg))
             {
-                errMsg = "The selected node does not contain valid audio data. Check it contains a LineStrRef, and that its FaceFX exists and points to it.";
-            }
-            if (node.ReplyType != EReplyTypes.REPLY_STANDARD)
-            {
-                errMsg = "The node type is not REPLY_STANDARD.";
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
             }
             if (node.Interpdata != null)
             {
-                errMsg = "The selected node already points to an InterpData.";
-            }
-            if (!string.IsNullOrEmpty(errMsg))
-            {
-                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                MessageBox.Show("The selected node already points to an InterpData.", "Warning", MessageBoxButton.OK);
                 return;
             }
 
@@ -929,23 +920,14 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             DialogueNodeExtended node = dew.SelectedDialogueNode;
 
-            string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
-            string errMsg = "";
-            if (string.IsNullOrEmpty(faceFX) || !faceFX.Contains($"{node.LineStrRef}") || node.LineStrRef == -1)
+            if (!IsAudioNode(node, out string errMsg))
             {
-                errMsg = "The selected node does not contain valid audio data. Check it contains a LineStrRef, and that its FaceFX exists and points to it.";
-            }
-            if (node.ReplyType != EReplyTypes.REPLY_STANDARD)
-            {
-                errMsg = "The node type is not REPLY_STANDARD.";
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
             }
             if (node.Interpdata == null)
             {
-                errMsg = "The selected node doesn't point to an InterpData.";
-            }
-            if (!string.IsNullOrEmpty(errMsg))
-            {
-                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                MessageBox.Show("The selected node doesn't point to an InterpData.", "Warning", MessageBoxButton.OK);
                 return;
             }
 
@@ -1010,23 +992,15 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             DialogueNodeExtended node = dew.SelectedDialogueNode;
 
-            string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
-            string errMsg = "";
-            if (string.IsNullOrEmpty(faceFX) || !faceFX.Contains($"{node.LineStrRef}") || node.LineStrRef == -1)
+
+            if (!IsAudioNode(node, out string errMsg))
             {
-                errMsg = "The selected node does not contain valid audio data. Check it contains a LineStrRef, and that its FaceFX exists and points to it.";
-            }
-            if (node.ReplyType != EReplyTypes.REPLY_STANDARD)
-            {
-                errMsg = "The node type is not REPLY_STANDARD.";
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
             }
             if (node.Interpdata == null)
             {
-                errMsg = "The selected node doesn't point to an InterpData.";
-            }
-            if (!string.IsNullOrEmpty(errMsg))
-            {
-                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                MessageBox.Show("The selected node doesn't point to an InterpData.", "Warning", MessageBoxButton.OK);
                 return;
             }
 
@@ -1108,12 +1082,36 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <returns>Whether it's an audio node or not.</returns>
         private static bool IsAudioNode(DialogueNodeExtended node)
         {
+            return IsAudioNode(node, out string errMsg);
+        }
+
+        /// <summary>
+        /// Check if the given node is a valid audio node.
+        /// CONDITION: Has FaceFX. FaceFX matches LineRef. LineRef is not -1. Reply type is REPLY_STANDARD.
+        /// </summary>
+        /// <param name="node">Node to check.</param>
+        /// <param name="errMsg">Error message.</param>
+        /// <returns>Whether it's an audio node or not.</returns>
+        private static bool IsAudioNode(DialogueNodeExtended node, out string errMsg)
+        {
+            errMsg = "";
             // Check that there's at least one FaceFX and store its strRef
             string faceFX = node.FaceFX_Female ?? (node.FaceFX_Male ?? "");
 
             // Validate that the node is meant to have data (not autocontinues or dialogend)
             // and that has proper audio data (strRef matches the FaceFX)
-            return !string.IsNullOrEmpty(faceFX) && node.LineStrRef != -1 && node.ReplyType == EReplyTypes.REPLY_STANDARD && faceFX.Contains($"{node.LineStrRef}");
+            if (string.IsNullOrEmpty(faceFX) || !faceFX.Contains($"{node.LineStrRef}") || node.LineStrRef == -1)
+            {
+                errMsg = $"Node {(node.IsReply ? "R" : "E")}{node.NodeCount} does not contain valid audio data. Check it contains a LineStrRef, and that its FaceFX exists and points to it.";
+                return false;
+            }
+            if (node.ReplyType != EReplyTypes.REPLY_STANDARD)
+            {
+                errMsg = $"Node {(node.IsReply ? "R" : "E")}{node.NodeCount}'s type is not REPLY_STANDARD.";
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
