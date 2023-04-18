@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.InkML;
-using LegendaryExplorer.Dialogs;
+﻿using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
@@ -292,7 +291,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
 
-            List<(int, ExportEntry, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
+            List<(int, ExportEntry, ExportEntry, ExportEntry, int)> elements = GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs);
 
             // Assign ExportIDs to the dialogue nodes, and write the new StrRefIDs to the VOElements tracks
             for (int i = 0; i < nodes.Count; i++)
@@ -309,14 +308,14 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 }
 
                 DialogueNodeExtended node = nodes[i];
-                (int exportID, ExportEntry VOElements, ExportEntry interp, int _) = elements[i];
+                (int exportID, ExportEntry VOElements, ExportEntry interpData, ExportEntry interp, int _) = elements[i];
 
                 // Write the new ExportID
                 node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
                 // Update the Interp comment
                 interp.WriteProperty(GenerateObjComment(node.Line));
                 // Write the StringRef
-                VOElements.WriteProperty(new IntProperty(node.LineStrRef, "m_nStrRefID"));
+                UpdateInterpDataStrRefID(interpData, node.LineStrRef, VOElements);
 
                 usedIDs.Add(exportID); // Mark the ExportID as used
             }
@@ -381,24 +380,26 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             nodes.AddRange(entryNodes);
             nodes.AddRange(replyNodes);
 
-            // Key: StrRefID, Val: (ExportID, Interp)
-            Dictionary<int, (int, ExportEntry)> exportIDs = new();
+            // Key: StrRefID, Val: (ExportID, Interp, VOElements)
+            Dictionary<int, (int, ExportEntry, ExportEntry)> exportIDs = new();
             foreach (var el in GetConvNodeElements((ExportEntry)dew.SelectedConv.Sequence, conversation, usedIDs))
             {
                 // We do it like this instead of using ToDictionary to avoid errors with duplicate keys
-                (int ExportID, ExportEntry _, ExportEntry interp, int StrRefID) = el;
-                exportIDs[StrRefID] = (ExportID, interp);
+                (int ExportID, ExportEntry VOElements, ExportEntry _, ExportEntry interp, int StrRefID) = el;
+                exportIDs[StrRefID] = (ExportID, interp, VOElements);
             }
 
             // Assign ExportIDs to the dialogue nodes that match the StrRefID
             foreach (DialogueNodeExtended node in nodes)
             {
-                if (exportIDs.TryGetValue(node.LineStrRef, out (int, ExportEntry) el))
+                if (exportIDs.TryGetValue(node.LineStrRef, out (int, ExportEntry, ExportEntry) el))
                 {
-                    (int exportID, ExportEntry interp) = el;
+                    (int exportID, ExportEntry interp, ExportEntry VOElements) = el;
 
                     // Write the new ExportID
                     node.NodeProp.Properties.AddOrReplaceProp(new IntProperty(exportID, "nExportID"));
+                    // Insert a defualt key if needed
+                    AddDefaultTrackKey(VOElements, true, 0, VOElements.GetProperties());
                     // Update the Interp comment
                     interp.WriteProperty(GenerateObjComment(node.Line));
 
@@ -817,12 +818,12 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="sequence">Sequence to get the elements from.</param>
         /// <param name="conversation">BioConversation to operate on.</param>
         /// <param name="usedIDs">List of ExportIDs that are already in use.</param>
-        /// <returns>List of (ExportID, VOElements track, Interp, StrRefID)</returns>
-        private static List<(int, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, HashSet<int> usedIDs)
+        /// <returns>List of (ExportID, VOElements track, InterpData, Interp, StrRefID)</returns>
+        private static List<(int, ExportEntry, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, HashSet<int> usedIDs)
         {
             IMEPackage pcc = sequence.FileRef;
 
-            List<(int, ExportEntry, ExportEntry, int)> elements = new();
+            List<(int, ExportEntry, ExportEntry, ExportEntry, int)> elements = new();
 
             List<IEntry> convNodes = SeqTools.GetAllSequenceElements(sequence)
                 .Where(el => el.ClassName == "BioSeqEvt_ConvNode").ToList();
@@ -869,7 +870,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 // Only consider as valid InterpDatas that contain a VOElements track
                 if (VOElements == null) { continue; }
 
-                elements.Add((m_nNodeID.Value, VOElements, seqActInterp, strRefID));
+                elements.Add((m_nNodeID.Value, VOElements, interpData, seqActInterp, strRefID));
             }
 
             return elements;
@@ -910,19 +911,58 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// </summary>
         /// <param name="interpData">InterpData to update the value on.</param>
         /// <param name="strRefID">StringRefID to set.</param>
-        private static void UpdateInterpDataStrRefID(ExportEntry interpData, int strRefID)
+        private static void UpdateInterpDataStrRefID(ExportEntry interpData, int strRefID, ExportEntry VOElements = null)
         {
-            if (!MatineeHelper.TryGetInterpGroup(interpData, "Conversation", out ExportEntry interpGroup))
+            if (VOElements == null)
             {
-                interpGroup = MatineeHelper.AddNewGroupToInterpData(interpData, "Conversation");
+                if (!MatineeHelper.TryGetInterpGroup(interpData, "Conversation", out ExportEntry interpGroup))
+                {
+                    interpGroup = MatineeHelper.AddNewGroupToInterpData(interpData, "Conversation");
+                }
+
+                if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackVOElements", out VOElements))
+                {
+                    VOElements = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackVOElements");
+                }
             }
 
-            if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackVOElements", out ExportEntry interpTrack))
-            {
-                interpTrack = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackVOElements");
-            }
+            PropertyCollection props = VOElements.GetProperties();
+            props.AddOrReplaceProp(new IntProperty(strRefID, "m_nStrRefID"));
+            AddDefaultTrackKey(VOElements, false, 0, props);
+            VOElements.WriteProperties(props);
+        }
 
-            interpTrack.WriteProperty(new IntProperty(strRefID, "m_nStrRefID"));
+        /// <summary>
+        /// Add a default key to the TrackKeys prop of the interpTrack, if it doesn't contain one, creating the property if necessary,
+        /// and writing the props if requested.
+        /// </summary>
+        /// <param name="interpTrack">Track to add the key to.</param>
+        /// <param name="writeProps">Whether to write the props or not. Useful to have control whether the caller or the callee writes and avoid redundant writes.</param>
+        /// <param name="time">Time to insert the key at.</param>
+        /// <param name="props">Props containing the trackKeys, or to which write them.</param>
+        /// <returns>Updated property collection.</returns>
+        private static PropertyCollection AddDefaultTrackKey(ExportEntry interpTrack, bool writeProps, int time = 0, PropertyCollection props = null)
+        {
+            if (props == null) { props = interpTrack.GetProperties(); }
+            ArrayProperty<StructProperty> m_aTrackKeys = props.GetProp<ArrayProperty<StructProperty>>("m_aTrackKeys")
+                ?? new ArrayProperty<StructProperty>("m_aTrackKeys");
+
+            if (!m_aTrackKeys.Any())
+            {
+                // Add the key to the track
+                m_aTrackKeys.Add(new StructProperty("BioTrackKey",
+                    new PropertyCollection()
+                    {
+                        new NameProperty("None", "KeyName"),
+                        new FloatProperty(time, "fTime")
+                    },
+                    "BioTrackKey"));
+
+                props.AddOrReplaceProp(m_aTrackKeys);
+            }
+            if (writeProps) { interpTrack.WriteProperties(props); }
+
+            return props;
         }
 
         /// <summary>
