@@ -646,7 +646,14 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             ExportEntry conversationGroup = MatineeHelper.AddNewGroupToInterpData(interpData, "Conversation");
             ExportEntry VOElements = MatineeHelper.AddNewTrackToGroup(conversationGroup, "BioEvtSysTrackVOElements");
             VOElements.WriteProperty(new IntProperty(strRefID, "m_nStrRefID"));
-            VOElements.WriteProperty(new ArrayProperty<StructProperty>("m_aTrackKeys"));
+            VOElements.WriteProperty(new ArrayProperty<StructProperty>("m_aTrackKeys")
+            {
+                new StructProperty("BioTrackKey", new PropertyCollection()
+                {
+                    new NameProperty("None", "KeyName"),
+                    new FloatProperty(0, "fTime")
+                }, "BioTrackKey")
+            });
 
             exports.Add(interpData);
 
