@@ -23,5 +23,7 @@
         <MenuItem Header="Update VOElements and Interp comment for Selected Node" Click="UpdateVOAndComment_Click" ToolTip="Update the Interp comment and VOElement' StrRefID that are linked to the selected audio node."/>
         <MenuItem Header="Add Conversation Defaults to Conversation" Click="AddConversationDefaults_Click" ToolTip="Add a Conversation group, and VOElements and SwitchCamera tracks to all audio nodes in the selected conversation."/>
         <MenuItem Header="Add Conversation Defaults to Selected Node" Click="AddConversationDefaultsToNode_Click" ToolTip="Add a Conversation group, and VOElements and SwitchCamera tracks to the selected node."/>
+        <MenuItem Header="Update the InterpLengths of the Conversation" Click="UpdateInterpLengths_Click" ToolTip="Update the InterpLength of all the audio nodes in the selectd conversation, based either on the FXA or the audio length."/>
+        <MenuItem Header="Update the InterpLengths of Selected Node" Click="UpdateInterpLength_Click" ToolTip="Update the InterpLength of the selected audio node in the selectd conversation, based either on the FXA or the audio length."/>
     </MenuItem>
 </MenuItem>

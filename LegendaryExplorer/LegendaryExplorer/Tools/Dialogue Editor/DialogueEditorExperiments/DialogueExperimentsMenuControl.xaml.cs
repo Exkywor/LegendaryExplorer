@@ -79,7 +79,16 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
         {
             DialogueEditorExperimentsE.AddConversationDefaultsToNodeExperiment(GetDEWindow());
         }
-        #endregion
 
+        private void UpdateInterpLengths_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.UpdateInterpLengths(GetDEWindow());
+        }
+
+        private void UpdateInterpLength_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.UpdateInterpLengthExperiment(GetDEWindow());
+        }
+        #endregion
     }
 }
