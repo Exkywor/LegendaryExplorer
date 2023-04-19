@@ -89,6 +89,16 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
         {
             DialogueEditorExperimentsE.UpdateInterpLengthExperiment(GetDEWindow());
         }
+
+        private void BatchGenerateLE1AudioLinks_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.BatchGenerateLE1AudioLinks(GetDEWindow());
+        }
+
+        private void GenerateLE1AudioLinks_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.GenerateLE1AudioLinksExperiment(GetDEWindow());
+        }
         #endregion
     }
 }
