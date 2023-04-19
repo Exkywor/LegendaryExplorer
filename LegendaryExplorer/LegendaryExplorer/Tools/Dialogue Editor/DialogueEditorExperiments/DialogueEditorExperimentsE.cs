@@ -972,7 +972,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             {
                 if (IsAudioNode(node) && node.ExportID > 0 && node.Interpdata != null)
                 {
-                    AddConversationDefaultsToInterpData(node.Interpdata);
+                    AddConversationDefaultsToInterpData(node.Interpdata, node.LineStrRef);
                 }
             }
 
@@ -1004,7 +1004,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 return;
             }
 
-            AddConversationDefaultsToInterpData(node.Interpdata);
+            AddConversationDefaultsToInterpData(node.Interpdata, node.LineStrRef);
 
             dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
@@ -1016,11 +1016,29 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Add a Conversation group, and VOElements and SwitchCamera tracks to interpData.
         /// </summary>
         /// <param name="interpData">InterpData to add the elements to.</param>
-        private static void AddConversationDefaultsToInterpData(ExportEntry interpData)
+        /// <param name="strRefID">StrRefID for the VOElements track</param>
+        private static void AddConversationDefaultsToInterpData(ExportEntry interpData, int strRefID = 0)
         {
+            if (!MatineeHelper.TryGetInterpGroup(interpData, "Conversation", out ExportEntry interpGroup))
+            {
+                interpGroup = MatineeHelper.AddNewGroupToInterpData(interpData, "Conversation");
+            }
 
+            if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackVOElements", out ExportEntry VOElements))
+            {
+                VOElements = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackVOElements");
+                PropertyCollection props = VOElements.GetProperties();
+                props.AddOrReplaceProp(new IntProperty(strRefID, "m_nStrRefID"));
+                AddDefaultTrackKey(VOElements, false, 0, props);
+                VOElements.WriteProperties(props);
+            }
+
+            if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackSwitchCamera", out ExportEntry SwitchCamera))
+            {
+                SwitchCamera = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackSwitchCamera");
+                MatineeHelper.AddDefaultPropertiesToTrack(SwitchCamera);
+            }
         }
-
 
         /// <summary>
         /// Try get the first Interp referencing the InterpData.
