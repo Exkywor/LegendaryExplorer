@@ -948,6 +948,73 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             node.Interpdata.WriteProperty(new FloatProperty(interpLength, "InterpLength"));
         }
 
+
+        /// <summary>
+        /// Create SoundCues and SoundNodeWaves, and link them to the FaceFX for all audio nodes that don't have one.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void BatchGenerateLE1AudioLinks(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.Pcc.Game != MEGame.LE1 || dew.SelectedConv == null) { return; }
+
+            List<DialogueNodeExtended> nodes = new();
+
+            nodes.AddRange(dew.SelectedConv.EntryList);
+            nodes.AddRange(dew.SelectedConv.ReplyList);
+
+            foreach (DialogueNodeExtended node in nodes)
+            {
+                if (IsAudioNode(node) && node.ExportID > 0 && node.Interpdata != null)
+                {
+                    GenerateLE1AudioLinks(node);
+                }
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully created the SoundCue, SoundNodeWave, and linked it to the FaceFX for all the audio nodes.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Create SoundCues and SoundNodeWaves, and link them to the FaceFX for the selected audio node.
+        /// Wrapper for GenerateLE1AudioLinks so it can be used on its own.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void GenerateLE1AudioLinksExperiment(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.Pcc.Game != MEGame.LE1 || dew.SelectedDialogueNode == null) { return; }
+
+            DialogueNodeExtended node = dew.SelectedDialogueNode;
+
+            if (!IsAudioNode(node, out string errMsg))
+            {
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
+            }
+            if (node.Interpdata == null)
+            {
+                MessageBox.Show("The selected node doesn't point to an InterpData.", "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            GenerateLE1AudioLinks(node);
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully created the SoundCue, SoundNodeWave, and linked it to the FaceFX for the selected audio node.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Create SoundCues and SoundNodeWaves, and link them to the FaceFX for the selected audio node.
+        /// </summary>
+        /// <param name="node">Node to generate the links for.</param>
+        private static void GenerateLE1AudioLinks(DialogueNodeExtended node)
+        {
+
+        }
+
         /// <summary>
         /// Try get the first Interp referencing the InterpData.
         /// </summary>

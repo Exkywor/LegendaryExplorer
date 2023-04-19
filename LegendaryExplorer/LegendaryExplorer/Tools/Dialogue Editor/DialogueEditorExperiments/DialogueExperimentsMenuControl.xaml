@@ -25,5 +25,7 @@
         <MenuItem Header="Add Conversation Defaults to Selected Node" Click="AddConversationDefaultsToNode_Click" ToolTip="Add a Conversation group, and VOElements and SwitchCamera tracks to the selected node."/>
         <MenuItem Header="Update the InterpLengths of the Conversation" Click="UpdateInterpLengths_Click" ToolTip="Update the InterpLength of all the audio nodes in the selectd conversation, based either on the FXA or the audio length."/>
         <MenuItem Header="Update the InterpLengths of Selected Node" Click="UpdateInterpLength_Click" ToolTip="Update the InterpLength of the selected audio node in the selectd conversation, based either on the FXA or the audio length."/>
+        <MenuItem Header="Generate LE1 Audio Links for Conversation" Click="BatchGenerateLE1AudioLinks_Click" ToolTip="Create SoundCues and SoundNodeWaves, and link them to the FaceFX for all audio nodes that don't have one."/>
+        <MenuItem Header="Genreeate LE1 Audio Links for Selected Node" Click="GenerateLE1AudioLinks_Click" ToolTip="Create SoundCues and SoundNodeWaves, and link them to the FaceFX for the selected audio node."/>
     </MenuItem>
 </MenuItem>
