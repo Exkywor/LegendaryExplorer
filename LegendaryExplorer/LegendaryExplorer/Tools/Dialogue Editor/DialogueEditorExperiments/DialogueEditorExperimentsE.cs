@@ -1153,6 +1153,20 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 }
             }
 
+            // If the first VO starts beyond zero, add that offset to the length
+            if (MatineeHelper.TryGetInterpGroup(node.Interpdata, "Conversation", out ExportEntry conversation))
+            {
+                if (MatineeHelper.TryGetInterpTrack(conversation, "BioEvtSysTrackVOElements", out ExportEntry VOElements))
+                {
+                    ArrayProperty<StructProperty> m_aTrackKeys = VOElements.GetProperty<ArrayProperty<StructProperty>>("m_aTrackKeys");
+
+                    if (m_aTrackKeys != null && m_aTrackKeys.Any())
+                    {
+                        interpLength += m_aTrackKeys.First().GetProp<FloatProperty>("fTime").Value;
+                    }
+                }
+            }
+
             node.Interpdata.WriteProperty(new FloatProperty(interpLength, "InterpLength"));
         }
 
