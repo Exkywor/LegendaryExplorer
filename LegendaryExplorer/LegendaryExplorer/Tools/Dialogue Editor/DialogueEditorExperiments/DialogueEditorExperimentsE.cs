@@ -1041,6 +1041,81 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
 
         /// <summary>
+        /// Update the InterpLength of all the audio nodes in the selectd conversation, based either on the FXA or the audio length.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void UpdateInterpLengths(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedConv == null) { return; }
+
+            bool byFXA = MessageBoxResult.Yes == MessageBox.Show(
+                "Calculate the InterpLengths by the FXA length? If not, the audio length will be used.",
+                "Calculate by FXA", MessageBoxButton.YesNo);
+
+            List<DialogueNodeExtended> nodes = new();
+
+            nodes.AddRange(dew.SelectedConv.EntryList);
+            nodes.AddRange(dew.SelectedConv.ReplyList);
+
+            foreach (DialogueNodeExtended node in nodes)
+            {
+                if (IsAudioNode(node) && node.ExportID > 0 && node.Interpdata != null)
+                {
+                    UpdateInterpLength(node, byFXA);
+                }
+            }
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully updated the InterpLength of all audio nodes in the conversation.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Update the InterpLength of the Node, based either on the FXA or the audio length.
+        /// Wrapper for UpdateInterpLength so it can be used on its own.
+        /// </summary>
+        /// <param name="dew">Current Dialogue Editor instance.</param>
+        public static void UpdateInterpLengthExperiment(DialogueEditorWindow dew)
+        {
+            if (dew.Pcc == null || dew.SelectedDialogueNode == null) { return; }
+
+            DialogueNodeExtended node = dew.SelectedDialogueNode;
+
+            if (!IsAudioNode(node, out string errMsg))
+            {
+                MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
+                return;
+            }
+            if (node.Interpdata == null)
+            {
+                MessageBox.Show("The selected node doesn't point to an InterpData.", "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            bool byFXA = MessageBoxResult.Yes == MessageBox.Show(
+                "Calculate the InterpLengths by the FXA length? If not, the audio length will be used.",
+                "Calculate by FXA", MessageBoxButton.YesNo);
+
+            UpdateInterpLength(node, byFXA);
+
+            dew.RecreateNodesToProperties(dew.SelectedConv);
+            dew.ForceRefreshCommand.Execute(null);
+
+            MessageBox.Show($"Successfully updated the InterpLength of the selected audio node.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Update the InterpLength of the Node, based either on the FXA or the audio length.
+        /// </summary>
+        /// <param name="node">Node to update.</param>
+        /// <param name="byFXA">Whether to update the length by the FXA length, or the audio one.</param>
+        private static void UpdateInterpLength(DialogueNodeExtended node, bool byFXA)
+        {
+
+        }
+
+        /// <summary>
         /// Try get the first Interp referencing the InterpData.
         /// </summary>
         /// <param name="interpData">InterpData to search on.</param>
