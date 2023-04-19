@@ -2,12 +2,14 @@
 using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
+using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Matinee;
 using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
+using LegendaryExplorerCore.Unreal.BinaryConverters;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
 using System;
 using System.Collections.Generic;
@@ -957,6 +959,21 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.Pcc.Game != MEGame.LE1 || dew.SelectedConv == null) { return; }
 
+            int bioStreamingDataID = promptForInt("BioStreamingData export number:", "Not a valid export number. It must be positive integer", 0, "BioStreamingData");
+            if (!dew.Pcc.TryGetEntry(bioStreamingDataID, out IEntry entry) || entry.ClassName != "BioSoundNodeWaveStreamingData")
+            {
+                MessageBox.Show("The provided export is not a BioStreamingData.", "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            string baseName = GetBaseConversationName((ExportEntry)dew.SelectedConv.Sequence);
+            if (string.IsNullOrEmpty(baseName))
+            {
+                MessageBox.Show("Could not find a common base name between the conversation and the tlk file set.\n" +
+                    "Ensure they both have a common prefix, which will be used as the based of the SoundNodeWave names.", "Warning", MessageBoxButton.OK);
+                return;
+            }
+
             List<DialogueNodeExtended> nodes = new();
 
             nodes.AddRange(dew.SelectedConv.EntryList);
@@ -966,7 +983,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             {
                 if (IsAudioNode(node) && node.ExportID > 0 && node.Interpdata != null)
                 {
-                    GenerateLE1AudioLinks(node);
+                    GenerateLE1AudioLinks(node, (ExportEntry)dew.Pcc.GetEntry(dew.SelectedConv.Sequence.idxLink),
+                        baseName, bioStreamingDataID, dew.FaceFXAnimSetEditorControl_M, dew.FaceFXAnimSetEditorControl_F);
                 }
             }
 
@@ -998,7 +1016,23 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 return;
             }
 
-            GenerateLE1AudioLinks(node);
+            int bioStreamingDataID = promptForInt("BioStreamingData export number:", "Not a valid export number. It must be positive integer", 0, "BioStreamingData");
+            if (!dew.Pcc.TryGetEntry(bioStreamingDataID, out IEntry entry) || entry.ClassName != "BioSoundNodeWaveStreamingData")
+            {
+                MessageBox.Show("The provided export is not a BioStreamingData.", "Warning", MessageBoxButton.OK);
+                return;
+            } 
+
+            string baseName = GetBaseConversationName((ExportEntry)dew.SelectedConv.Sequence);
+            if (string.IsNullOrEmpty(baseName))
+            {
+                MessageBox.Show("Could not find a common base name between the conversation and the tlk file set.\n" +
+                    "Ensure they both have a common prefix, which will be used as the based of the SoundNodeWave names.", "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            GenerateLE1AudioLinks(node, (ExportEntry)dew.Pcc.GetEntry(dew.SelectedConv.Sequence.idxLink),
+                baseName, bioStreamingDataID, dew.FaceFXAnimSetEditorControl_M, dew.FaceFXAnimSetEditorControl_F);
 
             dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
@@ -1010,9 +1044,147 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Create SoundCues and SoundNodeWaves, and link them to the FaceFX for the selected audio node.
         /// </summary>
         /// <param name="node">Node to generate the links for.</param>
-        private static void GenerateLE1AudioLinks(DialogueNodeExtended node)
+        /// <param name="audioPackage">Package containing the audio elements.</param>
+        /// <param name="baseName">Base name for the new elements.</param>
+        /// <param name="bioStreamingDataID">BioStreamingData to link to the SoundNodeWaves.</param>
+        /// <param name="faceFXM">Male FaceFX set editor control.</param>
+        /// <param name="faceFXF">Female FaceFX set editor control.</param>
+        private static void GenerateLE1AudioLinks(DialogueNodeExtended node, ExportEntry audioPackage, string baseName, int bioStreamingDataID,
+            FaceFXAnimSetEditorControl faceFXM, FaceFXAnimSetEditorControl faceFXF)
         {
+            IMEPackage pcc = node.Interpdata.FileRef;
+            ExportEntry soundNodeWaveF = null;
+            ExportEntry soundCueF = null;
+            ExportEntry soundNodeWaveM = null;
+            ExportEntry soundCueM = null;
 
+            // Try to find any SoundNodeWaves or SoundCues, in case we need to only generate one or the other
+            foreach (ExportEntry exp in audioPackage.GetAllDescendants())
+            {
+                if (exp.ClassName == "SoundCue")
+                {
+                    if (exp.ObjectName.Name.EndsWith("_M")) { soundCueM = exp; }
+                    else { soundCueF = exp; }
+                }
+                else if (exp.ClassName == "SoundNodeWave")
+                {
+                    if (exp.ObjectName.Name.EndsWith("_M")) { soundNodeWaveM = exp; }
+                    else { soundNodeWaveF = exp; }
+                }
+
+                if (soundCueM != null && soundNodeWaveM != null && soundCueF != null && soundNodeWaveF != null) // Stop if we found all th elements
+                {
+                    break;
+                }
+            }
+
+            if (soundNodeWaveM == null) { GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, true); }
+            if (soundNodeWaveF == null) { GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, false); }
+            if (soundCueM == null) { GenerateSoundCue(pcc, audioPackage, soundNodeWaveM.UIndex, node.LineStrRef, true); }
+            if (soundCueF == null) { GenerateSoundCue(pcc, audioPackage, soundNodeWaveF.UIndex, node.LineStrRef, false); }
+
+            // Link to the FaceFX
+            LinkWaveToFaceFX(pcc, faceFXM, soundCueM.InstancedFullPath, soundNodeWaveM.ObjectName.Name, node.LineStrRef);
+            LinkWaveToFaceFX(pcc, faceFXF, soundCueM.InstancedFullPath, soundNodeWaveF.ObjectName.Name, node.LineStrRef);
+        }
+
+        /// <summary>
+        /// Link a SoundNodeWave, passed by id, to a new line and add it to the FaceFX set editor control.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="faceFX">FaceFX set editor control.</param>
+        /// <param name="path">SoundCue path.</param>
+        /// <param name="id">SoundNodeWave name.</param>
+        /// <param name="strRefID">TLK StrRefID, for the FXA name.</param>
+        private static void LinkWaveToFaceFX(IMEPackage pcc, FaceFXAnimSetEditorControl faceFX, string path, string id, int strRefID)
+        {
+            if (faceFX == null) { return; }
+
+            FaceFXLine line = new()
+            {
+                NameAsString = $"FXA_{strRefID}{(path.EndsWith("_M") ? "_M" : "")}",
+                AnimationNames = new(),
+                Points = new(),
+                NumKeys = new(),
+                FadeInTime = 0.16F,
+                FadeOutTime = 0.22F,
+                Path = path,
+                ID = id,
+                Index = faceFX.Lines.Count
+            };
+
+            FaceFXLineEntry newEntry = new(line);
+            faceFX.Lines.Add(newEntry);
+
+            if (int.TryParse(newEntry.Line.ID, out int tlkID))
+            {
+                newEntry.TLKString = TLKManagerWPF.GlobalFindStrRefbyID(tlkID, pcc);
+            }
+
+            faceFX.Lines.Add(newEntry);
+            faceFX.SaveChanges();
+        }
+
+        /// <summary>
+        /// Generate a SoundNodeWave based on the conversation name and strRefID.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="parent">Parent package for the node</param>
+        /// <param name="baseName">Base name for the node.</param>.
+        /// <param name="strRefID">Node's StrRefID.</param>
+        /// <param name="bioStreamingData">UIndex of the BioStreamingData.</param>
+        /// <param name="isMale">Whether the SoundCue is for a male.</param>
+        /// <returns>Generated SoundNodeWave.</returns>
+        private static ExportEntry GenerateSoundNodeWave(IMEPackage pcc, IEntry parent, string baseName, int strRefID, int bioStreamingData, bool isMale)
+        {
+            string name = $"{baseName}:VO_{strRefID}{(isMale ? "_M" : "")}";
+            PropertyCollection props = new()
+            {
+                new FloatProperty(1, "Volume"),
+                new ObjectProperty(bioStreamingData, "BioStreamingData")
+            };
+            return CreateExport(pcc, new NameReference(name), "SoundNodeWave", parent, props);
+        }
+
+        /// <summary>
+        /// Generate a SoundNodeWave based on the conversation name and strRefID.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="parent">Parent package for the node</param>
+        /// <param name="soundNodeWave">SoundNodeWave to reference.</param>
+        /// <param name="strRefID">Node's StrRefID.</param>
+        /// <param name="isMale">Whether the SoundCue is for a male.</param>
+        /// <returns>Generated SoundCue.</returns>
+        private static ExportEntry GenerateSoundCue(IMEPackage pcc, IEntry parent, int soundNodeWave, int strRefID, bool isMale)
+        {
+            string name = $"VO_{strRefID}{(isMale ? "_M" : "")}";
+            PropertyCollection props = new()
+            {
+                new NameProperty("DLG", "SoundGroup"),
+                new ObjectProperty(soundNodeWave, "FirstNode")
+            };
+            return CreateExport(pcc, new NameReference(name), "SoundCue", parent, props);
+        }
+
+        /// <summary>
+        /// Get the base name of the bioConversation.
+        /// </summary>
+        /// <param name="bioConversation">BioConversation to get the name from.</param>
+        /// <returns>Base conversation name. Empty string if couldn't get it.</returns>
+        private static string GetBaseConversationName(ExportEntry bioConversation)
+        {
+            IMEPackage pcc = bioConversation.FileRef;
+            string baseName = "";
+
+            ObjectProperty m_oTlkFileSet = bioConversation.GetProperty<ObjectProperty>("m_oTlkFileSet");
+            if (m_oTlkFileSet != null && m_oTlkFileSet.Value != 0)
+            {
+                ExportEntry tlkFileSet = pcc.GetUExport(m_oTlkFileSet.Value);
+                // All Tlk file sets begin with TlkSet_, followed by the name they have in common with the package
+                baseName = GetCommonPrefix(tlkFileSet.ObjectName.Name[7..], bioConversation.ObjectName.Name);
+            }
+
+            return baseName;
         }
 
         /// <summary>
@@ -1329,6 +1501,57 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             KismetHelper.AddObjectToSequence(exp, sequence, topLevel);
             // cloneSequence(exp);
             return exp;
+        }
+
+        /// <summary>
+        /// By SirCxyrtyx
+        /// </summary>
+        /// <param name="pcc"></param>
+        /// <param name="name"></param>
+        /// <param name="className"></param>
+        /// <param name="parent"></param>
+        /// <param name="properties"></param>
+        /// <param name="binary"></param>
+        /// <param name="prePropBinary"></param>
+        /// <param name="super"></param>
+        /// <param name="archetype"></param>
+        /// <returns>New ExportEntry</returns>
+        private static ExportEntry CreateExport(IMEPackage pcc, NameReference name, string className, IEntry parent, PropertyCollection properties = null, ObjectBinary binary = null, byte[] prePropBinary = null, IEntry super = null, IEntry archetype = null)
+        {
+            IEntry classEntry = className.CaseInsensitiveEquals("Class") ? null : EntryImporter.EnsureClassIsInFile(pcc, className, new RelinkerOptionsPackage());
+
+            var exp = new ExportEntry(pcc, parent, name, prePropBinary, properties, binary, binary is UClass)
+            {
+                Class = classEntry,
+                SuperClass = super,
+                Archetype = archetype
+            };
+            pcc.AddExport(exp);
+            return exp;
+        }
+
+        /// <summary>
+        /// Gets the common prefix of two strings. Assumes both only difer at the end.
+        /// </summary>
+        /// <param name="s1">First string.</param>
+        /// <param name="s2">Second string.</param>
+        /// <returns>Union of input strings.</returns>
+        private static string GetCommonPrefix(string s1, string s2)
+        {
+            if (s1.Length == 0 || s2.Length == 0 || char.ToLower(s1[0]) != char.ToLower(s2[0]))
+            {
+                return "";
+            }
+
+            for (int i = 1; i < s1.Length && i < s2.Length; i++)
+            {
+                if (char.ToLower(s1[i]) != char.ToLower(s2[i]))
+                {
+                    return s1[..i];
+                }
+            }
+
+            return s1.Length < s2.Length ? s1 : s2;
         }
 
         #endregion
