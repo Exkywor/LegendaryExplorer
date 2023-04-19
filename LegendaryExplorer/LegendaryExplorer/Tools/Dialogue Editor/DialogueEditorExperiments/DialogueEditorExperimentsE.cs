@@ -804,15 +804,15 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackVOElements", out ExportEntry VOElements))
             {
                 VOElements = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackVOElements");
-                PropertyCollection props = VOElements.GetProperties();
-                props.AddOrReplaceProp(new IntProperty(strRefID, "m_nStrRefID"));
-                AddDefaultTrackKey(VOElements, false, 0, props);
-                VOElements.WriteProperties(props);
             }
+            PropertyCollection props = VOElements.GetProperties();
+            props.AddOrReplaceProp(new IntProperty(strRefID, "m_nStrRefID"));
+            AddDefaultTrackKey(VOElements, false, 0, props);
+            VOElements.WriteProperties(props);
 
-            if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackSwitchCamera", out ExportEntry SwitchCamera))
+            if (!MatineeHelper.TryGetInterpTrack(interpGroup, "BioEvtSysTrackSwitchCamera", out _))
             {
-                SwitchCamera = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackSwitchCamera");
+                ExportEntry SwitchCamera = MatineeHelper.AddNewTrackToGroup(interpGroup, "BioEvtSysTrackSwitchCamera");
                 MatineeHelper.AddDefaultPropertiesToTrack(SwitchCamera);
             }
         }
