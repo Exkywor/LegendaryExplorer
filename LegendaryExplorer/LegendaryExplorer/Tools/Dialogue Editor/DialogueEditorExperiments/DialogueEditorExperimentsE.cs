@@ -992,7 +992,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             DialogueNodeExtended node = dew.SelectedDialogueNode;
 
-
             if (!IsAudioNode(node, out string errMsg))
             {
                 MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
@@ -1061,7 +1060,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             {
                 if (IsAudioNode(node) && node.ExportID > 0 && node.Interpdata != null)
                 {
-                    UpdateInterpLength(node, byFXA);
+                    UpdateInterpLength(node, byFXA, dew.FaceFXAnimSetEditorControl_F, dew.FaceFXAnimSetEditorControl_M);
                 }
             }
 
@@ -1097,7 +1096,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 "Calculate the InterpLengths by the FXA length? If not, the audio length will be used.",
                 "Calculate by FXA", MessageBoxButton.YesNo);
 
-            UpdateInterpLength(node, byFXA);
+            UpdateInterpLength(node, byFXA, dew.FaceFXAnimSetEditorControl_F, dew.FaceFXAnimSetEditorControl_M);
 
             dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
@@ -1110,9 +1109,51 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// </summary>
         /// <param name="node">Node to update.</param>
         /// <param name="byFXA">Whether to update the length by the FXA length, or the audio one.</param>
-        private static void UpdateInterpLength(DialogueNodeExtended node, bool byFXA)
+        private static void UpdateInterpLength(DialogueNodeExtended node, bool byFXA, FaceFXAnimSetEditorControl animControlF, FaceFXAnimSetEditorControl animControlM)
         {
+            float interpLength = 0;
+            IMEPackage pcc = node.Interpdata.FileRef;
 
+            if (byFXA)
+            {
+                FaceFXLineEntry femaleLine = null;
+                if (animControlF != null && animControlF.Lines != null)
+                {
+                    femaleLine = animControlF.Lines.FirstOrDefault(line => line.TLKID == node.LineStrRef);
+                }
+
+                FaceFXLineEntry maleLine = null;
+                if (animControlM != null && animControlM.Lines != null)
+                {
+                    maleLine = animControlF.Lines.FirstOrDefault(line => line.TLKID == node.LineStrRef);
+                }
+
+                float lengthF = 0;
+                float lengthM = 0;
+                if (femaleLine != null) { lengthF = femaleLine.Length; }
+                if (maleLine != null) { lengthM = maleLine.Length; }
+
+                interpLength = lengthF > lengthM ? lengthF : lengthM;
+                interpLength += 0.22F; // Add fadeout time
+            }
+            else
+            {
+                string lineRef = $"{node.LineStrRef}";
+                IEnumerable<ExportEntry> references = pcc.Exports.Where(exp => exp.ObjectName.Name.Contains(lineRef)
+                    && exp.ClassName == (pcc.Game.IsGame1() ? "SoundNodeWave" : "WwiseEvent"));
+
+                if (references != null)
+                {
+                    // We'll record the duration of the longest reference
+                    foreach (ExportEntry reference in references)
+                    {
+                        FloatProperty duration = reference.GetProperty<FloatProperty>(pcc.Game.IsGame1() ? "Duration" : "DurationSeconds");
+                        if (duration != null) { interpLength = duration.Value > interpLength ? duration.Value : interpLength; }
+                    }
+                }
+            }
+
+            node.Interpdata.WriteProperty(new FloatProperty(interpLength, "InterpLength"));
         }
 
         /// <summary>
