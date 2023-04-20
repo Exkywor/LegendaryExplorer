@@ -268,7 +268,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
         #endregion
 
-        #region Link Nodes
+        #region Link Nodes and Create Sequence
         /// <summary>
         /// Links all audio nodes in the conversation without an ExportID to the free ConvNodes in the sequence.
         /// </summary>
@@ -518,7 +518,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="convNodeIDBase">Base ID for the new ExportIDs.</param>
         /// <param name="nodes">Nodes to generate the sequence objects for.</param>
         /// <param name="usedIDs">ExportIDs in use.</param>
-
         public static void CreateNodesSequence(IMEPackage pcc, ConversationExtended conversation, int convNodeIDBase,
             List<DialogueNodeExtended> nodes, HashSet<int> usedIDs)
         {
@@ -543,32 +542,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 KismetHelper.AddObjectsToSequence((ExportEntry)conversation.Sequence, false, newExports.ToArray());
             }
         }
-
-        /// <summary>
-        /// Generate a list of IDs starting at base, of the given length, and skip IDs that are in the usedIDs list.
-        /// </summary>
-        /// <param name="baseID">Base num for the list.</param>
-        /// <param name="length">Target length of the list.</param>
-        /// <param name="usedIDs">IDs to skip.</param>
-        /// <returns>Generated IDs.</returns>
-        private static List<int> GenerateIDs(int baseID, int length, HashSet<int> usedIDs)
-        {
-            List<int> ids = new();
-
-            int count = 0;
-            while (count < length)
-            {
-                if (usedIDs != null && !usedIDs.Contains(baseID))
-                {
-                    ids.Add(baseID);
-                    count++;
-                }
-                baseID++;
-            }
-
-            return ids;
-        }
-
+        
         /// <summary>
         /// Create all the required sequence elements for a dialogue node. IT DOES NOT ADD THE EXPORTS TO THE SEQUENCE.
         /// </summary>
@@ -646,6 +620,101 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
 
         /// <summary>
+        /// Get a list of ExportIDs, VOElements track, Interp, and StrRefIDs of all the ConvNodes in the sequence.
+        /// </summary>
+        /// <param name="sequence">Sequence to get the elements from.</param>
+        /// <param name="conversation">BioConversation to operate on.</param>
+        /// <param name="usedIDs">List of ExportIDs that are already in use.</param>
+        /// <param name="ignoredNonVOs">Whether to ignore nodes that don't have a VOElements track.</param>
+        /// <returns>List of (ExportID, VOElements track, InterpData, Interp, StrRefID)</returns>
+        private static List<(int, ExportEntry, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, HashSet<int> usedIDs, bool ignoredNonVOs = true)
+        {
+            IMEPackage pcc = sequence.FileRef;
+
+            List<(int, ExportEntry, ExportEntry, ExportEntry, int)> elements = new();
+
+            List<IEntry> convNodes = SeqTools.GetAllSequenceElements(sequence)
+                .Where(el => el.ClassName == "BioSeqEvt_ConvNode").ToList();
+
+            foreach (ExportEntry node in convNodes)
+            {
+                IntProperty m_nNodeID = node.GetProperty<IntProperty>("m_nNodeID");
+                // Skip nodes that don't have an ExportID, or an ExportID that is already in use
+                if (m_nNodeID == null || usedIDs.Contains(m_nNodeID.Value)) { continue; }
+
+                // Find the interp data
+                ExportEntry interpData = null;
+                List<ExportEntry> searchingExports = new() { node };
+
+                ExportEntry seqActInterp = conversation.recursiveFindSeqActInterp(searchingExports, new List<ExportEntry>(), 10);
+                if (seqActInterp == null) { continue; }
+
+                ArrayProperty<StructProperty> varLinksProp = seqActInterp.GetProperty<ArrayProperty<StructProperty>>("VariableLinks");
+
+                if (varLinksProp != null)
+                {
+                    foreach (StructProperty prop in varLinksProp)
+                    {
+                        string desc = prop.GetProp<StrProperty>("LinkDesc").Value; //ME3/ME2/ME1
+                        if (desc == "Data") //ME3/ME1
+                        {
+                            ArrayProperty<ObjectProperty> linkedVars = prop.GetProp<ArrayProperty<ObjectProperty>>("LinkedVariables");
+                            if (linkedVars != null && linkedVars.Any())
+                            {
+                                int datalink = linkedVars[0].Value;
+                                interpData = sequence.FileRef.GetUExport(datalink);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // Only consider as valid ExportIDs that lead to InterpDatas
+                if (interpData == null) { continue; }
+
+                // Store the StrRefID in the VOElements track, if one exists
+                int strRefID = GetVOStrRefID(interpData, out ExportEntry VOElements);
+
+                if (ignoredNonVOs)
+                {
+                    // Only consider as valid InterpDatas that contain a VOElements track
+                    if (VOElements == null) { continue; }
+                }
+
+                elements.Add((m_nNodeID.Value, VOElements, interpData, seqActInterp, strRefID));
+            }
+
+            return elements;
+        }
+
+        /// <summary>
+        /// Generate a list of IDs starting at base, of the given length, and skip IDs that are in the usedIDs list.
+        /// </summary>
+        /// <param name="baseID">Base num for the list.</param>
+        /// <param name="length">Target length of the list.</param>
+        /// <param name="usedIDs">IDs to skip.</param>
+        /// <returns>Generated IDs.</returns>
+        private static List<int> GenerateIDs(int baseID, int length, HashSet<int> usedIDs)
+        {
+            List<int> ids = new();
+
+            int count = 0;
+            while (count < length)
+            {
+                if (usedIDs != null && !usedIDs.Contains(baseID))
+                {
+                    ids.Add(baseID);
+                    count++;
+                }
+                baseID++;
+            }
+
+            return ids;
+        }
+        #endregion
+
+        #region Update VOs and Comments
+        /// <summary>
         /// Update all the Interp comments and VOElements' StrRefIDs that are linked to the audio nodes of the selected conversation.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
@@ -720,7 +789,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 interp.WriteProperty(GenerateObjComment(node.Line));
             }
         }
+        #endregion
 
+        #region Add Conversation Defaults
         /// <summary>
         /// Add a Conversation group, and VOElements and SwitchCamera tracks to all audio nodes in the selected conversation.
         /// </summary>
@@ -804,7 +875,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 MatineeHelper.AddDefaultPropertiesToTrack(SwitchCamera);
             }
         }
+        #endregion
 
+        #region Update Interp Lengths
         /// <summary>
         /// Update the InterpLength of all the audio nodes in the selectd conversation, based either on the FXA or the audio length.
         /// </summary>
@@ -935,8 +1008,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             node.Interpdata.WriteProperty(new FloatProperty(interpLength, "InterpLength"));
         }
+        #endregion
 
-
+        #region Generate LE1 Audio Links
         /// <summary>
         /// Create SoundCues and SoundNodeWaves, and link them to the FaceFX for all audio nodes that don't have one.
         /// </summary>
@@ -1070,25 +1144,25 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 soundNodeWaveM ??= GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, true);
                 soundCueM ??= GenerateSoundCue(pcc, audioPackage, soundNodeWaveM.UIndex, node.LineStrRef, true);
 
-                LinkWaveToFaceFX(FXSetM, soundCueM, soundNodeWaveM.ObjectName.Name, node.LineStrRef);
+                LinkLE1AudioToFaceFX(FXSetM, soundCueM, soundNodeWaveM.ObjectName.Name, node.LineStrRef);
             }
             if (FXSetF != null)
             {
                 soundNodeWaveF ??= GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, false);
                 soundCueF ??= GenerateSoundCue(pcc, audioPackage, soundNodeWaveF.UIndex, node.LineStrRef, false);
 
-                LinkWaveToFaceFX(FXSetF, soundCueF, soundNodeWaveF.ObjectName.Name, node.LineStrRef);
+                LinkLE1AudioToFaceFX(FXSetF, soundCueF, soundNodeWaveF.ObjectName.Name, node.LineStrRef);
             }
         }
 
         /// <summary>
-        /// Link a SoundNodeWave, passed by id, to a new line and add it to the FaceFX set editor control.
+        /// Link audio, passed by id, to a new line and add it to the FaceFX set editor control.
         /// </summary>
         /// <param name="faceFXAnimSet">FaceFX anim set to link to.</param>
         /// <param name="soundCue">SoundCue to link.</param>
         /// <param name="id">SoundNodeWave name.</param>
         /// <param name="strRefID">TLK StrRefID, for the FXA name.</param>
-        private static void LinkWaveToFaceFX(ExportEntry faceFXAnimSet, ExportEntry soundCue, string id, int strRefID)
+        private static void LinkLE1AudioToFaceFX(ExportEntry faceFXAnimSet, ExportEntry soundCue, string id, int strRefID)
         {
             if (faceFXAnimSet == null) { return; }
 
@@ -1185,7 +1259,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             return baseName;
         }
+        #endregion
 
+        #region Helper functions
         /// <summary>
         /// Try get the first Interp referencing the InterpData.
         /// </summary>
@@ -1279,74 +1355,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         }
 
         /// <summary>
-        /// Get a list of ExportIDs, VOElements track, Interp, and StrRefIDs of all the ConvNodes in the sequence.
-        /// </summary>
-        /// <param name="sequence">Sequence to get the elements from.</param>
-        /// <param name="conversation">BioConversation to operate on.</param>
-        /// <param name="usedIDs">List of ExportIDs that are already in use.</param>
-        /// <param name="ignoredNonVOs">Whether to ignore nodes that don't have a VOElements track.</param>
-        /// <returns>List of (ExportID, VOElements track, InterpData, Interp, StrRefID)</returns>
-        private static List<(int, ExportEntry, ExportEntry, ExportEntry, int)> GetConvNodeElements(ExportEntry sequence, ConversationExtended conversation, HashSet<int> usedIDs, bool ignoredNonVOs = true)
-        {
-            IMEPackage pcc = sequence.FileRef;
-
-            List<(int, ExportEntry, ExportEntry, ExportEntry, int)> elements = new();
-
-            List<IEntry> convNodes = SeqTools.GetAllSequenceElements(sequence)
-                .Where(el => el.ClassName == "BioSeqEvt_ConvNode").ToList();
-
-            foreach (ExportEntry node in convNodes)
-            {
-                IntProperty m_nNodeID = node.GetProperty<IntProperty>("m_nNodeID");
-                // Skip nodes that don't have an ExportID, or an ExportID that is already in use
-                if (m_nNodeID == null || usedIDs.Contains(m_nNodeID.Value)) { continue; }
-
-                // Find the interp data
-                ExportEntry interpData = null;
-                List<ExportEntry> searchingExports = new() { node };
-
-                ExportEntry seqActInterp = conversation.recursiveFindSeqActInterp(searchingExports, new List<ExportEntry>(), 10);
-                if (seqActInterp == null) { continue; }
-
-                ArrayProperty<StructProperty> varLinksProp = seqActInterp.GetProperty<ArrayProperty<StructProperty>>("VariableLinks");
-
-                if (varLinksProp != null)
-                {
-                    foreach (StructProperty prop in varLinksProp)
-                    {
-                        string desc = prop.GetProp<StrProperty>("LinkDesc").Value; //ME3/ME2/ME1
-                        if (desc == "Data") //ME3/ME1
-                        {
-                            ArrayProperty<ObjectProperty> linkedVars = prop.GetProp<ArrayProperty<ObjectProperty>>("LinkedVariables");
-                            if (linkedVars != null && linkedVars.Any())
-                            {
-                                int datalink = linkedVars[0].Value;
-                                interpData = sequence.FileRef.GetUExport(datalink);
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                // Only consider as valid ExportIDs that lead to InterpDatas
-                if (interpData == null) { continue; }
-
-                // Store the StrRefID in the VOElements track, if one exists
-                int strRefID = GetVOStrRefID(interpData, out ExportEntry VOElements);
-
-                if (ignoredNonVOs)
-                {
-                    // Only consider as valid InterpDatas that contain a VOElements track
-                    if (VOElements == null) { continue; }
-                }
-
-                elements.Add((m_nNodeID.Value, VOElements, interpData, seqActInterp, strRefID));
-            }
-
-            return elements;
-        }
-
-        /// <summary>
         /// Get the StrRefID of the VOElements track and the track itself of an InterpData, if they exist.
         /// </summary>
         /// <param name="interpData">InterpData to find the value on.</param>
@@ -1374,7 +1382,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             VOTrack = interpTrack;
             return m_nStrRefID.Value;
         }
-
 
         /// <summary>
         /// Update the StrRefID of the VOElements track of the InterpData. Creates any missing element.
@@ -1449,10 +1456,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 new StrProperty(line == "No Data" ? "" : line.Length <= 32 ? line : $"{line.AsSpan(0, 29)}...")
             };
         }
-        #endregion
 
-        // HELPER FUNCTIONS
-        #region Helper functions
         private static int promptForID(string msg, string err)
         {
             if (PromptDialog.Prompt(null, msg) is string strID)
@@ -1552,7 +1556,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             return s1.Length < s2.Length ? s1 : s2;
         }
-
         #endregion
     }
 }
