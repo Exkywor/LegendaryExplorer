@@ -1188,7 +1188,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 return;
             }
 
-            string baseName = GetBaseConversationName((ExportEntry)dew.SelectedConv.Sequence);
+            string baseName = GetBaseConversationName(dew.SelectedConv.Export);
             if (string.IsNullOrEmpty(baseName))
             {
                 MessageBox.Show("Could not find a common base name between the conversation and the tlk file set.\n" +
@@ -1206,7 +1206,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 if (IsAudioNode(node) && node.ExportID > 0 && node.Interpdata != null)
                 {
                     GenerateLE1AudioLinks(node, (ExportEntry)dew.Pcc.GetEntry(dew.SelectedConv.Sequence.idxLink),
-                        baseName, bioStreamingDataID, dew.FaceFXAnimSetEditorControl_M, dew.FaceFXAnimSetEditorControl_F);
+                        baseName, bioStreamingDataID);
                 }
             }
 
@@ -1243,9 +1243,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             {
                 MessageBox.Show("The provided export is not a BioStreamingData.", "Warning", MessageBoxButton.OK);
                 return;
-            } 
+            }
 
-            string baseName = GetBaseConversationName((ExportEntry)dew.SelectedConv.Sequence);
+            string baseName = GetBaseConversationName(dew.SelectedConv.Export);
             if (string.IsNullOrEmpty(baseName))
             {
                 MessageBox.Show("Could not find a common base name between the conversation and the tlk file set.\n" +
@@ -1254,7 +1254,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             }
 
             GenerateLE1AudioLinks(node, (ExportEntry)dew.Pcc.GetEntry(dew.SelectedConv.Sequence.idxLink),
-                baseName, bioStreamingDataID, dew.FaceFXAnimSetEditorControl_M, dew.FaceFXAnimSetEditorControl_F);
+                baseName, bioStreamingDataID);
 
             dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
@@ -1269,12 +1269,10 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="audioPackage">Package containing the audio elements.</param>
         /// <param name="baseName">Base name for the new elements.</param>
         /// <param name="bioStreamingDataID">BioStreamingData to link to the SoundNodeWaves.</param>
-        /// <param name="faceFXM">Male FaceFX set editor control.</param>
-        /// <param name="faceFXF">Female FaceFX set editor control.</param>
-        private static void GenerateLE1AudioLinks(DialogueNodeExtended node, ExportEntry audioPackage, string baseName, int bioStreamingDataID,
-            FaceFXAnimSetEditorControl faceFXM, FaceFXAnimSetEditorControl faceFXF)
+        private static void GenerateLE1AudioLinks(DialogueNodeExtended node, ExportEntry audioPackage, string baseName, int bioStreamingDataID)
         {
             IMEPackage pcc = node.Interpdata.FileRef;
+            string strRefAsString = $"{node.LineStrRef}";
             ExportEntry soundNodeWaveF = null;
             ExportEntry soundCueF = null;
             ExportEntry soundNodeWaveM = null;
@@ -1283,68 +1281,83 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             // Try to find any SoundNodeWaves or SoundCues, in case we need to only generate one or the other
             foreach (ExportEntry exp in audioPackage.GetAllDescendants())
             {
-                if (exp.ClassName == "SoundCue")
+                if (exp.ClassName == "SoundCue" && exp.ObjectName.Name.Contains(strRefAsString))
                 {
                     if (exp.ObjectName.Name.EndsWith("_M")) { soundCueM = exp; }
                     else { soundCueF = exp; }
                 }
-                else if (exp.ClassName == "SoundNodeWave")
+                else if (exp.ClassName == "SoundNodeWave" && exp.ObjectName.Name.Contains(strRefAsString))
                 {
                     if (exp.ObjectName.Name.EndsWith("_M")) { soundNodeWaveM = exp; }
                     else { soundNodeWaveF = exp; }
                 }
 
-                if (soundCueM != null && soundNodeWaveM != null && soundCueF != null && soundNodeWaveF != null) // Stop if we found all th elements
+                if (soundCueM != null && soundNodeWaveM != null && soundCueF != null && soundNodeWaveF != null) // Stop if we found all the elements
                 {
                     break;
                 }
             }
 
-            if (soundNodeWaveM == null) { GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, true); }
-            if (soundNodeWaveF == null) { GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, false); }
-            if (soundCueM == null) { GenerateSoundCue(pcc, audioPackage, soundNodeWaveM.UIndex, node.LineStrRef, true); }
-            if (soundCueF == null) { GenerateSoundCue(pcc, audioPackage, soundNodeWaveF.UIndex, node.LineStrRef, false); }
+            ExportEntry FXSetM = node.SpeakerTag.FaceFX_Male as ExportEntry;
+            ExportEntry FXSetF = node.SpeakerTag.FaceFX_Female as ExportEntry;
 
-            // Link to the FaceFX
-            LinkWaveToFaceFX(pcc, faceFXM, soundCueM.InstancedFullPath, soundNodeWaveM.ObjectName.Name, node.LineStrRef);
-            LinkWaveToFaceFX(pcc, faceFXF, soundCueM.InstancedFullPath, soundNodeWaveF.ObjectName.Name, node.LineStrRef);
+            if (FXSetM != null)
+            {
+                soundNodeWaveM ??= GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, true);
+                soundCueM ??= GenerateSoundCue(pcc, audioPackage, soundNodeWaveM.UIndex, node.LineStrRef, true);
+
+                LinkWaveToFaceFX(FXSetM, soundCueM, soundNodeWaveM.ObjectName.Name, node.LineStrRef);
+            }
+            if (FXSetF != null)
+            {
+                soundNodeWaveF ??= GenerateSoundNodeWave(pcc, audioPackage, baseName, node.LineStrRef, bioStreamingDataID, false);
+                soundCueF ??= GenerateSoundCue(pcc, audioPackage, soundNodeWaveF.UIndex, node.LineStrRef, false);
+
+                LinkWaveToFaceFX(FXSetF, soundCueF, soundNodeWaveF.ObjectName.Name, node.LineStrRef);
+            }
         }
 
         /// <summary>
         /// Link a SoundNodeWave, passed by id, to a new line and add it to the FaceFX set editor control.
         /// </summary>
-        /// <param name="pcc">Pcc to operate on.</param>
-        /// <param name="faceFX">FaceFX set editor control.</param>
-        /// <param name="path">SoundCue path.</param>
+        /// <param name="faceFXAnimSet">FaceFX anim set to link to.</param>
+        /// <param name="soundCue">SoundCue to link.</param>
         /// <param name="id">SoundNodeWave name.</param>
         /// <param name="strRefID">TLK StrRefID, for the FXA name.</param>
-        private static void LinkWaveToFaceFX(IMEPackage pcc, FaceFXAnimSetEditorControl faceFX, string path, string id, int strRefID)
+        private static void LinkWaveToFaceFX(ExportEntry faceFXAnimSet, ExportEntry soundCue, string id, int strRefID)
         {
+            if (faceFXAnimSet == null) { return; }
+
+            FaceFXAnimSet faceFX = faceFXAnimSet.GetBinaryData<FaceFXAnimSet>();
             if (faceFX == null) { return; }
+
+            string lineName = $"FXA_{strRefID}{(faceFXAnimSet.ObjectName.Name.EndsWith("_M") ? "_M" : "")}";
+
+            if (faceFX.Lines.Any(l => l.NameAsString == lineName)) { return; } // No need to add a new line
 
             FaceFXLine line = new()
             {
-                NameAsString = $"FXA_{strRefID}{(path.EndsWith("_M") ? "_M" : "")}",
+                NameIndex = faceFX.Names.Count,
+                NameAsString = lineName,
                 AnimationNames = new(),
                 Points = new(),
                 NumKeys = new(),
                 FadeInTime = 0.16F,
                 FadeOutTime = 0.22F,
-                Path = path,
+                Path = soundCue.InstancedFullPath,
                 ID = id,
                 Index = faceFX.Lines.Count
             };
 
-            FaceFXLineEntry newEntry = new(line);
-            faceFX.Lines.Add(newEntry);
+            faceFX.Names.Add(line.NameAsString);
+            faceFX.Lines.Add(line);
 
-            if (int.TryParse(newEntry.Line.ID, out int tlkID))
-            {
-                newEntry.TLKString = TLKManagerWPF.GlobalFindStrRefbyID(tlkID, pcc);
-            }
+            PropertyCollection props = faceFXAnimSet.GetProperties();
+            ArrayProperty<ObjectProperty> referencedSoundCues = props.GetProp<ArrayProperty<ObjectProperty>>("ReferencedSoundCues")
+                ?? new ArrayProperty<ObjectProperty>("ReferencedSoundCues");
 
-            faceFX.Lines.Add(newEntry);
-            faceFX.SaveChanges();
+            referencedSoundCues.Add(new ObjectProperty(soundCue.UIndex)); // ASSUMES: If the line wasn't in the binary, it also doesn't referenced the SoundCue
+            faceFXAnimSet.WritePropertiesAndBinary(props, faceFX);
         }
 
         /// <summary>
@@ -1365,7 +1378,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 new FloatProperty(1, "Volume"),
                 new ObjectProperty(bioStreamingData, "BioStreamingData")
             };
-            return CreateExport(pcc, new NameReference(name), "SoundNodeWave", parent, props);
+            return CreateExport(pcc, new NameReference(name), "SoundNodeWave", parent, props, SoundNodeWave.Create());
         }
 
         /// <summary>
@@ -1385,7 +1398,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 new NameProperty("DLG", "SoundGroup"),
                 new ObjectProperty(soundNodeWave, "FirstNode")
             };
-            return CreateExport(pcc, new NameReference(name), "SoundCue", parent, props);
+            return CreateExport(pcc, new NameReference(name), "SoundCue", parent, props, SoundCue.Create());
         }
 
         /// <summary>
