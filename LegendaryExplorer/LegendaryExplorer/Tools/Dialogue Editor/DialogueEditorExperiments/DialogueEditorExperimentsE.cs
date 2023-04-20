@@ -1102,12 +1102,12 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             {
                 if (exp.ClassName == "SoundCue" && exp.ObjectName.Name.Contains(strRefAsString))
                 {
-                    if (exp.ObjectName.Name.EndsWith("_M")) { soundCueM = exp; }
+                    if (exp.ObjectName.Name.EndsWith("_M", StringComparison.CurrentCultureIgnoreCase)) { soundCueM = exp; }
                     else { soundCueF = exp; }
                 }
                 else if (exp.ClassName == "SoundNodeWave" && exp.ObjectName.Name.Contains(strRefAsString))
                 {
-                    if (exp.ObjectName.Name.EndsWith("_M")) { soundNodeWaveM = exp; }
+                    if (exp.ObjectName.Name.EndsWith("_M", StringComparison.CurrentCultureIgnoreCase)) { soundNodeWaveM = exp; }
                     else { soundNodeWaveF = exp; }
                 }
 
@@ -1150,7 +1150,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             FaceFXAnimSet faceFX = faceFXAnimSet.GetBinaryData<FaceFXAnimSet>();
             if (faceFX == null) { return; }
 
-            string lineName = $"FXA_{strRefID}{(faceFXAnimSet.ObjectName.Name.EndsWith("_M") ? "_M" : "")}";
+            string lineName = $"FXA_{strRefID}{(faceFXAnimSet.ObjectName.Name.EndsWith("_M", StringComparison.CurrentCultureIgnoreCase) ? "_M" : "")}";
 
             if (faceFX.Lines.Any(l => l.NameAsString == lineName)) { return; } // No need to add a new line
 
