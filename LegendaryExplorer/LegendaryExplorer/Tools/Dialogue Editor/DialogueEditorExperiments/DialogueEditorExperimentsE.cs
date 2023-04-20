@@ -39,11 +39,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                     return;
                 }
 
-                int newStrRefID = promptForID("New line string ref:", "Not a valid line string ref.");
-                if (newStrRefID < 1)
-                {
-                    return;
-                }
+                int newStrRefID = PromptForInt("New line string ref:", "Not a valid line string ref.", 0);
+                if (newStrRefID < 1) { return; }
 
                 if (currStrRefID == newStrRefID)
                 {
@@ -54,14 +51,14 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 string currStringRef = currStrRefID.ToString();
                 string newStringRef = newStrRefID.ToString();
 
-                updateFaceFX(dew.FaceFXAnimSetEditorControl_M, currStringRef, newStringRef);
-                updateFaceFX(dew.FaceFXAnimSetEditorControl_F, currStringRef, newStringRef);
+                UpdateFaceFX(dew.FaceFXAnimSetEditorControl_M, currStringRef, newStringRef);
+                UpdateFaceFX(dew.FaceFXAnimSetEditorControl_F, currStringRef, newStringRef);
 
-                updateWwiseStream(node.WwiseStream_Male, currStringRef, newStringRef);
-                updateWwiseStream(node.WwiseStream_Female, currStringRef, newStringRef);
+                UpdateWwiseStream(node.WwiseStream_Male, currStringRef, newStringRef);
+                UpdateWwiseStream(node.WwiseStream_Female, currStringRef, newStringRef);
 
-                updateVOReferences(dew.Pcc, node.WwiseStream_Male, currStringRef, newStringRef);
-                updateVOReferences(dew.Pcc, node.WwiseStream_Female, currStringRef, newStringRef);
+                UpdateVOReferences(dew.Pcc, node.WwiseStream_Male, currStringRef, newStringRef);
+                UpdateVOReferences(dew.Pcc, node.WwiseStream_Female, currStringRef, newStringRef);
 
                 node.LineStrRef = newStrRefID;
                 node.Line = TLKManagerWPF.GlobalFindStrRefbyID(node.LineStrRef, dew.Pcc);
@@ -74,7 +71,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             }
         }
 
-        private static void updateVOReferences(IMEPackage pcc, ExportEntry wwiseStream, string oldRef, string newRef)
+        private static void UpdateVOReferences(IMEPackage pcc, ExportEntry wwiseStream, string oldRef, string newRef)
         {
             if (wwiseStream == null)
             {
@@ -93,10 +90,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 ExportEntry refEntry = (ExportEntry)pcc.GetEntry(reference.Key.UIndex);
                 refEntry.ObjectNameString = refEntry.ObjectNameString.Replace(oldRef, newRef);
             }
-
         }
 
-        private static void updateWwiseStream(ExportEntry wwiseStream, string oldRef, string newRef)
+        private static void UpdateWwiseStream(ExportEntry wwiseStream, string oldRef, string newRef)
         {
             if (wwiseStream is null)
             {
@@ -110,7 +106,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             wwiseStream.ObjectNameString = wwiseStream.ObjectNameString.Replace(oldRef, newRef);
         }
 
-        private static void updateFaceFX(FaceFXAnimSetEditorControl fxa, string oldRef, string newRef)
+        private static void UpdateFaceFX(FaceFXAnimSetEditorControl fxa, string oldRef, string newRef)
         {
             if (fxa.SelectedLine == null || fxa == null)
             {
@@ -147,21 +143,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             fxa.SaveChanges();
         }
-
-        private static string promptForRef(string msg, string err)
-        {
-            if (PromptDialog.Prompt(null, msg) is string stringRef)
-            {
-                int intRef;
-                if (string.IsNullOrEmpty(stringRef) || !int.TryParse(stringRef, out intRef))
-                {
-                    MessageBox.Show(err, "Warning", MessageBoxButton.OK);
-                    return null;
-                }
-                return intRef.ToString();
-            }
-            return null;
-        }
         #endregion
 
         #region Clone Node And Sequence
@@ -182,7 +163,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                     return;
                 }
 
-                int newID = promptForID("New node ExportID:", "Not a valid ExportID.");
+                int newID = PromptForInt("New node ExportID:", "Not a valid ExportID.", 0);
                 if (newID == 0) { return; }
 
                 if (selectedDialogueNode.ExportID.Equals(newID))
@@ -216,7 +197,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 ExportEntry sequence = SeqTools.GetParentSequence(oldInterpData);
 
                 // Clone the Intero and Interpdata objects
-                ExportEntry newInterp = cloneObject(oldInterp, sequence);
+                ExportEntry newInterp = CloneObject(oldInterp, sequence);
                 ExportEntry newInterpData = EntryCloner.CloneTree(oldInterpData);
                 KismetHelper.AddObjectToSequence(newInterpData, sequence, true);
 
@@ -224,13 +205,13 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 ExportEntry newConvNode = null;
                 if (oldConvNode != null)
                 {
-                    newConvNode = cloneObject(oldConvNode, sequence);
+                    newConvNode = CloneObject(oldConvNode, sequence);
                     KismetHelper.CreateOutputLink(newConvNode, "Started", newInterp, 0);
                 }
 
                 if (oldEndNode != null)
                 {
-                    ExportEntry newEndNode = cloneObject(oldEndNode, sequence);
+                    ExportEntry newEndNode = CloneObject(oldEndNode, sequence);
                     KismetHelper.CreateOutputLink(newInterp, "Completed", newEndNode, 0);
                     KismetHelper.CreateOutputLink(newInterp, "Reversed", newEndNode, 0);
                 }
@@ -277,7 +258,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
-            int convNodeIDBase = promptForInt("New ExportIDs base for extra IDs that may be need to be created:",
+            int convNodeIDBase = PromptForInt("New ExportIDs base for extra IDs that may be need to be created:",
                 "Not a valid base. It must be positive integer", -1, "New NodeID range");
             if (convNodeIDBase == -1) { return; }
 
@@ -350,7 +331,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             if (createObjsForNotMatched)
             {
-                convNodeIDBase = promptForInt("New ExportIDs base for new IDs that may be needed:",
+                convNodeIDBase = PromptForInt("New ExportIDs base for new IDs that may be needed:",
                     "Not a valid base. It must be positive integer", -1, "New NodeID range");
                 if (convNodeIDBase == -1) { return; }
             }
@@ -429,7 +410,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
-            int convNodeIDBase = promptForInt("New ExportIDs base:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
+            int convNodeIDBase = PromptForInt("New ExportIDs base:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
             if (convNodeIDBase == -1) { return; }
 
             HashSet<int> usedIDs = new();
@@ -459,7 +440,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.SelectedDialogueNode == null) { return; }
 
-            int exportID = promptForInt("New ExportID. If you input 0, a new ID will be generated:", "Not a valid ID. It must be positive integer", -1, "New NodeID");
+            int exportID = PromptForInt("New ExportID. If you input 0, a new ID will be generated:", "Not a valid ID. It must be positive integer", -1, "New NodeID");
             if (exportID == -1) { return; }
 
             DialogueNodeExtended node = dew.SelectedDialogueNode;
@@ -1019,7 +1000,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         {
             if (dew.Pcc == null || dew.Pcc.Game != MEGame.LE1 || dew.SelectedConv == null) { return; }
 
-            int bioStreamingDataID = promptForInt("BioStreamingData export number:", "Not a valid export number. It must be positive integer", 0, "BioStreamingData");
+            int bioStreamingDataID = PromptForInt("BioStreamingData export number:", "Not a valid export number. It must be positive integer", 0, "BioStreamingData");
             if (!dew.Pcc.TryGetEntry(bioStreamingDataID, out IEntry entry) || entry.ClassName != "BioSoundNodeWaveStreamingData")
             {
                 MessageBox.Show("The provided export is not a BioStreamingData.", "Warning", MessageBoxButton.OK);
@@ -1076,7 +1057,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 return;
             }
 
-            int bioStreamingDataID = promptForInt("BioStreamingData export number:", "Not a valid export number. It must be positive integer", 0, "BioStreamingData");
+            int bioStreamingDataID = PromptForInt("BioStreamingData export number:", "Not a valid export number. It must be positive integer", 0, "BioStreamingData");
             if (!dew.Pcc.TryGetEntry(bioStreamingDataID, out IEntry entry) || entry.ClassName != "BioSoundNodeWaveStreamingData")
             {
                 MessageBox.Show("The provided export is not a BioStreamingData.", "Warning", MessageBoxButton.OK);
@@ -1457,21 +1438,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             };
         }
 
-        private static int promptForID(string msg, string err)
-        {
-            if (PromptDialog.Prompt(null, msg) is string strID)
-            {
-                int ID;
-                if (!int.TryParse(strID, out ID))
-                {
-                    MessageBox.Show(err, "Warning", MessageBoxButton.OK);
-                    return 0;
-                }
-                return ID;
-            }
-            return 0;
-        }
-
         /// <summary>
         /// Prompts the user for an int, verifying that the int is valid.
         /// </summary>
@@ -1480,7 +1446,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="biggerThan">Number the input must be bigger than. If not provided -2,147,483,648 will be used.</param>
         /// <param name="title">Title for the prompt.</param>
         /// <returns>The input int.</returns>
-        private static int promptForInt(string msg, string err, int biggerThan = -2147483648, string title = "")
+        private static int PromptForInt(string msg, string err, int biggerThan = -2147483648, string title = "")
         {
             if (PromptDialog.Prompt(null, msg, title) is string stringPrompt)
             {
@@ -1495,8 +1461,23 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             return -1;
         }
 
+        private static string PromptForRef(string msg, string err)
+        {
+            if (PromptDialog.Prompt(null, msg) is string stringRef)
+            {
+                int intRef;
+                if (string.IsNullOrEmpty(stringRef) || !int.TryParse(stringRef, out intRef))
+                {
+                    MessageBox.Show(err, "Warning", MessageBoxButton.OK);
+                    return null;
+                }
+                return intRef.ToString();
+            }
+            return null;
+        }
+
         // From SequenceEditorWPF.xaml.cs
-        private static ExportEntry cloneObject(ExportEntry old, ExportEntry sequence, bool topLevel = true, bool incrementIndex = true)
+        private static ExportEntry CloneObject(ExportEntry old, ExportEntry sequence, bool topLevel = true, bool incrementIndex = true)
         {
             //SeqVar_External needs to have the same index to work properly
             ExportEntry exp = EntryCloner.CloneEntry(old, incrementIndex: incrementIndex && old.ClassName != "SeqVar_External");
