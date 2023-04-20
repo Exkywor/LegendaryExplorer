@@ -50,19 +50,19 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
             DialogueEditorExperimentsE.LinkNodesStrRef(GetDEWindow());
         }
 
-        private void CreateNodesSequence_Click(object sender, RoutedEventArgs e)
+        private void BatchCreateNodesSequence_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.CreateNodesSequenceExperiment(GetDEWindow());
+            DialogueEditorExperimentsE.BatchCreateNodesSequenceExperiment(GetDEWindow());
         }
 
-        private void CreateSelectedNodeSequence_Click(object sender, RoutedEventArgs e)
+        private void CreateNodeSequence_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.CreateSelectedNodeSequence(GetDEWindow());
+            DialogueEditorExperimentsE.CreateNodeSequenceExperiment(GetDEWindow());
         }
 
-        private void UpdateVOsAndComments_Click(object sender, RoutedEventArgs e)
+        private void BatchUpdateVOsAndComments_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.UpdateVOsAndComments(GetDEWindow());
+            DialogueEditorExperimentsE.BatchUpdateVOsAndCommentsExperiment(GetDEWindow());
         }
         
         private void UpdateVOAndComment_Click(object sender, RoutedEventArgs e)
@@ -70,19 +70,19 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
             DialogueEditorExperimentsE.UpdateVOAndCommentExperiment(GetDEWindow());
         }
 
+        private void BatchAddConversationDefaults_Click(object sender, RoutedEventArgs e)
+        {
+            DialogueEditorExperimentsE.BatchAddConversationDefaultsExperiment(GetDEWindow());
+        }
+
         private void AddConversationDefaults_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.AddConversationDefaults(GetDEWindow());
+            DialogueEditorExperimentsE.AddConversationDefaultsExperiment(GetDEWindow());
         }
 
-        private void AddConversationDefaultsToNode_Click(object sender, RoutedEventArgs e)
+        private void BatchUpdateInterpLengths_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.AddConversationDefaultsToNodeExperiment(GetDEWindow());
-        }
-
-        private void UpdateInterpLengths_Click(object sender, RoutedEventArgs e)
-        {
-            DialogueEditorExperimentsE.UpdateInterpLengths(GetDEWindow());
+            DialogueEditorExperimentsE.BatchUpdateInterpLengthsExperiment(GetDEWindow());
         }
 
         private void UpdateInterpLength_Click(object sender, RoutedEventArgs e)
@@ -92,7 +92,7 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
 
         private void BatchGenerateLE1AudioLinks_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.BatchGenerateLE1AudioLinks(GetDEWindow());
+            DialogueEditorExperimentsE.BatchGenerateLE1AudioLinksExperiment(GetDEWindow());
         }
 
         private void GenerateLE1AudioLinks_Click(object sender, RoutedEventArgs e)
