@@ -553,20 +553,6 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             dew.RecreateNodesToProperties(dew.SelectedConv);
             dew.ForceRefreshCommand.Execute(null);
 
-            // Code to check how many uses each ExportID has, to catch duplicates
-            //Dictionary<int, int> test = new();
-            //foreach (DialogueNodeExtended node in nodes)
-            //{
-            //    int exportID = node.NodeProp.GetProp<IntProperty>("nExportID");
-            //    if (test.TryGetValue(exportID, out int val))
-            //    {
-            //        test[exportID] = val++;
-            //    } else
-            //    {
-            //        test[exportID] = 1;
-            //    }
-            //}
-
             MessageBox.Show("Linked all nodes without an ExportID.", "Success", MessageBoxButton.OK);
         }
 
@@ -661,7 +647,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Wrapper for CreateNodesSequence so it can used as an experiment.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void CreateNodesSequenceExperiment(DialogueEditorWindow dew)
+        public static void BatchCreateNodesSequenceExperiment(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
@@ -691,7 +677,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Create the basic sequence objects for the selected audio node, if it doesn't have an ExportID.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void CreateSelectedNodeSequence(DialogueEditorWindow dew)
+        public static void CreateNodeSequenceExperiment(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedDialogueNode == null) { return; }
 
@@ -885,7 +871,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Update all the Interp comments and VOElements' StrRefIDs that are linked to the audio nodes of the selected conversation.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void UpdateVOsAndComments(DialogueEditorWindow dew)
+        public static void BatchUpdateVOsAndCommentsExperiment(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
@@ -961,7 +947,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Add a Conversation group, and VOElements and SwitchCamera tracks to all audio nodes in the selected conversation.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void AddConversationDefaults(DialogueEditorWindow dew)
+        public static void BatchAddConversationDefaultsExperiment(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
@@ -988,7 +974,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Add a Conversation group, and VOElements and SwitchCamera tracks to the selected node.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void AddConversationDefaultsToNodeExperiment(DialogueEditorWindow dew)
+        public static void AddConversationDefaultsExperiment(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedDialogueNode == null) { return; }
 
@@ -1045,7 +1031,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Update the InterpLength of all the audio nodes in the selectd conversation, based either on the FXA or the audio length.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void UpdateInterpLengths(DialogueEditorWindow dew)
+        public static void BatchUpdateInterpLengthsExperiment(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.SelectedConv == null) { return; }
 
@@ -1177,7 +1163,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// Create SoundCues and SoundNodeWaves, and link them to the FaceFX for all audio nodes that don't have one.
         /// </summary>
         /// <param name="dew">Current Dialogue Editor instance.</param>
-        public static void BatchGenerateLE1AudioLinks(DialogueEditorWindow dew)
+        public static void BatchGenerateLE1AudioLinksExperiment(DialogueEditorWindow dew)
         {
             if (dew.Pcc == null || dew.Pcc.Game != MEGame.LE1 || dew.SelectedConv == null) { return; }
 
