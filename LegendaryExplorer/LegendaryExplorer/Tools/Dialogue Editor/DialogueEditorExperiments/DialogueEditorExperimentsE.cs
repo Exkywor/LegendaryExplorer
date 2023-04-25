@@ -523,7 +523,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 KismetHelper.AddObjectsToSequence((ExportEntry)conversation.Sequence, false, newExports.ToArray());
             }
         }
-        
+
         /// <summary>
         /// Create all the required sequence elements for a dialogue node. IT DOES NOT ADD THE EXPORTS TO THE SEQUENCE.
         /// </summary>
@@ -936,6 +936,32 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             if (byFXA)
             {
+                // Refresh the export of the FaceFX control. This is done so that the batch version can get the lengths
+                // without having to select the converastion first, because otherwise you get the previously loaded export.
+                // Without this, it also causes issues when you need different sets from the same file.
+                //
+                // How to improve this to avoid refreshing on EVERY node? We could probably split the nodes by set, and only
+                // refresh once per set, or we could redo the animation Points loading and length calculation code and avoid using the
+                // FaceFXAnimSetEditorControl altogether, but both would take more time to implement than the 2 to 5 seconds the
+                // batch experiment takes on long conversations.
+                if (node.SpeakerTag?.FaceFX_Female is ExportEntry faceFX_f)
+                {
+                    animControlF.LoadExport(faceFX_f);
+                }
+                else
+                {
+                    animControlF.UnloadExport();
+                }
+
+                if (node.SpeakerTag?.FaceFX_Male is ExportEntry faceFX_m)
+                {
+                    animControlM.LoadExport(faceFX_m);
+                }
+                else
+                {
+                    animControlM.UnloadExport();
+                }
+
                 FaceFXLineEntry femaleLine = null;
                 if (animControlF != null && animControlF.Lines != null)
                 {
