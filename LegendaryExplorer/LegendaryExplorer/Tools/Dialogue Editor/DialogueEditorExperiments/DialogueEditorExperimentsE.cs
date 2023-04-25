@@ -1171,7 +1171,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 FaceFXLineEntry maleLine = null;
                 if (animControlM != null && animControlM.Lines != null)
                 {
-                    maleLine = animControlF.Lines.FirstOrDefault(line => line.TLKID == node.LineStrRef);
+                    maleLine = animControlM.Lines.FirstOrDefault(line => line.TLKID == node.LineStrRef);
                 }
 
                 float lengthF = 0;
