@@ -23,9 +23,9 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
     /// </summary>
     class DialogueEditorExperimentsE
     {
-        #region Update Native Node String Ref
+        #region Update Audio Node String Ref
         // Changes the node's lineref and the parts of the FXA, WwiseStream, and referencing VOs that include it so it doesn't break
-        public static void UpdateNativeNodeStringRef(DialogueEditorWindow dew)
+        public static void UpdateAudioNodeStrRef(DialogueEditorWindow dew)
         {
             DialogueNodeExtended node = dew.SelectedDialogueNode;
 

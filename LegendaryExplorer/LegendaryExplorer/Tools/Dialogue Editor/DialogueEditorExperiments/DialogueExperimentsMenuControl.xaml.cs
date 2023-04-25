@@ -30,9 +30,9 @@ namespace LegendaryExplorer.Tools.Dialogue_Editor.DialogueEditorExperiments
 
         // EXPERIMENTS: EXKYWOR------------------------------------------------------------
         #region Exkywor's experiments
-        private void UpdateNativeNodeStringRef_Click(object sender, RoutedEventArgs e)
+        private void UpdateAudioNodeStrRef_Click(object sender, RoutedEventArgs e)
         {
-            DialogueEditorExperimentsE.UpdateNativeNodeStringRef(GetDEWindow());
+            DialogueEditorExperimentsE.UpdateAudioNodeStrRef(GetDEWindow());
         }
 
         private void CloneNodeAndSequence_Click(object sender, RoutedEventArgs e)
