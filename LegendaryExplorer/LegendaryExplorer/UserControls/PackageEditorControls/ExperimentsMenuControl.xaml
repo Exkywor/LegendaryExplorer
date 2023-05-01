@@ -182,6 +182,7 @@
         <MenuItem Header="Rename Conversation" Click="RenameConversation_Click" ToolTip="Rename a conversation, changing the WwiseBank name and FXAs and related elements too, and optionally, updating its WwiseBank ID."/>
         <MenuItem Header="Update class properties of AmbPerfGameData" Click="UpdateAmbPerfClass_Click" ToolTip="Update WepPropClass, PropName, and PropResource props of an AmbPerf."/>
         <MenuItem Header="Batch update class properties of AmbPerfGameDatas" Click="BatchUpdateAmbPerfClass_Click" ToolTip="Batch update WepPropClass, PropName, and PropResource props of an AmbPerfs in a selected Package."/>
+        <MenuItem Header="Add Prefab to Level" Click="AddPrefabToLevel_Click" ToolTip="Creates instances of all the prefab archetypes of a Prefab into the file's persistent level."/>
     </MenuItem>
     <MenuItem Header="Object Database">
         <MenuItem Header="Build ME1 Object Database" Click="ChonkyDB_BuildME1GameDB"/>

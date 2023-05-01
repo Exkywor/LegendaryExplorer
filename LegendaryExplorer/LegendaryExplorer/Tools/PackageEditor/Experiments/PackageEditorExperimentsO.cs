@@ -6,6 +6,7 @@ using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Matinee;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
@@ -2303,7 +2304,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             return "";
         }
-       
+
         /// <summary>
         /// Wrapper for UpdateAmbPerfClass so it can used as a full experiment on its own.
         /// </summary>
@@ -2331,7 +2332,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 return;
             }
 
-            UpdateAmbPerfClass(pew.Pcc, (ExportEntry) pew.SelectedItem.Entry, propResource);
+            UpdateAmbPerfClass(pew.Pcc, (ExportEntry)pew.SelectedItem.Entry, propResource);
 
             MessageBox.Show("Properties of SFXAmbPerfGameData updated successfully.", "Success", MessageBoxButton.OK);
         }
@@ -2406,13 +2407,63 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             ambPerfGameData.WriteProperties(props);
         }
 
+        /// <summary>
+        /// Creates instances of all the prefab archetypes of a Prefab into the file's persistent level.
+        /// </summary>
+        /// <param name="pew">Current PE window.</param>
+        public static void AddPrefabToLevel(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+
+            if (pew.SelectedItem.Entry.ClassName is not "Prefab" || !(pew.SelectedItem.Entry is ExportEntry prefab))
+            {
+                ShowError("Selected export is not Prefab");
+                return;
+            }
+
+            ArrayProperty<ObjectProperty> prefabArchetypes = prefab.GetProperty<ArrayProperty<ObjectProperty>>("PrefabArchetypes");
+            if (prefabArchetypes == null)
+            {
+                ShowError("The Prefab contains no PrefabArchetypes property");
+                return;
+            }
+
+            if (!(pew.Pcc.FindExport("TheWorld.PersistentLevel") is ExportEntry { ClassName: "Level" } levelExport))
+            {
+                ShowError("No PersistentLevel found in the file.");
+                return;
+            }
+
+            Level level = ObjectBinary.From<Level>(levelExport);
+
+            foreach (ObjectProperty archRef in prefabArchetypes)
+            {
+                ExportEntry archetype;
+                IEntry entry = pew.Pcc.GetEntry(archRef.Value);
+
+                // Either cast the archetype or resolve it, so we clone an ExportEntry
+                if (entry is ImportEntry import) { archetype = EntryImporter.ResolveImport(import); }
+                else { archetype = (ExportEntry)entry; }
+
+                ExportEntry newEntry = EntryCloner.CloneEntry(archetype);
+                newEntry.Archetype = entry;
+                newEntry.idxLink = levelExport.UIndex;
+
+                level.Actors.Add(newEntry.UIndex);
+            }    
+
+            levelExport.WriteBinary(level);
+
+            MessageBox.Show("Added instances of all the archetypes in the Prefab to the PersistentLevel.", "Success", MessageBoxButton.OK);
+        }
+
         // HELPER FUNCTIONS
         #region Helper functions
         /// <summary>
         /// Indicates a class that is related to the audio elements of a BioConversation.
         /// </summary>
         private enum AudioClass { WwiseStream, WwiseEvent, SoundCue, SoundNodeWave }
-        
+
         /// <summary>
         /// Checks if a dest position is within a given distance of the origin.
         /// </summary>

@@ -1470,6 +1470,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         {
             PackageEditorExperimentsO.BatchUpdateAmbPerfClassExperiment(GetPEWindow());
         }
+
+        private void AddPrefabToLevel_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.AddPrefabToLevel(GetPEWindow());
+        }
         #endregion
 
         // EXPERIMENTS: CHONKY DB---------------------------------------------------------
