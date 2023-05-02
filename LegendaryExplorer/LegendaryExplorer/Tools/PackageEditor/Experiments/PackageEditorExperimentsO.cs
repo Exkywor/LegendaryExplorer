@@ -2445,11 +2445,25 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 if (entry is ImportEntry import) { archetype = EntryImporter.ResolveImport(import); }
                 else { archetype = (ExportEntry)entry; }
 
-                ExportEntry newEntry = EntryCloner.CloneEntry(archetype);
-                newEntry.Archetype = entry;
-                newEntry.idxLink = levelExport.UIndex;
+                ExportEntry newExport = EntryCloner.CloneEntry(archetype);
+                newExport.Archetype = entry;
+                newExport.idxLink = levelExport.UIndex;
 
-                level.Actors.Add(newEntry.UIndex);
+                switch(archetype.ClassName)
+                {
+                    case "BioDoor":
+                    case "PointLight":
+                    case "StaticMeshActor":
+                    case "SpotLight":
+                        AddStack(newExport);
+                        break;
+                    default:
+                        ObjectBinary binary = ObjectBinary.From(newExport);
+                        if (binary != null) { newExport.WriteBinary(binary); }
+                        break;
+                }
+
+                level.Actors.Add(newExport.UIndex);
             }    
 
             levelExport.WriteBinary(level);
@@ -2581,6 +2595,35 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             props.AddOrReplaceProp(new IntProperty(minVars, "MinVars"));
             props.AddOrReplaceProp(new IntProperty(maxVars, "MaxVars"));
             return new StructProperty("SeqVarLink", props);
+        }
+
+        public static void AddStack(ExportEntry export)
+        {
+            if (export.HasStack)
+            {
+                return;
+            }
+            var ms = new MemoryStream();
+            ms.WriteInt32(export.Class.UIndex);
+            if (export.Game != MEGame.UDK)
+            {
+                ms.WriteInt32(export.Class.UIndex);
+            }
+            ms.WriteInt64(-1);
+            if (export.Game >= MEGame.ME3)
+            {
+                ms.WriteInt16(0);
+            }
+            else
+            {
+                ms.WriteInt32(0);
+            }
+            ms.WriteInt32(0);
+            ms.WriteInt32(-1);
+            ms.WriteInt32(export.NetIndex);
+            ms.Write(export.DataReadOnly[export.GetPropertyStart()..]);
+            export.ObjectFlags |= UnrealFlags.EObjectFlags.HasStack;
+            export.Data = ms.ToArray();
         }
         #endregion
     }
