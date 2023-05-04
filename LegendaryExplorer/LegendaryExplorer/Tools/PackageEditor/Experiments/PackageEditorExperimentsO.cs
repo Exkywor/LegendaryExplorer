@@ -2438,23 +2438,23 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             foreach (ObjectProperty archRef in prefabArchetypes)
             {
-                ExportEntry archetype;
-                IEntry entry = pew.Pcc.GetEntry(archRef.Value);
-
                 // Either cast the archetype or resolve it, so we clone an ExportEntry
-                if (entry is ImportEntry import) { archetype = EntryImporter.ResolveImport(import); }
-                else { archetype = (ExportEntry)entry; }
+                IEntry entry = pew.Pcc.GetEntry(archRef.Value);
+                ExportEntry archetype = ResolveEntryToExport(entry);
 
                 ExportEntry newExport = EntryCloner.CloneEntry(archetype);
                 newExport.Archetype = entry;
                 newExport.idxLink = levelExport.UIndex;
 
-                switch(archetype.ClassName)
+                switch (archetype.ClassName)
                 {
                     case "BioDoor":
                     case "PointLight":
-                    case "StaticMeshActor":
                     case "SpotLight":
+                        AddStack(newExport);
+                        break;
+                    case "StaticMeshActor":
+                        CloneComponentsToActor(pew.Pcc, archetype, newExport);
                         AddStack(newExport);
                         break;
                     default:
@@ -2464,11 +2464,54 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
 
                 level.Actors.Add(newExport.UIndex);
-            }    
+            }
 
             levelExport.WriteBinary(level);
 
             MessageBox.Show("Added instances of all the archetypes in the Prefab to the PersistentLevel.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Clone the StaticMeshComponent and CollisionComponent of the source into the target, adding their proper binary in the process.
+        /// </summary>
+        /// <param name="pcc">Package to operate on.</param>
+        /// <param name="source">Source export to clone the components from.</param>
+        /// <param name="target">Target export to clone the components into.</param>
+        private static void CloneComponentsToActor(IMEPackage pcc, ExportEntry source, ExportEntry target)
+        {
+            PropertyCollection sourceProps = source.GetProperties();
+            PropertyCollection targetProps = target.GetProperties();
+
+            ObjectProperty meshRef = sourceProps.GetProp<ObjectProperty>("StaticMeshComponent");
+            ObjectProperty collisionRef = sourceProps.GetProp<ObjectProperty>("CollisionComponent");
+
+            if (meshRef != null)
+            {
+                ExportEntry newMeshComponent = EntryCloner.CloneEntry(ResolveEntryToExport(pcc.GetEntry(meshRef.Value)));
+                newMeshComponent.idxLink = target.UIndex;
+                newMeshComponent.WriteBinary(StaticMeshComponent.Create());
+                targetProps.AddOrReplaceProp(new ObjectProperty(newMeshComponent.UIndex, "StaticMeshComponent"));
+            }
+            if (collisionRef != null)
+            {
+                ExportEntry newCollisionComponent = EntryCloner.CloneEntry(ResolveEntryToExport(pcc.GetEntry(collisionRef.Value)));
+                newCollisionComponent.idxLink = target.UIndex;
+                newCollisionComponent.WriteBinary(StaticMeshComponent.Create());
+                targetProps.AddOrReplaceProp(new ObjectProperty(newCollisionComponent.UIndex, "CollisionComponent"));
+            }
+
+            target.WriteProperties(targetProps);
+        }
+
+        /// <summary>
+        /// Cast the entry to ExportEntry, or resolve it if it's an ImportEntry.
+        /// </summary>
+        /// <param name="entry">Entry to resolve.</param>
+        /// <returns>Resulting ExportEntry.</returns>
+        private static ExportEntry ResolveEntryToExport(IEntry entry)
+        {
+            if (entry is ImportEntry import) { return EntryImporter.ResolveImport(import); }
+            else { return (ExportEntry)entry; }
         }
 
         // HELPER FUNCTIONS
