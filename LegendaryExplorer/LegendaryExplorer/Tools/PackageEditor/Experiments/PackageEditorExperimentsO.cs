@@ -2442,30 +2442,34 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 IEntry entry = pew.Pcc.GetEntry(archRef.Value);
                 ExportEntry archetype = ResolveEntryToExport(entry);
 
-                ExportEntry newExport = EntryCloner.CloneEntry(archetype);
-                newExport.Archetype = entry;
-                newExport.idxLink = levelExport.UIndex;
-
-                newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.ArchetypeObject;
-                newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.Public;
-                newExport.ObjectFlags |= UnrealFlags.EObjectFlags.Transactional;
+                ExportEntry newExport;
 
                 switch (archetype.ClassName)
                 {
                     case "BioDoor":
                     case "PointLight":
                     case "SpotLight":
-                        AddStack(newExport);
-                        break;
                     case "StaticMeshActor":
-                        CloneComponentsToActor(pew.Pcc, archetype, newExport);
+                        newExport = CreateExport(pew.Pcc, archetype.ObjectName, archetype.ClassName, levelExport, archetype.GetProperties(),
+                            null, null, null, archetype);
                         AddStack(newExport);
                         break;
                     default:
+                        newExport = EntryCloner.CloneEntry(archetype);
+                        newExport.Archetype = entry;
+                        newExport.idxLink = levelExport.UIndex;
+
+                        // Set the proper flags
+                        newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.ArchetypeObject;
+                        newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.Public;
+                        newExport.ObjectFlags |= UnrealFlags.EObjectFlags.Transactional;
+
                         ObjectBinary binary = ObjectBinary.From(newExport);
                         if (binary != null) { newExport.WriteBinary(binary); }
                         break;
                 }
+
+                if (newExport.ClassName == "StaticMeshActor") { AddComponentsToActor(pew.Pcc, archetype, newExport); }
 
                 level.Actors.Add(newExport.UIndex);
             }
@@ -2476,35 +2480,44 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         }
 
         /// <summary>
-        /// Clone the StaticMeshComponent and CollisionComponent of the source into the target, adding their proper binary in the process.
+        /// Add the StaticMeshComponent and CollisionComponent of the source into the target, adding their proper binary in the process.
         /// </summary>
         /// <param name="pcc">Package to operate on.</param>
         /// <param name="source">Source export to clone the components from.</param>
         /// <param name="target">Target export to clone the components into.</param>
-        private static void CloneComponentsToActor(IMEPackage pcc, ExportEntry source, ExportEntry target)
+        private static void AddComponentsToActor(IMEPackage pcc, ExportEntry source, ExportEntry target)
         {
             PropertyCollection sourceProps = source.GetProperties();
             PropertyCollection targetProps = target.GetProperties();
 
-            ObjectProperty meshRef = sourceProps.GetProp<ObjectProperty>("StaticMeshComponent");
-            ObjectProperty collisionRef = sourceProps.GetProp<ObjectProperty>("CollisionComponent");
-
-            if (meshRef != null)
-            {
-                ExportEntry newMeshComponent = EntryCloner.CloneEntry(ResolveEntryToExport(pcc.GetEntry(meshRef.Value)));
-                newMeshComponent.idxLink = target.UIndex;
-                newMeshComponent.WriteBinary(ObjectBinary.From(newMeshComponent));
-                targetProps.AddOrReplaceProp(new ObjectProperty(newMeshComponent.UIndex, "StaticMeshComponent"));
-            }
-            if (collisionRef != null)
-            {
-                ExportEntry newCollisionComponent = EntryCloner.CloneEntry(ResolveEntryToExport(pcc.GetEntry(collisionRef.Value)));
-                newCollisionComponent.idxLink = target.UIndex;
-                newCollisionComponent.WriteBinary(ObjectBinary.From(newCollisionComponent));
-                targetProps.AddOrReplaceProp(new ObjectProperty(newCollisionComponent.UIndex, "CollisionComponent"));
-            }
+            CopyComponentToProps(pcc, "StaticMeshComponent", target, sourceProps, targetProps);
+            CopyComponentToProps(pcc, "CollisionComponent", target, sourceProps, targetProps);
 
             target.WriteProperties(targetProps);
+        }
+
+        /// <summary>
+        /// Copy a source component into a new object, and add the new property to the target collection.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="componentName">Name of the component to copy.</param>
+        /// <param name="parent">Parent export to link the component to.</param>
+        /// <param name="sourceProps">Props possibly containing the component to copy.</param>
+        /// <param name="targetProps">Props to copy the component into.</param>
+        /// <returns></returns>
+        private static void CopyComponentToProps(IMEPackage pcc, string componentName, ExportEntry parent, PropertyCollection sourceProps, PropertyCollection targetProps)
+        {
+            ObjectProperty componentRef = sourceProps.GetProp<ObjectProperty>(componentName);
+
+            if (componentRef != null)
+            {
+                ExportEntry sourceComponent = ResolveEntryToExport(pcc.GetEntry(componentRef.Value));
+                PropertyCollection sourceComponentProps = sourceComponent.GetProperties();
+                ExportEntry newComponent = CreateExport(pcc, sourceComponent.ObjectName, sourceComponent.ClassName, parent, sourceComponentProps,
+                    sourceComponent.GetBinaryData(), new byte[8]);
+
+                targetProps.AddOrReplaceProp(new ObjectProperty(newComponent.UIndex, componentName));
+            }
         }
 
         /// <summary>
@@ -2671,6 +2684,20 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             ms.Write(export.DataReadOnly[export.GetPropertyStart()..]);
             export.ObjectFlags |= UnrealFlags.EObjectFlags.HasStack;
             export.Data = ms.ToArray();
+        }
+
+        private static ExportEntry CreateExport(IMEPackage pcc, NameReference name, string className, IEntry parent, PropertyCollection properties = null, ObjectBinary binary = null, byte[] prePropBinary = null, IEntry super = null, IEntry archetype = null)
+        {
+            IEntry classEntry = className.CaseInsensitiveEquals("Class") ? null : EntryImporter.EnsureClassIsInFile(pcc, className, new RelinkerOptionsPackage());
+
+            var exp = new ExportEntry(pcc, parent, name, prePropBinary, properties, binary, binary is UClass)
+            {
+                Class = classEntry,
+                SuperClass = super,
+                Archetype = archetype
+            };
+            pcc.AddExport(exp);
+            return exp;
         }
         #endregion
     }
