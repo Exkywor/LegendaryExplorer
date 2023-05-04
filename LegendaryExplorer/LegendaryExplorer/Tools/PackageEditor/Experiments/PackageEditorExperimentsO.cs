@@ -2446,6 +2446,10 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 newExport.Archetype = entry;
                 newExport.idxLink = levelExport.UIndex;
 
+                newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.ArchetypeObject;
+                newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.Public;
+                newExport.ObjectFlags |= UnrealFlags.EObjectFlags.Transactional;
+
                 switch (archetype.ClassName)
                 {
                     case "BioDoor":
@@ -2489,14 +2493,14 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             {
                 ExportEntry newMeshComponent = EntryCloner.CloneEntry(ResolveEntryToExport(pcc.GetEntry(meshRef.Value)));
                 newMeshComponent.idxLink = target.UIndex;
-                newMeshComponent.WriteBinary(StaticMeshComponent.Create());
+                newMeshComponent.WriteBinary(ObjectBinary.From(newMeshComponent));
                 targetProps.AddOrReplaceProp(new ObjectProperty(newMeshComponent.UIndex, "StaticMeshComponent"));
             }
             if (collisionRef != null)
             {
                 ExportEntry newCollisionComponent = EntryCloner.CloneEntry(ResolveEntryToExport(pcc.GetEntry(collisionRef.Value)));
                 newCollisionComponent.idxLink = target.UIndex;
-                newCollisionComponent.WriteBinary(StaticMeshComponent.Create());
+                newCollisionComponent.WriteBinary(ObjectBinary.From(newCollisionComponent));
                 targetProps.AddOrReplaceProp(new ObjectProperty(newCollisionComponent.UIndex, "CollisionComponent"));
             }
 
