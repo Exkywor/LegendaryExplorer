@@ -2444,15 +2444,16 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                 ExportEntry newExport;
 
+                // General creation
                 switch (archetype.ClassName)
                 {
-                    case "BioDoor":
                     case "PointLight":
                     case "SpotLight":
+                    case "BioDoor":
                     case "StaticMeshActor":
                         newExport = CreateExport(pew.Pcc, archetype.ObjectName, archetype.ClassName, levelExport, archetype.GetProperties(),
-                            null, null, null, archetype);
-                        AddStack(newExport);
+                            null, null, null, archetype); // Create the export
+                        AddStack(newExport); // Add preProps binary
                         break;
                     default:
                         newExport = EntryCloner.CloneEntry(archetype);
@@ -2467,9 +2468,39 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         ObjectBinary binary = ObjectBinary.From(newExport);
                         if (binary != null) { newExport.WriteBinary(binary); }
                         break;
+
                 }
 
-                if (newExport.ClassName == "StaticMeshActor") { AddComponentsToActor(pew.Pcc, archetype, newExport); }
+                // Specific operations on the different classes. We could have a single switch case, but given that they need the export to already
+                // be created, and the specificities, it's cleaner to have two separate steps.
+                switch (archetype.ClassName)
+                {
+                    case "PointLight":
+                    case "SpotLight":
+                        // Add lighting channels to the lightComponents, in case they don't have them, as otherwise they won't appear.
+                        // You'd think that you'd be better copying the component and adding it in the PersistentLevel,
+                        // but that seems to do nothing, they need to be added to the archetype in the Prefab.
+                        ObjectProperty componentRef = archetype.GetProperties().GetProp<ObjectProperty>("LightComponent");
+
+                        if (componentRef != null)
+                        {
+                            ExportEntry lightComponent = ResolveEntryToExport(pew.Pcc.GetEntry(componentRef.Value));
+
+                            StructProperty lightingChannels = lightComponent.GetProperty<StructProperty>("LightingChannels")
+                                ?? new StructProperty("LightingChannelContainer", new PropertyCollection(), "LightingChannels");
+
+                            lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Static"));
+                            lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Dynamic"));
+
+                            lightComponent.WriteProperty(lightingChannels);
+                        }
+                        break;
+                    case "StaticMeshActor":
+                        AddComponentsToActor(pew.Pcc, archetype, newExport); // Copy relevant components
+                        break;
+                    default:
+                        break;
+                }
 
                 level.Actors.Add(newExport.UIndex);
             }
@@ -2490,8 +2521,15 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             PropertyCollection sourceProps = source.GetProperties();
             PropertyCollection targetProps = target.GetProperties();
 
-            CopyComponentToProps(pcc, "StaticMeshComponent", target, sourceProps, targetProps);
-            CopyComponentToProps(pcc, "CollisionComponent", target, sourceProps, targetProps);
+            switch (target.ClassName)
+            {
+                case "StaticMeshActor":
+                    CopyComponentToProps(pcc, "StaticMeshComponent", target, sourceProps, targetProps);
+                    CopyComponentToProps(pcc, "CollisionComponent", target, sourceProps, targetProps);
+                    break;
+                default:
+                    break;
+            }
 
             target.WriteProperties(targetProps);
         }
