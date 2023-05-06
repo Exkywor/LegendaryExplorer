@@ -2447,9 +2447,10 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 // General creation
                 switch (archetype.ClassName)
                 {
+                    case "BioDoor":
+                        continue; // Skip BioDoors, as adding the causes crashes
                     case "PointLight":
                     case "SpotLight":
-                    case "BioDoor":
                     case "StaticMeshActor":
                         newExport = CreateExport(pew.Pcc, archetype.ObjectName, archetype.ClassName, levelExport, archetype.GetProperties(),
                             null, null, null, archetype); // Create the export
@@ -2468,7 +2469,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         ObjectBinary binary = ObjectBinary.From(newExport);
                         if (binary != null) { newExport.WriteBinary(binary); }
                         break;
-
                 }
 
                 // Specific operations on the different classes. We could have a single switch case, but given that they need the export to already
@@ -2497,6 +2497,37 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         break;
                     case "StaticMeshActor":
                         AddComponentsToActor(pew.Pcc, archetype, newExport); // Copy relevant components
+                        break;
+                    case "BioSunActor":
+                        // We need to get to the archetypes of the BioSunFlareComponents, then set them to
+                        // come from the SFXGame package, rather than BIOC_Base
+                        List<Property> props = archetype.GetProperties().ToList();
+
+                        foreach(Property prop in props)
+                        {
+                            if (prop.PropType != PropertyType.ObjectProperty || (!prop.Name.Name.Contains("HaloSprite") && !prop.Name.Name.Contains("FlareSprite"))) { continue; }
+
+                            IEntry flareEntry = pew.Pcc.GetEntry(((ObjectProperty)prop).Value);
+
+                            ImportEntry flareImport;
+
+                            // Try to find if the component or its archetype are an import,
+                            // so we can operate on them
+                            if (flareEntry is ExportEntry export) {
+                                IEntry flareArchetype = export.Archetype;
+
+                                if (flareArchetype is ImportEntry import) { flareImport = import; }
+                                else { continue; } // Neither the component nor its archetype were an import, so we skip it
+                            }
+                            else {
+                                flareImport = (ImportEntry)flareEntry;
+                            }
+
+                            if (flareImport.PackageFile.CaseInsensitiveEquals("BIOC_Base"))
+                            {
+                                flareImport.PackageFile = "SFXGame";
+                            }
+                        }
                         break;
                     default:
                         break;
