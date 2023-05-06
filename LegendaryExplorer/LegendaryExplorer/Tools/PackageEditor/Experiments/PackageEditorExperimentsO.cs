@@ -2457,17 +2457,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         AddStack(newExport); // Add preProps binary
                         break;
                     default:
-                        newExport = EntryCloner.CloneEntry(archetype);
-                        newExport.Archetype = entry;
-                        newExport.idxLink = levelExport.UIndex;
-
-                        // Set the proper flags
-                        newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.ArchetypeObject;
-                        newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.Public;
-                        newExport.ObjectFlags |= UnrealFlags.EObjectFlags.Transactional;
-
-                        ObjectBinary binary = ObjectBinary.From(newExport);
-                        if (binary != null) { newExport.WriteBinary(binary); }
+                        newExport = ClonePrefabArchetype(entry, archetype, levelExport);
                         break;
                 }
 
@@ -2477,57 +2467,13 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 {
                     case "PointLight":
                     case "SpotLight":
-                        // Add lighting channels to the lightComponents, in case they don't have them, as otherwise they won't appear.
-                        // You'd think that you'd be better copying the component and adding it in the PersistentLevel,
-                        // but that seems to do nothing, they need to be added to the archetype in the Prefab.
-                        ObjectProperty componentRef = archetype.GetProperties().GetProp<ObjectProperty>("LightComponent");
-
-                        if (componentRef != null)
-                        {
-                            ExportEntry lightComponent = ResolveEntryToExport(pew.Pcc.GetEntry(componentRef.Value));
-
-                            StructProperty lightingChannels = lightComponent.GetProperty<StructProperty>("LightingChannels")
-                                ?? new StructProperty("LightingChannelContainer", new PropertyCollection(), "LightingChannels");
-
-                            lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Static"));
-                            lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Dynamic"));
-
-                            lightComponent.WriteProperty(lightingChannels);
-                        }
+                        AddLightingChannelsToComponent(pew.Pcc, archetype);
                         break;
                     case "StaticMeshActor":
                         AddComponentsToActor(pew.Pcc, archetype, newExport); // Copy relevant components
                         break;
                     case "BioSunActor":
-                        // We need to get to the archetypes of the BioSunFlareComponents, then set them to
-                        // come from the SFXGame package, rather than BIOC_Base
-                        List<Property> props = archetype.GetProperties().ToList();
-
-                        foreach(Property prop in props)
-                        {
-                            if (prop.PropType != PropertyType.ObjectProperty || (!prop.Name.Name.Contains("HaloSprite") && !prop.Name.Name.Contains("FlareSprite"))) { continue; }
-
-                            IEntry flareEntry = pew.Pcc.GetEntry(((ObjectProperty)prop).Value);
-
-                            ImportEntry flareImport;
-
-                            // Try to find if the component or its archetype are an import,
-                            // so we can operate on them
-                            if (flareEntry is ExportEntry export) {
-                                IEntry flareArchetype = export.Archetype;
-
-                                if (flareArchetype is ImportEntry import) { flareImport = import; }
-                                else { continue; } // Neither the component nor its archetype were an import, so we skip it
-                            }
-                            else {
-                                flareImport = (ImportEntry)flareEntry;
-                            }
-
-                            if (flareImport.PackageFile.CaseInsensitiveEquals("BIOC_Base"))
-                            {
-                                flareImport.PackageFile = "SFXGame";
-                            }
-                        }
+                        FixPackageOfSunSprites(pew.Pcc, archetype.GetProperties());
                         break;
                     default:
                         break;
@@ -2586,6 +2532,91 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     sourceComponent.GetBinaryData(), new byte[8]);
 
                 targetProps.AddOrReplaceProp(new ObjectProperty(newComponent.UIndex, componentName));
+            }
+        }
+
+        /// <summary>
+        /// Clone an archetype from a prefab into the PersistentLevel.
+        /// </summary>
+        /// <param name="archetypeEntry">Archetype entry, may be an import or an export.</param>
+        /// <param name="archetype">Resolved export of the archetype, in case it was an import.</param>
+        /// <param name="persistentLevel">PersistentLevel to add the clone to.</param>
+        /// <returns></returns>
+        private static ExportEntry ClonePrefabArchetype(IEntry archetypeEntry, ExportEntry archetype, ExportEntry persistentLevel)
+        {
+            ExportEntry newExport = EntryCloner.CloneEntry(archetype);
+            newExport.Archetype = archetypeEntry;
+            newExport.idxLink = persistentLevel.UIndex;
+
+            // Set the proper flags
+            newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.ArchetypeObject;
+            newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.Public;
+            newExport.ObjectFlags |= UnrealFlags.EObjectFlags.Transactional;
+
+            ObjectBinary binary = ObjectBinary.From(newExport);
+            if (binary == null) { newExport.WriteBinary(ObjectBinary.Create(newExport.ClassName, newExport.FileRef.Game, newExport.GetProperties())); }
+
+            return newExport;
+        }
+
+        /// <summary>
+        /// Add lighting channels to the LightComponents, in case they don't have them, as otherwise they won't appear.
+        /// You'd think that you'd be better copying the component and adding it in the PersistentLevel,
+        /// but that seems to do nothing, they need to be added to the archetype in the Prefab.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="parent">Parent export of the LightComponent.</param>
+        private static void AddLightingChannelsToComponent(IMEPackage pcc, ExportEntry parent)
+        {
+            ObjectProperty componentRef = parent.GetProperties().GetProp<ObjectProperty>("LightComponent");
+
+            if (componentRef != null)
+            {
+                ExportEntry lightComponent = ResolveEntryToExport(pcc.GetEntry(componentRef.Value));
+
+                StructProperty lightingChannels = lightComponent.GetProperty<StructProperty>("LightingChannels")
+                    ?? new StructProperty("LightingChannelContainer", new PropertyCollection(), "LightingChannels");
+
+                lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Static"));
+                lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Dynamic"));
+
+                lightComponent.WriteProperty(lightingChannels);
+            }
+        }
+
+        /// <summary>
+        /// Find the SunSprite components that are ImportEntries, if any, then change their package file to SFXGame, if it's BIOC_Base.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="props">Props containing the components references.</param>
+        private static void FixPackageOfSunSprites(IMEPackage pcc, PropertyCollection props)
+        {
+            foreach (Property prop in props)
+            {
+                if (prop.PropType != PropertyType.ObjectProperty || (!prop.Name.Name.Contains("HaloSprite") && !prop.Name.Name.Contains("FlareSprite"))) { continue; }
+
+                IEntry flareEntry = pcc.GetEntry(((ObjectProperty)prop).Value);
+
+                ImportEntry flareImport;
+
+                // Try to find if the component or its archetype are an import,
+                // so we can operate on them
+                if (flareEntry is ExportEntry export)
+                {
+                    IEntry flareArchetype = export.Archetype;
+
+                    if (flareArchetype is ImportEntry import) { flareImport = import; }
+                    else { continue; } // Neither the component nor its archetype were an import, so we skip it
+                }
+                else
+                {
+                    flareImport = (ImportEntry)flareEntry;
+                }
+
+                if (flareImport.PackageFile.CaseInsensitiveEquals("BIOC_Base"))
+                {
+                    flareImport.PackageFile = "SFXGame";
+                }
             }
         }
 
