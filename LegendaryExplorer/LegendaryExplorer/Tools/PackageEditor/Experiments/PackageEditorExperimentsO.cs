@@ -2593,7 +2593,8 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         {
             foreach (Property prop in props)
             {
-                if (prop.PropType != PropertyType.ObjectProperty || (!prop.Name.Name.Contains("HaloSprite") && !prop.Name.Name.Contains("FlareSprite"))) { continue; }
+                if (prop.PropType != PropertyType.ObjectProperty && !prop.Name.Name.Contains("Sprite")) { continue; }
+                // if (prop.PropType != PropertyType.ObjectProperty || (!prop.Name.Name.Contains("HaloSprite") && !prop.Name.Name.Contains("FlareSprite"))) { continue; }
 
                 IEntry flareEntry = pcc.GetEntry(((ObjectProperty)prop).Value);
 
