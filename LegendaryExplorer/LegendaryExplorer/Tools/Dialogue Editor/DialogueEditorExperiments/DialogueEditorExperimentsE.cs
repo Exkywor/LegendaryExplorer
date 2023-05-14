@@ -26,25 +26,25 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
     {
         #region Update Native Node String Ref
         /// <summary>
-        /// Change the node's lineref and the parts of the FXA, WwiseStream, and WwwiseEvents
+        /// Change the node's LineRef and the references to it in the FXA and audio elements.
         /// that include it so it doesn't break
         /// </summary>
         /// <param name="dew">Current DE window.</param>
-        public static void UpdateNativeNodeStringRef(DialogueEditorWindow dew)
+        public static void UpdateAudioNodeStrRef(DialogueEditorWindow dew)
         {
             DialogueNodeExtended node = dew.SelectedDialogueNode;
 
-            if (dew.Pcc == null || selectedDialogueNode == null) { return; }
+            if (dew.Pcc == null || node == null) { return; }
 
             // Need to check if currStringRef exists
-            string currStringRef = selectedDialogueNode.LineStrRef.ToString();
+            string currStringRef = node.LineStrRef.ToString();
             if (string.IsNullOrEmpty(currStringRef))
             {
                 MessageBox.Show("The selected node does not have a Line String Ref, which is required in order to programatically replace the required elements.", "Warning", MessageBoxButton.OK);
                 return;
             }
 
-            string newStringRef = promptForRef("New line string ref:", "Not a valid line string ref.");
+            string newStringRef = PromptForRef("New line string ref:", "Not a valid line string ref.");
             if (string.IsNullOrEmpty(newStringRef))
             {
                 return;
@@ -64,7 +64,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             if (pcc.Game.IsGame1())
             {
                 // Remove the _F from the femaleFXA name, as it appears without it for female FXA lines.
-                string femaleFXAName = selectedDialogueNode.FaceFX_Female[..^2];
+                string femaleFXAName = node.FaceFX_Female[..^2];
 
                 // Manually find the selected female line, as LEX doesn't load it into the SelectedLine of the
                 // FaceFXAnimSetEditorControl_F for ME1.
@@ -101,10 +101,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             }
 
 
-            if (int.TryParse(newStringRef, out int intRef))
-            {
-                selectedDialogueNode.LineStrRef = intRef;
-            }
+            if (int.TryParse(newStringRef, out int intRef)) { node.LineStrRef = intRef; }
 
             MessageBox.Show($"The node now points to {newStringRef}.", "Success", MessageBoxButton.OK);
         }
@@ -174,41 +171,41 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 
             FaceFXAnimSetEditorControl.IFaceFXBinary FaceFX = FXAControl.FaceFX;
 
-            FaceFXLine SelectedLine = null;
+            FaceFXLine selectedLine = null;
             if (femaleLine != null)
             {
-                SelectedLine = femaleLine;
+                selectedLine = femaleLine;
             }
             else
             {
-                SelectedLine = FXAControl.SelectedLine;
+                selectedLine = FXAControl.SelectedLine;
             }
 
-            if (SelectedLine == null) { return; }
+            if (selectedLine == null) { return; }
 
-            if (SelectedLine.Path != null)
+            if (selectedLine.Path != null)
             {
-                SelectedLine.Path = SelectedLine.Path.Replace(oldRef, newRef);
+                selectedLine.Path = selectedLine.Path.Replace(oldRef, newRef);
             }
-            if (SelectedLine.ID != null)
+            if (selectedLine.ID != null)
             {
-                SelectedLine.ID = SelectedLine.ID.Replace(oldRef, newRef);
+                selectedLine.ID = selectedLine.ID.Replace(oldRef, newRef);
             }
 
             // Change FaceFX name
-            if (SelectedLine.NameAsString != null)
+            if (selectedLine.NameAsString != null)
             {
-                string newName = SelectedLine.NameAsString.Replace(oldRef, newRef);
+                string newName = selectedLine.NameAsString.Replace(oldRef, newRef);
                 if (FaceFX.Names.Contains(newName))
                 {
-                    SelectedLine.NameIndex = FaceFX.Names.IndexOf(newName);
-                    SelectedLine.NameAsString = newName;
+                    selectedLine.NameIndex = FaceFX.Names.IndexOf(newName);
+                    selectedLine.NameAsString = newName;
                 }
                 else
                 {
                     FaceFX.Names.Add(newName);
-                    SelectedLine.NameIndex = FaceFX.Names.Count - 1;
-                    SelectedLine.NameAsString = newName;
+                    selectedLine.NameIndex = FaceFX.Names.Count - 1;
+                    selectedLine.NameAsString = newName;
                 }
             }
 
