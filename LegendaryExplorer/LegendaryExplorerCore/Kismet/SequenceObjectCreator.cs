@@ -1492,5 +1492,34 @@ namespace LegendaryExplorerCore.Kismet
             }
             return divide;
         }
+
+        /// <summary>
+        /// Adds a SeqAct_StreamInTextures object in the given sequence, optionally linking the extra parameters if set.
+        /// </summary>
+        /// <param name="seq">Sequence to add the new object to</param>
+        /// <param name="actor">Optional: The object to connect to the Actor pin</param>
+        /// <param name="location">Optional: The object to connect to the Location pin (actors)</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateStreamInTextures(ExportEntry seq, ExportEntry actor = null, ExportEntry location = null,PackageCache cache = null)
+        {
+            // Likely only works for LE1
+            var sin = CreateSequenceObject(seq.FileRef, "SeqAct_StreamInTextures", cache);
+            KismetHelper.AddObjectToSequence(sin, seq);
+            if (actor != null)
+            {
+                KismetHelper.CreateVariableLink(sin, "Actor", actor);
+            }
+            if (location != null)
+            {
+                KismetHelper.CreateVariableLink(sin, "Location", location);
+            }
+            return sin;
+        }
+
+        public static ExportEntry CreateStreamInTextures(ExportEntry mainSeq, ExportEntry player, TieredPackageCache cache)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
