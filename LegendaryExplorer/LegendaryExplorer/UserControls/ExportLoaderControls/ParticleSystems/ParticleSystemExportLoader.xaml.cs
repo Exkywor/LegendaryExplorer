@@ -50,7 +50,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                     {
                         var emitterExport = CurrentLoadedExport.FileRef.GetUExport(emitter.Value);
                         var emitterName = emitterExport.GetProperty<NameProperty>("EmitterName");
-                        string header = emitterName?.Value.Name ?? "Emitter";
+                        string header = emitterName?.Value.Instanced ?? "Emitter";
                         ParticleSystemNode p = new() { 
                             Entry = emitterExport, 
                             Header = $"{emitterExport.UIndex} {header}" 
