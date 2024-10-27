@@ -29,13 +29,10 @@ using InterpCurveFloat = LegendaryExplorerCore.Unreal.BinaryConverters.InterpCur
 using LegendaryExplorer.Tools.PackageEditor;
 using System.Windows.Media;
 using LegendaryExplorer.Misc;
-using LegendaryExplorer.Tools.LiveLevelEditor.MatEd;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
 using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using Newtonsoft.Json;
-using SharpDX.Direct2D1.Effects;
 using System.Threading.Tasks;
-using LegendaryExplorer.UserControls.ExportLoaderControls.MaterialEditor;
 
 namespace LegendaryExplorer.Tools.LiveLevelEditor
 {
@@ -52,7 +49,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             if (!game.IsLEGame() || !(GameController.GetInteropTargetForGame(game)?.CanUseLLE ?? false))
                 throw new ArgumentException(@"LE Live Level Editor does not support this game!", nameof(game));
 
-            return Instances.TryGetValue(game, out LELiveLevelEditorWindow lle) ? lle : null;
+            return Instances.GetValueOrDefault(game);
         }
 
         private bool _readyToView;
@@ -85,7 +82,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             }
         }
 
-        public bool CamPathReadyToView => _readyToView && Game is MEGame.ME3;
+        public bool CamPathReadyToView => _readyToView && false; //not ready for use yet
 
         public MEGame Game { get; }
         public InteropTarget GameTarget { get; }
@@ -381,6 +378,8 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
                 // Reload all files in the game to make sure the list is current
                 MELoadedFiles.GetFilesLoadedInGame(Game, true);
                 ActorDict.Clear();
+
+                InitializeCamPath();
             }
             else if (verb == "LEVELSUPDATE")
             {
@@ -1058,10 +1057,10 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
         #endregion
 
         #region CamPath
-        private const int CamPath_InterpDataIDX = 63;
-        private const int CamPath_LoopGateIDX = 77;
-        private const int CamPath_InterpTrackMoveIDX = 70;
-        private const int CamPath_FOVTrackIDX = 82;
+        private const string CamPath_InterpData_IFP = "TheWorld.PersistentLevel.Main_Sequence.InterpData_0";
+        private const string CamPath_LoopGate_IFP = "TheWorld.PersistentLevel.Main_Sequence.SeqAct_Gate_0";
+        private const string CamPath_InterpTrackMove_IFP = "TheWorld.PersistentLevel.Main_Sequence.InterpData_0.InterpGroup_65.InterpTrackMove_1";
+        private const string CamPath_FOVTrack_IFP = "TheWorld.PersistentLevel.Main_Sequence.InterpData_0.InterpGroup_66.InterpTrackFloatProp_0";
 
         private IMEPackage camPathPackage;
 
@@ -1137,25 +1136,40 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
 
         private void SaveCamPath(object sender, RoutedEventArgs e)
         {
-            camPathPackage.GetUExport(CamPath_InterpDataIDX).WriteProperty(new FloatProperty(Math.Max(Move_CurveEditor.Time, FOV_CurveEditor.Time), "InterpLength"));
-            camPathPackage.GetUExport(CamPath_LoopGateIDX).WriteProperty(new BoolProperty(ShouldLoop, "bOpen"));
-            camPathPackage.Save();
-            LiveEditHelper.PadCamPathFile(Game);
             GameTarget.ModernExecuteConsoleCommand("ce stopcam");
-            GameTarget.ModernExecuteConsoleCommand("ce LoadCamPath");
+            camPathPackage.FindExport(CamPath_InterpData_IFP).WriteProperty(new FloatProperty(Math.Max(Move_CurveEditor.Time, FOV_CurveEditor.Time), "InterpLength"));
+            camPathPackage.FindExport(CamPath_LoopGate_IFP).WriteProperty(new BoolProperty(ShouldLoop, "bOpen"));
+
+            InteropHelper.SendMessageToGame($"{InteropCommands.STREAMLEVELOUT} {camPathPackage.FileNameNoExtension}", Game);
+            InteropHelper.SendMessageToGame($"{InteropCommands.INTEROP_SHOWLOADINGINDICATOR}", Game);
+            InteropHelper.SendFileToGame(camPathPackage); // Send package into game for loading
+            Task.Run(() =>
+            {
+                Thread.Sleep(500);
+            }).ContinueWithOnUIThread(x =>
+            {
+                InteropHelper.SendMessageToGame($"{InteropCommands.STREAMLEVELIN} {camPathPackage.FileNameNoExtension}", Game);
+            }).ContinueWith(x =>
+            {
+                Thread.Sleep(500);
+            }).ContinueWithOnUIThread(x =>
+            {
+                InteropHelper.SendMessageToGame($"{InteropCommands.INTEROP_HIDELOADINGINDICATOR}", Game);
+            });
             playbackState = PlaybackState.Stopped;
             PlayPauseIcon = EFontAwesomeIcon.Solid_Play;
         }
 
         private void InitializeCamPath()
         {
-            if (Game is not MEGame.ME3)
+            //campath not ready yet
+            if (true)
             {
                 return;
             }
-            camPathPackage = MEPackageHandler.OpenMEPackage(LiveEditHelper.CamPathFilePath(Game));
-            interpTrackMove = camPathPackage.GetUExport(CamPath_InterpTrackMoveIDX);
-            fovTrackExport = camPathPackage.GetUExport(CamPath_FOVTrackIDX);
+            camPathPackage = MEPackageHandler.OpenMEPackage(Path.Combine(AppDirectories.ExecFolder, "LE3LiveEditorCamPath.pcc"));
+            interpTrackMove = camPathPackage.FindExport(CamPath_InterpTrackMove_IFP);
+            fovTrackExport = camPathPackage.FindExport(CamPath_FOVTrack_IFP);
             ReloadCurveEdExports();
 
             savedCamsFileWatcher = new FileSystemWatcher(MEDirectories.GetExecutableFolderPath(Game), "savedCams") { NotifyFilter = NotifyFilters.LastWrite };
@@ -1177,7 +1191,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             Dispatcher.BeginInvoke(new Action(ReloadCams));
         }
 
-        private void ReloadCams() => SavedCams.ReplaceAll(LiveEditHelper.ReadSavedCamsFile());
+        private void ReloadCams() => SavedCams.ReplaceAll(LiveEditHelper.ReadSavedCamsFile(Game));
 
         private void DisposeCamPath()
         {
