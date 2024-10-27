@@ -90,7 +90,17 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                                         }
                                     }
                                 }
+                                var spawnModule = (ExportEntry) lodExport.GetProperty<ObjectProperty>("SpawnModule")?.ResolveToEntry(CurrentLoadedExport.FileRef);
+                                if (spawnModule != null)
+                                {
+                                    ParticleSystemNode spwnModule = new()
+                                    {
+                                        Entry = spawnModule,
+                                        Header = $"Spawn Module: {spawnModule.UIndex} {spawnModule.InstancedFullPath}"
+                                    };
+                                    psLod.Children.Add(spwnModule);
 
+                                }
                                 var typeDataExport = (ExportEntry) lodExport.GetProperty<ObjectProperty>("TypeDataModule")?.ResolveToEntry(CurrentLoadedExport.FileRef);
                                 if (typeDataExport != null)
                                 {
