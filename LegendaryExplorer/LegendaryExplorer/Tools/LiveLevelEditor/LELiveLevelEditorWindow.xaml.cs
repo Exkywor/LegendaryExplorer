@@ -82,7 +82,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             }
         }
 
-        public bool CamPathReadyToView => _readyToView && false; //not ready for use yet
+        public bool CamPathReadyToView => _readyToView && App.IsDebug; //not ready for use yet
 
         public MEGame Game { get; }
         public InteropTarget GameTarget { get; }
@@ -1057,10 +1057,10 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
         #endregion
 
         #region CamPath
-        private const string CamPath_InterpData_IFP = "TheWorld.PersistentLevel.Main_Sequence.InterpData_0";
-        private const string CamPath_LoopGate_IFP = "TheWorld.PersistentLevel.Main_Sequence.SeqAct_Gate_0";
-        private const string CamPath_InterpTrackMove_IFP = "TheWorld.PersistentLevel.Main_Sequence.InterpData_0.InterpGroup_65.InterpTrackMove_1";
-        private const string CamPath_FOVTrack_IFP = "TheWorld.PersistentLevel.Main_Sequence.InterpData_0.InterpGroup_66.InterpTrackFloatProp_0";
+        private const string CamPath_InterpData_IFP = "TheWorld.PersistentLevel.Main_Sequence.CamPathSeq.InterpData_0";
+        private const string CamPath_LoopGate_IFP = "TheWorld.PersistentLevel.Main_Sequence.CamPathSeq.SeqAct_Gate_0";
+        private const string CamPath_InterpTrackMove_IFP = "TheWorld.PersistentLevel.Main_Sequence.CamPathSeq.InterpData_0.InterpGroup_0.InterpTrackMove_0";
+        private const string CamPath_FOVTrack_IFP = "TheWorld.PersistentLevel.Main_Sequence.CamPathSeq.InterpData_0.InterpGroup_1.InterpTrackFloatProp_0";
 
         private IMEPackage camPathPackage;
 
@@ -1162,12 +1162,11 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
 
         private void InitializeCamPath()
         {
-            //campath not ready yet
-            if (true)
+            if (!App.IsDebug || Game is not MEGame.LE1)
             {
                 return;
             }
-            camPathPackage = MEPackageHandler.OpenMEPackage(Path.Combine(AppDirectories.ExecFolder, "LE3LiveEditorCamPath.pcc"));
+            camPathPackage = MEPackageHandler.OpenMEPackage(Path.Combine(AppDirectories.ExecFolder, "LELiveEditorCamPath.pcc"));
             interpTrackMove = camPathPackage.FindExport(CamPath_InterpTrackMove_IFP);
             fovTrackExport = camPathPackage.FindExport(CamPath_FOVTrack_IFP);
             ReloadCurveEdExports();
