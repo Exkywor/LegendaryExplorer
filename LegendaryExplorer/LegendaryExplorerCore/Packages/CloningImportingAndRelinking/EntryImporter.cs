@@ -430,7 +430,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                                 break;
                             }
 
-                            // CROSSGEN ONLY: We allow substitution of MaterialInstanceConstant for Material with donor system
+                            // We allow substitution of MaterialInstanceConstant for Material with donor system
                             // as we need to be able to tune things
                             if (testExp.ClassName != sourceExport.ClassName)
                             {

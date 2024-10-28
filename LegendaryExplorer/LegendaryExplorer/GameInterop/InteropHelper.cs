@@ -184,7 +184,9 @@ namespace LegendaryExplorer.GameInterop
             // If you're developing the LEX Interop ASI you can 
             // force it to think it's installed and ignore the MD5 check.
             if (game is MEGame.LE1 or MEGame.LE3)
+            {
                 return true; // DEV ONLY
+            }
 #endif
             string asiDir = GetAsiDir(game);
             string asiMD5 = GameController.GetInteropTargetForGame(game).InteropASIMD5;

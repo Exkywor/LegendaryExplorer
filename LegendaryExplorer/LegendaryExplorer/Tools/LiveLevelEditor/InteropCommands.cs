@@ -14,6 +14,8 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
         public const string INTEROP_LOADPACKAGE = "LOADPACKAGE";
         public const string INTEROP_SHOWLOADINGINDICATOR = "SHOWLOADINGINDICATOR";
         public const string INTEROP_HIDELOADINGINDICATOR = "HIDELOADINGINDICATOR";
+        public const string STREAMLEVELOUT = "STREAMLEVELOUT";
+        public const string STREAMLEVELIN = "STREAMLEVELIN";
 
 
         // LIVE LEVEL EDITOR COMMANDS
