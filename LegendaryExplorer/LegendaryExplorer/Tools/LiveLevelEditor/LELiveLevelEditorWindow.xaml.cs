@@ -33,6 +33,7 @@ using LegendaryExplorerCore.Unreal.ObjectInfo;
 using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
+using Microsoft.Win32;
 
 namespace LegendaryExplorer.Tools.LiveLevelEditor
 {
@@ -657,7 +658,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
                                 FileName = mapName,
                                 ActorName = jsonActorObj.Name,
                                 ComponentName = component.SLCAName,
-                                ComponentIdx = i ,
+                                ComponentIdx = i,
                                 IsCollectionActor = true
                             };
                             ActorDict.AddToListAt(mapName, actor);
@@ -1137,8 +1138,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
         private void SaveCamPath(object sender, RoutedEventArgs e)
         {
             GameTarget.ModernExecuteConsoleCommand("ce stopcam");
-            camPathPackage.FindExport(CamPath_InterpData_IFP).WriteProperty(new FloatProperty(Math.Max(Move_CurveEditor.Time, FOV_CurveEditor.Time), "InterpLength"));
-            camPathPackage.FindExport(CamPath_LoopGate_IFP).WriteProperty(new BoolProperty(ShouldLoop, "bOpen"));
+            SavePendingChangesToCamPath();
 
             InteropHelper.SendMessageToGame($"{InteropCommands.STREAMLEVELOUT} {camPathPackage.FileNameNoExtension}", Game);
             InteropHelper.SendMessageToGame($"{InteropCommands.INTEROP_SHOWLOADINGINDICATOR}", Game);
@@ -1254,6 +1254,24 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
         {
             MatEdLLE.SetSpecificMaterial(export);
         }
+
+        private void SaveCamPathToPackage(object sender, RoutedEventArgs e)
+        {
+            SavePendingChangesToCamPath();
+            string extension = Path.GetExtension(camPathPackage.FilePath);
+            SaveFileDialog d = new() { Filter = $"*{extension}|*{extension}" };
+            if (d.ShowDialog() == true)
+            {
+                camPathPackage.Save(d.FileName);
+            }
+        }
+
+        private void SavePendingChangesToCamPath()
+        {
+            // Save changes to cam path
+            camPathPackage.FindExport(CamPath_InterpData_IFP).WriteProperty(new FloatProperty(Math.Max(Move_CurveEditor.Time, FOV_CurveEditor.Time), "InterpLength"));
+            camPathPackage.FindExport(CamPath_LoopGate_IFP).WriteProperty(new BoolProperty(ShouldLoop, "bOpen"));
+        }
     }
 
     public class ActorEntryLE
@@ -1290,7 +1308,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
         public int ComponentIdx = -1;
 
         public string PathInLevel => ComponentName is null ? ActorName : $"{ActorName}.{ComponentName}";
-        
+
         /// <summary>
         /// If this object is for one in a collection
         /// </summary>

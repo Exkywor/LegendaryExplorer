@@ -160,6 +160,9 @@
                                             </Style>
                                         </Button.Style>-->
                                     </Button>
+                                    <Button Click="SaveCamPathToPackage" Margin="5">
+                                        Save to Package
+                                    </Button>
                                     <Button Click="ClearKeys"  Margin="5">
                                         Clear Keys
                                     </Button>
