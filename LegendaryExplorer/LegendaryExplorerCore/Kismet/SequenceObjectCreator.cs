@@ -1521,5 +1521,22 @@ namespace LegendaryExplorerCore.Kismet
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Creates a new SeqEvent_ConsoleEvent with the given ConsoleEventName
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="consoleEventName"></param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateSeqEventConsole(ExportEntry sequence, string consoleEventName, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "SeqEvent_Console", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            fObj.WriteProperty(new NameProperty(consoleEventName, "ConsoleEventName"));
+
+            return fObj;
+        }
     }
 }
