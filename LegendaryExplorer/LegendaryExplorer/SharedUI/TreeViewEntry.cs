@@ -446,7 +446,9 @@ namespace LegendaryExplorer.SharedUI
                             case "SoundCue":
                                 {
                                     //parse out tlk id?
-                                    var splits = Entry.ObjectName.Name.Split('_', ',');
+                                    // 11/02/2024 - Have to do instances as in Game1 only male strings (suffixed with _M) get treated as unique base names
+                                    // So audio:VO_123456 and audio:VO_123456_M have different base names!
+                                    var splits = Entry.ObjectName.Instanced.Split('_', ',');
                                     for (int i = splits.Length - 1; i > 0; i--)
                                     {
                                         //backwards is faster
