@@ -1526,7 +1526,7 @@ namespace LegendaryExplorerCore.Kismet
         /// Creates a new SeqEvent_ConsoleEvent with the given ConsoleEventName
         /// </summary>
         /// <param name="sequence">Sequence this object will be placed into</param>
-        /// <param name="consoleEventName"></param>
+        /// <param name="consoleEventName">The console event name that is used to trigger the event</param>
         /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
         /// <returns>The created kismet object</returns>
         public static ExportEntry CreateSeqEventConsole(ExportEntry sequence, string consoleEventName, PackageCache cache = null)
@@ -1536,6 +1536,52 @@ namespace LegendaryExplorerCore.Kismet
 
             fObj.WriteProperty(new NameProperty(consoleEventName, "ConsoleEventName"));
 
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_InitLoadingMovie with the given movie filename, if any
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="movieName">Name of loading movie to prepare</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateInitLoadingMovie(ExportEntry sequence, string movieName, TieredPackageCache cache)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_InitLoadingMovie", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            if (movieName != null)
+            {
+                fObj.WriteProperty(new StrProperty(movieName, "sMovieName"));
+            }
+
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_PlayLoadingMovie
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreatePlayLoadingMovie(ExportEntry sequence, TieredPackageCache cache)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_PlayLoadingMovie", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_StopLoadingMovie
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateStopLoadingMovie(ExportEntry sequence, TieredPackageCache cache)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_StopLoadingMovie", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
             return fObj;
         }
     }
