@@ -126,6 +126,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             DisposeCamPath();
             DataContext = null;
             GameTarget.GameReceiveMessage -= GameControllerOnReceiveMessage;
+            MatEdLLE?.Dispose();
             Instances.Remove(Game);
             GameOpenTimer.Stop();
             RetryLoadTimer.Stop();
