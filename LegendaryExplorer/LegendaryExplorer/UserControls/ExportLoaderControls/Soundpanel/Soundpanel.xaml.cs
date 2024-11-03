@@ -1232,6 +1232,13 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
 
                 if (CurrentLoadedExport.ClassName == "SoundNodeWave" && ExportInfoListBox.SelectedItem is ISACTListBankChunk bankEntry)
                 {
+                    var pcmStream = GetPCMStream();
+                    if (pcmStream == null)
+                    {
+                        MessageBox.Show("An error occurred converting the audio to .wav.", "Error converting", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
                     SaveFileDialog d = new SaveFileDialog
                     {
                         Filter = "Wave PCM File|*.wav",
@@ -1239,21 +1246,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                     };
                     if (d.ShowDialog() == true)
                     {
-                        // We force return wave data as using the conversion in NAudio makes it all static on reimport due to it not being actual raw PCM data (it is type 0x3, which is not 0x1 PCM)
-                        MemoryStream waveStream = AudioStreamHelper.GetWaveStreamFromISBEntry(bankEntry, true);
-                        if (waveStream.Length == 0)
-                        {
-                            MessageBox.Show("An error occurred converting the audio to .wav.", "Error converting", MessageBoxButton.OK, MessageBoxImage.Error);
-                            return;
-                        }
-
-                        waveStream.Seek(0, SeekOrigin.Begin);
-                        using (FileStream fs = new FileStream(d.FileName, FileMode.OpenOrCreate))
-                        {
-                            waveStream.CopyTo(fs);
-                            fs.Flush();
-                        }
-
+                        pcmStream.WriteToFile(d.FileName);
                         MessageBox.Show("Done.");
                     }
                 }
@@ -1316,7 +1309,8 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                     case "WwiseBank":
                         return ExportInfoListBox.SelectedItem is EmbeddedWEMFile;
                     case "SoundNodeWave":
-                        return ExportInfoListBox.SelectedItem is ISACTListBankChunk { SampleData: not null };
+                        return ExportInfoListBox.SelectedItem is ISACTListBankChunk lbc && (lbc.SampleData != null ||
+                               lbc.SampleOffset != null);
                 }
             }
 
@@ -1383,7 +1377,8 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
 
             OpenFileDialog d = new OpenFileDialog
             {
-                Title = "Select new .wav file", Filter = "Wave PCM|*.wav",
+                Title = "Select new .wav file",
+                Filter = "Wave PCM|*.wav",
                 CustomPlaces = AppDirectories.GameCustomPlaces
             };
             bool? res = d.ShowDialog();
