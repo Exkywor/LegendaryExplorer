@@ -300,7 +300,7 @@ namespace LegendaryExplorer.UnrealExtensions
                 case CompressionInfoBankChunk.ISACTCompressionFormat.OGGVORBIS when forceReturnWaveData:
                     //Xbox IMA, XMA, Sony MSF (PS3)
                     //Use VGM Stream
-                    byte[] fakeData = bankEntry.GenerateFakeSampleISB();
+                    byte[] fakeData = bankEntry.GenerateFakeSampleISB(sampleData);
                     var tempPath = GetATempSoundPath() + ".isb";
                     File.WriteAllBytes(tempPath, fakeData);
                     return ConvertRIFFToWaveVGMStream(tempPath);
