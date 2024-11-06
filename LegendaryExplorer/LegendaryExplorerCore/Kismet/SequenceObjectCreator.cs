@@ -1625,5 +1625,31 @@ namespace LegendaryExplorerCore.Kismet
 
             return fObj;
         }
+
+        /// <summary>
+        /// Creates a new SeqAct_SetMaterial for with the given object and material, if provided.
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="targetObj">Optional: The target object to link on the Target pin.</param>
+        /// <param name="newMaterial">Optional: The new material to set on the target.</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateSetMaterial(ExportEntry sequence, ExportEntry targetObj = null, ExportEntry newMaterial = null, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "SeqAct_SetMaterial", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            if (targetObj != null)
+            {
+                KismetHelper.CreateVariableLink(fObj, "Target", targetObj);
+            }
+
+            if (newMaterial != null)
+            {
+                fObj.WriteProperty(new ObjectProperty(newMaterial,"NewMaterial"));
+            }
+
+            return fObj;
+        }
     }
 }
