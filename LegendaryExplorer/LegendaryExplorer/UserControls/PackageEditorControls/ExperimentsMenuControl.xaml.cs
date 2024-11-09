@@ -1258,6 +1258,31 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             }
         }
 
+        private void RenameFXA(object sender, RoutedEventArgs e)
+        {
+            var pccLoaded = GetPEWindow().Pcc != null;
+            if (pccLoaded && GetPEWindow().SelectedItem.Entry is ExportEntry fxa && fxa.ClassName == "FaceFXAnimSet")
+            {
+                var fxas = new List<ExportEntry>();
+                fxas.Add(fxa);
+                string oldFxaName = "";
+                if (fxa.ObjectNameString[^2..].ToLower() is "_m" or "_f")
+                {
+                    oldFxaName = fxa.ObjectNameString.Remove(fxa.ObjectNameString.Length - 2);
+                }
+                else
+                {
+                    // Most likely a NonSpkr, in which case we'll use the full name
+                    if (fxa.ObjectNameString.EndsWith("_nonspkr", StringComparison.OrdinalIgnoreCase))
+                    {
+                        oldFxaName = fxa.ObjectNameString;
+                    }
+                }
+                string newFXAName = PromptDialog.Prompt(null, "New conversation name:", "New name", oldFxaName);
+                PackageEditorExperimentsO.RenameFXAs(GetPEWindow().Pcc,fxas, oldFxaName, newFXAName);
+            }
+
+        }
         private void ReplaceAllTlkRefs(object sender, RoutedEventArgs e)
         {
             var pccLoaded = GetPEWindow().Pcc != null;
