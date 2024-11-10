@@ -1366,9 +1366,10 @@ namespace LegendaryExplorerCore.Kismet
         /// <param name="seq">Sequence to add the new object to</param>
         /// <param name="controllerClass">Optional: The controller class property to set on the object</param>
         /// <param name="pawn">Optional: The pawn actor object to link to the Pawn terminal</param>
+        /// <param name="saveOldController">Optional: If the OldAIController variable on this class should be populated when changed</param>
         /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
         /// <returns>The created kismet object</returns>
-        public static ExportEntry CreateChangeAI(ExportEntry seq, IEntry controllerClass = null, ExportEntry pawn = null, PackageCache cache = null)
+        public static ExportEntry CreateChangeAI(ExportEntry seq, IEntry controllerClass = null, ExportEntry pawn = null, bool saveOldController = false, PackageCache cache = null)
         {
             // Validated for LE1
             var setObj = CreateSequenceObject(seq.FileRef, "BioSeqAct_ChangeAI", cache);
@@ -1382,6 +1383,11 @@ namespace LegendaryExplorerCore.Kismet
             if (pawn != null)
             {
                 KismetHelper.CreateVariableLink(setObj, "Pawn", pawn);
+            }
+
+            if (saveOldController)
+            {
+                setObj.WriteProperty(new BoolProperty(true, "SaveOldAIController"));
             }
 
             return setObj;
@@ -1501,7 +1507,7 @@ namespace LegendaryExplorerCore.Kismet
         /// <param name="location">Optional: The object to connect to the Location pin (actors)</param>
         /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
         /// <returns>The created kismet object</returns>
-        public static ExportEntry CreateStreamInTextures(ExportEntry seq, ExportEntry actor = null, ExportEntry location = null,PackageCache cache = null)
+        public static ExportEntry CreateStreamInTextures(ExportEntry seq, ExportEntry actor = null, ExportEntry location = null, PackageCache cache = null)
         {
             // Likely only works for LE1
             var sin = CreateSequenceObject(seq.FileRef, "SeqAct_StreamInTextures", cache);
@@ -1646,7 +1652,7 @@ namespace LegendaryExplorerCore.Kismet
 
             if (newMaterial != null)
             {
-                fObj.WriteProperty(new ObjectProperty(newMaterial,"NewMaterial"));
+                fObj.WriteProperty(new ObjectProperty(newMaterial, "NewMaterial"));
             }
 
             return fObj;
