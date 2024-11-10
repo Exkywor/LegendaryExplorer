@@ -1292,6 +1292,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             }
         }
 
+        private void ImportWwiseBankRefs_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsK.ImportBankRefsAndNewStreams(GetPEWindow());
+        }
+
         #endregion
 
         // EXPERIMENTS: HENBAGLE ------------------------------------------------------------
