@@ -2259,7 +2259,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             if (pcc == null || (pcc.Game is MEGame.ME1)) { return; }
 
             List<ExportEntry> fxas = GetFXAs(pcc, bioConversation);
-            RenameFXAs(pcc, bioConversation, fxas, oldName, newName);
+            RenameFXAs(pcc, fxas, oldName, newName);
         }
 
         /// <summary>
@@ -2271,7 +2271,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         /// <param name="fxas">List of FXAs to rename.</param>
         /// <param name="oldName">Old name to replace in the elements.</param>
         /// <param name="newName">New name to replace in the elements.</param>
-        private static void RenameFXAs(IMEPackage pcc, ExportEntry bioConversation, List<ExportEntry> fxas, string oldName, string newName)
+        public static void RenameFXAs(IMEPackage pcc, List<ExportEntry> fxas, string oldName, string newName)
         {
             if (pcc == null || (pcc.Game is MEGame.ME1)) { return; }
 

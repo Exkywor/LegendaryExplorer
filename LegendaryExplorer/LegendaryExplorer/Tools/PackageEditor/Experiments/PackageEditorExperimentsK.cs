@@ -12,6 +12,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.Misc;
 using LegendaryExplorer.Tools.AssetDatabase;
+using LegendaryExplorerCore.Audio;
 using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Gammtek.Extensions;
 using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
@@ -1326,6 +1327,31 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         export.WriteProperties(props);
                     }
                 }
+            }
+        }
+
+        public static void ImportBankRefsAndNewStreams(PackageEditorWindow pe)
+        {
+            if (pe.Pcc == null)
+                return;
+            OpenFileDialog ofd = new OpenFileDialog()
+            {
+                Filter = "WwiseBank files|*.bnk",
+                Title = "Select generated soundbank",
+                CustomPlaces = AppDirectories.GameCustomPlaces
+            };
+            if (ofd.ShowDialog() == true)
+            {
+                var askResult = Xceed.Wpf.Toolkit.MessageBox.Show(pe,
+                    "Are you using this for a dialogue import? If using this for a dialogue bank the streamed audio and events must be named correctly in the editor.\n" +
+                    "Each audio must contain the tlk reference e.g. '123546' plus a gendered reference with '_f_' if the line is spoken by femshep, else '_m_'.\n" +
+                    "Each event must be named in the format VO_123456_m_Play where 123456 is the tlk ref and the gender is determined by the m/f.\n\n" +
+                    "To set durations turn them on in wwise (Project Settings -> Soundbanks -> Estimated Duration).",
+                    "Is this a Dialogue Bank Import?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question,
+                    MessageBoxResult.Cancel);
+                if (askResult == MessageBoxResult.Cancel)
+                    return;
+                WwiseBankImport.ImportBank(ofd.FileName, askResult == MessageBoxResult.Yes, pe.Pcc,true);
             }
         }
     }

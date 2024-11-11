@@ -8,6 +8,7 @@ using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
+using LegendaryExplorerCore.Helpers;
 
 namespace LegendaryExplorerCore.Kismet
 {
@@ -960,12 +961,13 @@ namespace LegendaryExplorerCore.Kismet
         }
 
         /// <summary>
-        /// Finds sequence objects with variable connections that come to this node
+        /// Finds sequence objects with variable link connections that come to this node
         /// </summary>
-        /// <param name="node">Sequence variable to find connections to</param>
+        /// <param name="node">Node to find variable connections to</param>
         /// <param name="sequenceElements">Sequence objects to search for connections</param>
+        /// <param name="filteredLinkNames">Optional: Link desc of variable link that any sequence objects must match</param>
         /// <returns>List of any sequence objects that link to this node</returns>
-        public static List<ExportEntry> FindVariableConnectionsToNode(ExportEntry node, List<ExportEntry> sequenceElements)
+        public static List<ExportEntry> FindVariableConnectionsToNode(ExportEntry node, IEnumerable<ExportEntry> sequenceElements, List<string> filteredLinkNames = null)
         {
             List<ExportEntry> referencingNodes = [];
 
@@ -973,9 +975,39 @@ namespace LegendaryExplorerCore.Kismet
             {
                 if (seqObj == node) continue; // Skip node pointing to itself
                 var linkSet = GetVariableLinksOfNode(seqObj);
-                if (linkSet.Any(x => x.LinkedNodes.Any(y => y == node)))
+                var matchingLinks = linkSet.Where(x => x.LinkedNodes.Any(y => y != null && y.UIndex == node.UIndex)).ToList();
+                if (matchingLinks.Count == 0)
+                    continue; // No match
+
+                if (filteredLinkNames == null && Enumerable.Any(matchingLinks))
                 {
+                    // Just add it
                     referencingNodes.Add(seqObj);
+                    continue;
+                }
+
+                // Check if the name matches the filters
+                // Determine if it comes in on our named input idx
+                if (filteredLinkNames != null)
+                {
+                    // Build the list of allowed input idxs
+                    // This is not that reliable, as the inputs will be defined on the class, not the instance
+                    // oops
+                    bool matched = false;
+                    foreach (var link in linkSet)
+                    {
+                        if (matched)
+                            break;
+                        foreach (var filteredLinkName in filteredLinkNames)
+                        {
+                            if (link.LinkDesc.CaseInsensitiveEquals(filteredLinkName))
+                            {
+                                referencingNodes.Add(seqObj);
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
