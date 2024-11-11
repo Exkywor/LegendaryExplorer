@@ -81,6 +81,7 @@ namespace LegendaryExplorerCore.UDK
         public static string GenerateUDKFileForLevel(IMEPackage pcc, string mapOutputPath = null,
             string assetsOutputPath = null, string decookedMaterialsFolder = null)
         {
+            decookedMaterialsFolder ??= Path.Combine(UDKDirectory.SharedPath, $"{pcc.Game}MaterialPort");
             var assetInfo = GenerateAssetsPackage(pcc, assetsOutputPath, decookedMaterialsFolder);
 
             MELoadedFiles.InvalidateCaches();
@@ -864,7 +865,7 @@ namespace LegendaryExplorerCore.UDK
                                 //importedExport.idxLink = 0;
                             }
 
-                            return (ExportEntry) ent;
+                            return (ExportEntry)ent;
                         }
 
                         if (diff == null)
@@ -1083,7 +1084,7 @@ namespace LegendaryExplorerCore.UDK
             var cache = new PackageCache();
             foreach (var exp in meshPackage.Exports.Where(IsAsset))
             {
-                EntryExporter.ExportExportToPackage(exp, package, out _, cache, new RelinkerOptionsPackage() { ImportExportDependencies = true, Cache = cache, PortExportsAsImportsWhenPossible = true});
+                EntryExporter.ExportExportToPackage(exp, package, out _, cache, new RelinkerOptionsPackage() { ImportExportDependencies = true, Cache = cache, PortExportsAsImportsWhenPossible = true });
             }
 
             return package;
