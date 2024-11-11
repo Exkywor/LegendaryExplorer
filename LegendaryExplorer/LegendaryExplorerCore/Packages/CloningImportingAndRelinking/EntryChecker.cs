@@ -287,7 +287,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
 
         private static void recursiveCheckProperty(ReferenceCheckPackage item, LECLocalizationShim.GetLocalizedStringDelegate localizationDelegate, string relativePath, string containingClassOrStructName, IEntry entry, Property property)
         {
-            var prefix = localizationDelegate(LECLocalizationShim.string_interp_warningPropertyTypingWrongPrefix, relativePath, entry.UIndex, entry.ObjectName.Name, entry.ClassName, property.StartOffset.ToString(@"X6"));
+            var prefix = localizationDelegate(LECLocalizationShim.string_interp_warningPropertyTypingWrongPrefix, relativePath, entry.UIndex, entry.ObjectName.Instanced, entry.ClassName, property.StartOffset.ToString(@"X6"));
             if (property is UnknownProperty up)
             {
                 item.AddSignificantIssue(localizationDelegate(LECLocalizationShim.string_interp_warningFoundBrokenPropertyData, prefix), entry);
