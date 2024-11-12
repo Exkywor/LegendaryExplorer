@@ -79,7 +79,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.MaterialEditor
             TextureParameterMatEd te = new TextureParameterMatEd();
             var props = expression.GetProperties();
             te.ParameterName = props.GetProp<NameProperty>("ParameterName")?.Value.Instanced ?? "None";
-            te.ParameterValue = props.GetProp<ObjectProperty>("Texture").Value; // This is the Object reference
+            te.ParameterValue = props.GetProp<ObjectProperty>("Texture")?.Value ?? 0; // This is the Object reference
             te.ExpressionGUID = props.GetProp<StructProperty>("ExpressionGUID");
             te.IsDefaultParameter = true;
             return te;
