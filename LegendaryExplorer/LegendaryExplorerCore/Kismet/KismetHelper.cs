@@ -1239,7 +1239,7 @@ namespace LegendaryExplorerCore.Kismet
                 {
                     outLink.RemoveAll(x => x.LinkedOp == node);
                 }
-                KismetHelper.WriteOutputLinksToNode(node, outLinks);
+                KismetHelper.WriteOutputLinksToNode(incomingInputNode, outLinks);
             }
 
             // Variable links
@@ -1250,7 +1250,7 @@ namespace LegendaryExplorerCore.Kismet
                 {
                     varLink.LinkedNodes.RemoveAll(x => x == node);
                 }
-                KismetHelper.WriteVariableLinksToNode(node, varLinks);
+                KismetHelper.WriteVariableLinksToNode(incomingVarLinkNode, varLinks);
             }
 
             // Event links
@@ -1261,7 +1261,7 @@ namespace LegendaryExplorerCore.Kismet
                 {
                     eventLink.LinkedNodes.RemoveAll(x => x == node);
                 }
-                KismetHelper.WriteEventLinksToNode(node, eventLinks);
+                KismetHelper.WriteEventLinksToNode(incomingEventLinkNode, eventLinks);
             }
         }
     }
