@@ -493,7 +493,7 @@ namespace LegendaryExplorerCore.UDK
                     textureUIndex = keptVersion.UIndex;
                     return;
                 }
-                var cloneTex = EntryCloner.CloneEntry(lmTex);
+                var cloneTex = EntryCloner.CloneEntry(lmTex, incrementIndex: false); // Do not increment or previous check will fail
                 cloneTex.ObjectName = new NameReference(setup.KeptLightmapPrefix + cloneTex.ObjectName.Name, cloneTex.ObjectName.Number);
                 Debug.WriteLine($"Kept lightmap texture {cloneTex.InstancedFullPath}");
                 textureUIndex = cloneTex.UIndex;
