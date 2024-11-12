@@ -349,8 +349,10 @@ namespace LegendaryExplorerCore.Packages
             int score = 0;
             if (!exp.IsDefaultObject)
             {
+                if (exp.ObjectName == "SeekFreeShaderCache")
+                    return -100; // Should go first as porting other objects may modify this
                 if (exp.ObjectName == "ObjectReferencer")
-                    return -10; // Should go earlier
+                    return -11; // Should go earlier
                 if (exp.ObjectName.Name.StartsWith("PersistentLevel")) // Go above LSKs
                     return -10;
 
