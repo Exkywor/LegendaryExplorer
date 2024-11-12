@@ -579,7 +579,7 @@ namespace LegendaryExplorer.Tools.PathfindingEditor
             : base(idx, x, y, p, grapheditor, drawRotationLine: true)
         {
             ObjectProperty smc = export.GetProperty<ObjectProperty>("StaticMeshComponent");
-            if (smc != null)
+            if (smc != null && smc.Value != 0)
             {
                 ExportEntry smce = pcc.GetUExport(smc.Value);
                 //smce.GetProperty<ObjectProperty>("St")
