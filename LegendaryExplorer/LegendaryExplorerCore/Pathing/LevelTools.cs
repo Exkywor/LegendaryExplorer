@@ -4,13 +4,10 @@ using LegendaryExplorerCore.Unreal.BinaryConverters;
 using LegendaryExplorerCore.Unreal.Classes;
 using LegendaryExplorerCore.Unreal.Collections;
 using LegendaryExplorerCore.Unreal;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 using LegendaryExplorerCore.DebugTools;
 using LegendaryExplorerCore.Gammtek.Extensions;
 using LegendaryExplorerCore.Helpers;
@@ -165,6 +162,13 @@ namespace LegendaryExplorerCore.Pathing
                                 // Replace the mesh 
                                 texturesOnMesh.Remove(tex);
                                 texturesOnMesh.Add(imp);
+#if DEBUG
+                                if (!imp.IsA("Texture"))
+                                {
+                                    // THIS IS NOT A GOOD SIGN!
+                                    Debugger.Break();
+                                }
+#endif
                                 validatePackage = false;
                             }
                         }
@@ -178,12 +182,32 @@ namespace LegendaryExplorerCore.Pathing
                         if (tImp.FileRef != package)
                         {
                             // This is an import in another package. We must copy it over.
-                            var newImp = EntryExporter.PortParents(tImp, package, true);
+                            var impParent = EntryExporter.PortParents(tImp, package, true);
+                            var newImp = EntryImporter.GetOrAddCrossImportOrPackage(tImp.InstancedFullPath, tImp.FileRef, package, new RelinkerOptionsPackage(), impParent.UIndex);
                             texturesOnMesh.Remove(tex);
                             texturesOnMesh.Add(newImp);
+#if DEBUG
+                            if (!newImp.IsA("Texture"))
+                            {
+                                // THIS IS NOT A GOOD SIGN!
+                                Debugger.Break();
+                            }
+#endif
                         }
                     }
                 }
+
+#if DEBUG
+                // VALIDATION
+                foreach (var tex in texturesOnMesh)
+                {
+                    if (!tex.IsA("Texture"))
+                    {
+                        // THIS IS NOT A GOOD SIGN!
+                        Debugger.Break();
+                    }
+                }
+#endif
 
                 // Add streaming instances.
                 foreach (var tex in texturesOnMesh)
@@ -203,9 +227,9 @@ namespace LegendaryExplorerCore.Pathing
                         BoundingSphere = new Sphere()
                         {
                             Center = new Vector3(actorLocation.X, actorLocation.Y, actorLocation.Z),
-                            W = 50 // Radius. I guess we could technically take the size of the mesh. But do I care that much?
+                            W = 500 // Radius. I guess we could technically take the size of the mesh. But do I care that much?
                         },
-                        TexelFactor = 50 // I have no ideal how to calcluate this
+                        TexelFactor = 50 // I have no ideal how to calculate this
                     });
                 }
             }
