@@ -868,7 +868,8 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                 ApplyCrossGamePropertyFixes(incomingExport, targetExport.FileRef, props);
                 ObjectBinary binary = ExportBinaryConverter.ConvertPostPropBinary(incomingExport, targetExport.Game, props);
                 props.WriteTo(res.Writer, targetExport.FileRef);
-                res.Writer.WriteFromBuffer(binary.ToBytes(targetExport.FileRef));
+                // 11/12/2024 - Set file offset to start of binary data so it can accurately serialize offsets for class types that depend on it being proper (ShaderCache) - Mgamerz
+                res.Writer.WriteFromBuffer(binary.ToBytes(targetExport.FileRef, fileOffset: targetExport.DataOffset + (int)res.Writer.BaseStream.Length));
             }
             catch (Exception exception)
             {
