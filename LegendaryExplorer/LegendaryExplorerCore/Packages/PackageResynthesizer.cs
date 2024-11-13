@@ -197,7 +197,7 @@ namespace LegendaryExplorerCore.Packages
                 }
                 else if (mode == ESynthesisMode.Synth_Resolving)
                 {
-                    // Transfer classes
+                    // Transfer classes and replace data WITHOUT RELINK
                     if (ordering.Entry is ExportEntry oExp && IsClassSubObj(oExp))
                     {
                         var destExp = newPackage.FindExport(ordering.Entry.InstancedFullPath);
