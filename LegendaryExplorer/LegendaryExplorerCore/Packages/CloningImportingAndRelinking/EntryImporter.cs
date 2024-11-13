@@ -1734,14 +1734,17 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
         public static List<string> GetPossibleAssociatedFiles(IMEPackage package, string localization = "INT", bool includeNonBioPRelated = true)
         {
             // This method doesn't really work for files loaded from a stream as they have null FilePath - like certain files in M3
-            string filenameWithoutExtension = Path.GetFileNameWithoutExtension(package.FilePath)?.ToLower();
+            string filenameWithoutExtension = package.FileNameNoExtension?.ToLower();
             var associatedFiles = new List<string>();
             string bioFileExt = package.Game == MEGame.ME1 ? ".sfm" : ".pcc";
-            if (includeNonBioPRelated)
+
+            // Don't add localization of this package if it's already localized
+            if (includeNonBioPRelated && package.Localization == MELocalization.None)
             {
                 associatedFiles.Add($"{filenameWithoutExtension}_LOC_{localization}{bioFileExt}"); //todo: support users setting preferred language of game files
             }
 
+            // Parents are allowed to have localizations
             associatedFiles.AddRange(GetBioXParentFiles(package.Game, filenameWithoutExtension, true, true, bioFileExt, localization));
 
             if (package.Game == MEGame.ME3 && filenameWithoutExtension.Contains("MP", StringComparison.OrdinalIgnoreCase) && !filenameWithoutExtension.CaseInsensitiveEquals("BIOP_MP_COMMON"))
@@ -1771,7 +1774,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
             if (isBioXfile)
             {
                 // Do not include extensions in the results of this, they will be appended in resulting file
-                static string bioXNextFileLookup(string filenameWithoutExtensionX)
+                static string bioXNextFileLookup(MEGame lookupGame, string filenameWithoutExtensionX)
                 {
                     //Lookup parents
                     var bioType = filenameWithoutExtensionX[3];
@@ -1787,7 +1790,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                                 return $"biod_{levelName}";
                             case 's' when parts.Length > 2:
                                 return $"bios_{levelName}"; //BioS has no subfiles as far as I know but we'll just put this here anyways.
-                            case 'a' when parts.Length == 2:
+                            case 'a' when parts.Length == 2 && !lookupGame.IsGame1():
                             case 'd' when parts.Length == 2:
                             case 's' when parts.Length == 2:
                                 return $"biop_{levelName}";
@@ -1797,7 +1800,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                     return null;
                 }
 
-                string nextfile = bioXNextFileLookup(filenameWithoutExtension);
+                string nextfile = bioXNextFileLookup(game, filenameWithoutExtension);
                 while (nextfile != null)
                 {
                     if (includeNonBioPTiers)
@@ -1809,11 +1812,11 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                                 $"{nextfile}_LOC_{localization}{bioFileExt}"); //todo: support users setting preferred language of game files
                         }
                     }
-                    else if (nextfile.Length > 3 && nextfile[3] == 'p')
+                    else if (nextfile.Length > 3 && nextfile[3] == (game.IsGame1() ? 'a' : 'p'))
                     {
                         associatedFiles.Add($"{nextfile}{bioFileExt}");
                     }
-                    nextfile = bioXNextFileLookup(nextfile.ToLower());
+                    nextfile = bioXNextFileLookup(game, nextfile.ToLower());
                 }
             }
 
