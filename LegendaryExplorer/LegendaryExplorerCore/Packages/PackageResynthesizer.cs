@@ -120,8 +120,16 @@ namespace LegendaryExplorerCore.Packages
 
         private static IMEPackage DumpUnreferencedObjects(IMEPackage package, PackageCache cache)
         {
-            var newPackage = MEPackageHandler.CreateMemoryEmptyPackage("RebuildingPackage.pcc", package.Game);
+            // Package must be inventoried before dumping objects because otherwise we will try to resolve array types
+            // when package may not yet be fully setup, which causes problems.
 
+            foreach (var exp in package.Exports.Where(x => x.ClassName is "ScriptStruct" or "Class"))
+            {
+                GlobalUnrealObjectInfo.generateClassInfo(exp, exp.ClassName == "ScriptStruct", cache);
+            }
+
+            var newPackage = MEPackageHandler.CreateMemoryEmptyPackage("RebuildingPackage.pcc", package.Game);
+            
             var theWorld = package.FindExport("TheWorld");
             if (theWorld != null)
             {
