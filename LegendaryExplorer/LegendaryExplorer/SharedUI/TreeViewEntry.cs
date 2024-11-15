@@ -16,6 +16,7 @@ using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.PlotDatabase;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
+using LegendaryExplorerCore.Unreal.ObjectInfo;
 
 namespace LegendaryExplorer.SharedUI
 {
@@ -377,6 +378,13 @@ namespace LegendaryExplorer.SharedUI
                                     }
                                 }
                                 break;
+                        }
+
+                        if (_subtext == null && ee.IsA("SequenceObject"))
+                        {
+                            _subtext = ee.GetProperty<StrProperty>("ObjName")?.Value;
+                            if (_subtext == ee.ObjectName.Instanced)
+                                _subtext = null; // Don't display it if it's the same.
                         }
 
                         // Short circuit
