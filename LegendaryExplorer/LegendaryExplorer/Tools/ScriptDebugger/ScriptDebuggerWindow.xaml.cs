@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -636,6 +637,20 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
                 }
                 e.Handled = true;
                 ((ListBox)sender).SelectedItem = null;
+            }
+        }
+
+        private void CopyPropertiesToClipboard(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is ObjectPropertyValue opv)
+            {
+                opv.LoadProperties();
+                StringBuilder sb = new StringBuilder();
+                foreach (var prop in opv.Properties)
+                {
+                    sb.AppendLine(prop.ToString());
+                }
+                Clipboard.SetText(sb.ToString());
             }
         }
     }

@@ -327,10 +327,12 @@
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="200" />
-                                                    <ColumnDefinition />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding PropName, Mode=OneTime}" />
                                                 <TextBlock Grid.Column="1" Text="{Binding Value, Mode=OneTime}" />
+                                                <Button Grid.Column="2" Content="Copy properties to clipboard" Padding="4,0" Click="CopyPropertiesToClipboard"/>
                                             </Grid>
                                         </HierarchicalDataTemplate>
                                         <HierarchicalDataTemplate DataType="{x:Type local:StructPropertyValue}"

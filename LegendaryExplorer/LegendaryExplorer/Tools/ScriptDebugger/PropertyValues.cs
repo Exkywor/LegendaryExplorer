@@ -47,6 +47,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         {
             Debugger.WriteValue(Address, _value);
         }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
+        } 
     }
 
     public class FloatPropertyValue : PropertyValue
@@ -73,6 +78,10 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         {
             Debugger.WriteValue(Address, _value);
         }
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
+        }
     }
 
     public class StringRefPropertyValue : PropertyValue
@@ -98,6 +107,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         private void WriteValue()
         {
             Debugger.WriteValue(Address, _value);
+        }
+
+        public override string ToString()
+        {
+            return $"{PropName}: ${Value}";
         }
     }
 
@@ -136,6 +150,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
                 fullVal &= ~BitMask;
             }
             Debugger.WriteValue(Address, fullVal);
+        }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
         }
     }
 
@@ -179,6 +198,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
                 OnPropertyChanged(nameof(Value));
             }
         }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
+        }
     }
 
     public class BytePropertyValue : PropertyValue
@@ -204,6 +228,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         private void WriteValue()
         {
             Debugger.WriteValue(Address, _value);
+        }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}b";
         }
     }
 
@@ -241,6 +270,10 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         {
             Debugger.WriteValue(Address, FNames[EnumValues.IndexOf(_value)]);
         }
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
+        }
     }
 
     public class DelegatePropertyValue : PropertyValue
@@ -269,6 +302,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         {
             //Not sure how to implement editing of this one
         }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
+        }
     }
 
     public class NamePropertyValue : PropertyValue
@@ -294,6 +332,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         private void WriteValue()
         {
             //No idea how to make this editable 
+        }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
         }
     }
 
@@ -340,6 +383,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         {
             //No idea how to make this editable 
         }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
+        }
     }
 
     public class ClassPropertyValue : ObjectPropertyValue
@@ -368,6 +416,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
             Value = $"{elements.Count} elements";
             Elements.AddRange(elements);
         }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
+        }
     }
 
     public class StructPropertyValue : PropertyValue
@@ -392,6 +445,11 @@ namespace LegendaryExplorer.Tools.ScriptDebugger
         {
             Properties.ClearEx();
             Properties.ReplaceAll(NStruct.GetProperties(Address));
+        }
+
+        public override string ToString()
+        {
+            return $"{PropName}: {Value}";
         }
     }
 
