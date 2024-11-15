@@ -185,9 +185,11 @@ namespace LegendaryExplorer.Tools.PackageEditor
         public ICommand NavigateForwardCommand { get; set; }
         public ICommand ForceReloadPackageCommand { get; set; }
         public ICommand ComparePackagesCommand { get; set; }
+        public ICommand StructuralComparePackagesCommand { get; set; }
         public ICommand OpenOtherVersionCommand { get; set; }
         public ICommand OpenHighestMountedCommand { get; set; }
         public ICommand CompareToUnmoddedCommand { get; set; }
+        public ICommand StructuralCompareToUnmoddedCommand { get; set; }
         public ICommand ExportAllDataCommand { get; set; }
         public ICommand ExportBinaryDataCommand { get; set; }
         public ICommand ImportAllDataCommand { get; set; }
@@ -259,7 +261,9 @@ namespace LegendaryExplorer.Tools.PackageEditor
         {
             CalculateExportMD5Command = new GenericCommand(CalculateExportMD5, ExportIsSelected);
             CompareToUnmoddedCommand = new GenericCommand(() => SharedPackageTools.ComparePackageToUnmodded(this, entryDoubleClickToTreeview), () => SharedPackageTools.CanCompareToUnmodded(this));
+            StructuralCompareToUnmoddedCommand = new GenericCommand(() => SharedPackageTools.ComparePackageToUnmodded(this, entryDoubleClickToTreeview, true), () => SharedPackageTools.CanCompareToUnmodded(this));
             ComparePackagesCommand = new GenericCommand(() => SharedPackageTools.ComparePackageToAnother(this, entryDoubleClickToTreeview), PackageIsLoaded);
+            StructuralComparePackagesCommand = new GenericCommand(() => SharedPackageTools.ComparePackageToAnother(this, entryDoubleClickToTreeview, true), PackageIsLoaded);
             ExportAllDataCommand = new GenericCommand(ExportAllData, ExportIsSelected);
             ExportBinaryDataCommand = new GenericCommand(ExportBinaryData, ExportIsSelected);
             ImportAllDataCommand = new GenericCommand(ImportAllData, ExportIsSelected);

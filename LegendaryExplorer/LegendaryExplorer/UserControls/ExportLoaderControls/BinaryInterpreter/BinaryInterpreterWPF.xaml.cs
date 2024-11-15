@@ -612,7 +612,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                         {
                             var dataReadOnly = CurrentLoadedExport.DataReadOnly;
                             string templateNameString = Pcc.GetNameEntry(EndianReader.ToInt32(dataReadOnly[(toci + 4)..], CurrentLoadedExport.FileRef.Endian));
-                            var templateName = new NameReference(templateNameString, EndianReader.ToInt32(data, dataReadOnly[(toci + 8)..], CurrentLoadedExport.FileRef.Endian));
+                            var templateName = new NameReference(templateNameString, EndianReader.ToInt32(dataReadOnly[(toci + 8)..], CurrentLoadedExport.FileRef.Endian));
                             subNodes.Add(new BinInterpNode(toci + 4, $"TemplateName: {templateName.Instanced}", NodeType.StructLeafName) { Length = 8 });
                             break;
                         }

@@ -19,27 +19,14 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
         public int Offset;
 
 
-        protected override void Serialize(SerializingContainer2 sc)
+        protected override void Serialize(SerializingContainer sc)
         {
             sc.Serialize(ref Node);
-            sc.Serialize(ref StateNode);
-            if (sc.Game is MEGame.UDK)
+            if (sc.Game is not MEGame.UDK)
             {
-                if (sc.IsLoading)
-                {
-                    uint tmp = sc.ms.ReadUInt32();
-                    ProbeMask = 0xFFFFFFFF00000000UL | tmp;
-                }
-                else
-                {
-                    uint tmp = (uint)ProbeMask;
-                    sc.ms.Writer.WriteUInt32(tmp);
-                }
+                sc.Serialize(ref StateNode);
             }
-            else
-            {
-                sc.Serialize(ref ProbeMask);
-            }
+            sc.Serialize(ref ProbeMask);
             if (sc.Game is MEGame.ME1 or MEGame.ME2 && sc.Pcc.Platform is not MEPackage.GamePlatform.PS3)
             {
                 sc.Serialize(ref LatentAction);
@@ -91,7 +78,7 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
             {
                 throw new Exception($"Cannot deserialize a {nameof(StateFrame)} for an export that does not have the {nameof(UnrealFlags.EObjectFlags.HasStack)} flag set.");
             }
-            var sc = new SerializingContainer2(new MemoryStream(export.GetPrePropBinary()), export.FileRef, true);
+            var sc = new SerializingContainer(new MemoryStream(export.GetPrePropBinary()), export.FileRef, true);
             var sf = new StateFrame();
             sf.Serialize(sc);
             return sf;

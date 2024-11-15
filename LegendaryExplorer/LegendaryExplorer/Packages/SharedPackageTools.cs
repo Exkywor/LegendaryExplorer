@@ -29,21 +29,48 @@ namespace LegendaryExplorer.Packages
         /// </summary>
         /// <param name="wpfBase"></param>
         /// <param name="entryDoubleClick"></param>
+        /// <param name="structuralCompare"></param>
         /// <param name="package"></param>
         /// <param name="diskPath"></param>
         /// <param name="packageStream"></param>
-        public static void CompareToPackageWrapper(WPFBase wpfBase, Action<EntryStringPair> entryDoubleClick, IMEPackage package = null, string diskPath = null, Stream packageStream = null)
+        public static void CompareToPackageWrapper(WPFBase wpfBase, Action<EntryStringPair> entryDoubleClick, bool structuralCompare = false, IMEPackage package = null, string diskPath = null, Stream packageStream = null)
         {
-            Task.Run(() =>
+            Task.Run(object () =>
             {
                 wpfBase.BusyText = "Comparing packages...";
                 wpfBase.IsBusy = true;
                 try
                 {
-                    if (package != null) return (object)wpfBase.Pcc.CompareToPackage(package);
-                    if (diskPath != null) return (object)wpfBase.Pcc.CompareToPackage(diskPath);
-                    if (packageStream != null) return (object)wpfBase.Pcc.CompareToPackage(packageStream);
-                    return "CompareToPackageWrapper() requires at least one parameter be set!";
+                    if (structuralCompare)
+                    {
+                        if (package is null)
+                        {
+                            if (diskPath is not null)
+                            {
+                                package = MEPackageHandler.OpenMEPackage(diskPath, forceLoadFromDisk: true);
+                            }
+                            else if (packageStream is not null)
+                            {
+                                package = MEPackageHandler.OpenMEPackageFromStream(packageStream);
+                            }
+                            else
+                            {
+                                return $"{nameof(CompareToPackageWrapper)}() requires at least one parameter be set!";
+                            }
+                        }
+                        var diff = PackageDiff.Create(wpfBase.Pcc, package);
+                        var list = new List<EntryStringPair>();
+                        list.AddRange(diff.ChangedEntries.Select(ed => new EntryStringPair(ed.A, $"Changed #{ed.A.UIndex} {ed.A.InstancedFullPath}")));
+                        list.AddRange(diff.AOnlyEntries.Select(entry => new EntryStringPair(entry, $"Export only exists in this file #{entry.UIndex} {entry.InstancedFullPath}")));
+                        list.AddRange(diff.BOnlyEntries.Select(entry => new EntryStringPair(entry, $"Export only exists in other file #{entry.UIndex} {entry.InstancedFullPath}")));
+                        list.AddRange(diff.AOnlyNames.Select(name => new EntryStringPair($"Name only exists in this file: {name}")));
+                        list.AddRange(diff.BOnlyNames.Select(name => new EntryStringPair($"Name only exists in other file: {name}")));
+                        return list;
+                    }
+                    if (package != null) return wpfBase.Pcc.CompareToPackage(package);
+                    if (diskPath != null) return wpfBase.Pcc.CompareToPackage(diskPath);
+                    if (packageStream != null) return wpfBase.Pcc.CompareToPackage(packageStream);
+                    return $"{nameof(CompareToPackageWrapper)}() requires at least one parameter be set!";
                 }
                 catch (Exception e)
                 {
@@ -58,9 +85,9 @@ namespace LegendaryExplorer.Packages
                 }
                 else if (result.Result is List<EntryStringPair> results)
                 {
-                    if (Enumerable.Any(results))
+                    if (results.Count != 0)
                     {
-                        ListDialog ld = new ListDialog(results, "Changed exports/imports/names between files",
+                        var ld = new ListDialog(results, "Changed exports/imports/names between files",
                                 "The following exports, imports, and names are different between the files.", wpfBase)
                         { DoubleClickEntryHandler = entryDoubleClick };
                         ld.Show();
@@ -78,7 +105,7 @@ namespace LegendaryExplorer.Packages
         /// </summary>
         /// <param name="wpfBase"></param>
         /// <param name="entryDoubleClickCallback"></param>
-        public static void ComparePackageToUnmodded(WPFBase wpfBase, Action<EntryStringPair> entryDoubleClickCallback)
+        public static void ComparePackageToUnmodded(WPFBase wpfBase, Action<EntryStringPair> entryDoubleClickCallback, bool structuralCompare = false)
         {
             if (wpfBase.Pcc == null) return;
 
@@ -115,11 +142,11 @@ namespace LegendaryExplorer.Packages
 
                 if (foundCandidates.Result.DiskFiles.Contains(choice))
                 {
-                    CompareToPackageWrapper(wpfBase, entryDoubleClickCallback, diskPath: choice);
+                    CompareToPackageWrapper(wpfBase, entryDoubleClickCallback, structuralCompare: structuralCompare, diskPath: choice);
                 }
                 else if (foundCandidates.Result.SFARPackageStreams.TryGetValue(choice, out var packageStream))
                 {
-                    CompareToPackageWrapper(wpfBase, entryDoubleClickCallback, packageStream: packageStream);
+                    CompareToPackageWrapper(wpfBase, entryDoubleClickCallback, structuralCompare: structuralCompare, packageStream: packageStream);
                 }
                 else
                 {
@@ -128,7 +155,7 @@ namespace LegendaryExplorer.Packages
             });
         }
 
-        public static void ComparePackageToAnother(WPFBase wpfBase, Action<EntryStringPair> entryDoubleClickCallback)
+        public static void ComparePackageToAnother(WPFBase wpfBase, Action<EntryStringPair> entryDoubleClickCallback, bool structuralCompare = false)
         {
             if (wpfBase.Pcc != null)
             {
@@ -142,17 +169,12 @@ namespace LegendaryExplorer.Packages
                         return;
                     }
 
-                    SharedPackageTools.CompareToPackageWrapper(wpfBase, entryDoubleClickCallback, diskPath: d.FileName);
+                    CompareToPackageWrapper(wpfBase, entryDoubleClickCallback, structuralCompare: structuralCompare, diskPath: d.FileName);
                 }
             }
         }
 
         public static bool CanCompareToUnmodded(WPFBase wpfBase) => wpfBase.Pcc != null && wpfBase.Pcc.Game != MEGame.UDK && (!(wpfBase.Pcc.IsInBasegame() || wpfBase.Pcc.IsInOfficialDLC()) || ME3TweaksBackups.GetGameBackupPath(wpfBase.Pcc.Game) != null);
-
-        public static void CompareUnmodded(WPFBase wpfBase, Action<EntryStringPair> entryDoubleClickCallback)
-        {
-            SharedPackageTools.ComparePackageToUnmodded(wpfBase, entryDoubleClickCallback);
-        }
 
         public static UnmoddedCandidatesLookup GetUnmoddedCandidatesForPackage(WPFBase wpfBase)
         {
@@ -261,9 +283,9 @@ namespace LegendaryExplorer.Packages
 
         internal class UnmoddedCandidatesLookup
         {
-            public List<string> DiskFiles = new();
-            public Dictionary<string, Stream> SFARPackageStreams = new();
-            public bool Any() => Enumerable.Any(DiskFiles) || Enumerable.Any(SFARPackageStreams);
+            public readonly List<string> DiskFiles = [];
+            public Dictionary<string, Stream> SFARPackageStreams = [];
+            public bool Any() => DiskFiles.Count != 0 || SFARPackageStreams.Count != 0;
         }
 
         /// <summary>

@@ -14,28 +14,21 @@ namespace LegendaryExplorerCore.Packages
         public IMEPackage PackageA;
         public IMEPackage PackageB;
 
-        public List<IEntry> AOnlyEntries = new();
-        public List<IEntry> BOnlyEntries = new();
+        public readonly List<IEntry> AOnlyEntries = [];
+        public readonly List<IEntry> BOnlyEntries = [];
 
-        public List<string> AOnlyNames = new();
-        public List<string> BOnlyNames = new();
+        public readonly List<string> AOnlyNames = [];
+        public readonly List<string> BOnlyNames = [];
 
-        public List<EntryDiff> ChangedEntries = new();
+        public readonly List<EntryDiff> ChangedEntries = [];
 
         private PackageDiff(){}
 
-        public class EntryDiff : IDiff<IEntry>
+        public class EntryDiff(IEntry a, IEntry b) : IDiff<IEntry>
         {
-            public virtual IEntry A { get; }
-            public virtual IEntry B { get; }
-            public bool IsDifferent { get; protected init; }
-
-            public EntryDiff(IEntry a, IEntry b)
-            {
-                A = a;
-                B = b;
-                IsDifferent = true;
-            }
+            public virtual IEntry A { get; } = a;
+            public virtual IEntry B { get; } = b;
+            public bool IsDifferent { get; protected init; } = true;
         }
 
         public class ImportDiff : EntryDiff, IDiff<ImportEntry>
@@ -95,8 +88,8 @@ namespace LegendaryExplorerCore.Packages
                 PackageFlagsDiff = new Diff<EPackageFlags>(a.PackageFlags, b.PackageFlags);
                 NetIndexDiff = new Diff<int>(a.NetIndex, b.NetIndex);
 
-                BinEntryDiffs = new();
-                BinNameDiffs = new();
+                BinEntryDiffs = [];
+                BinNameDiffs = [];
 
                 var aData = a.DataReadOnly;
                 var bData = b.DataReadOnly;
@@ -215,18 +208,11 @@ namespace LegendaryExplorerCore.Packages
             bool IsDifferent { get; }
         }
 
-        public readonly struct UIndexAndPropNameCollectorAndZeroer : IUIndexAction
+        private readonly struct UIndexAndPropNameCollectorAndZeroer(Dictionary<string, int> uindexAndPropNames) : IUIndexAction
         {
-            private readonly Dictionary<string, int> UindexAndPropNames;
-
-            public UIndexAndPropNameCollectorAndZeroer(Dictionary<string, int> uindexAndPropNames)
-            {
-                UindexAndPropNames = uindexAndPropNames;
-            }
-
             public void Invoke(ref int uIndex, string propName)
             {
-                UindexAndPropNames[propName] = uIndex;
+                uindexAndPropNames[propName] = uIndex;
                 uIndex = 0;
             }
         }
