@@ -22,22 +22,24 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace LegendaryExplorerCore.Packages
 {
+    [DebuggerDisplay("MEPackage {FilePath} | {Game}")]
+
     public sealed class MEPackage : UnrealPackageFile, IMEPackage, IDisposable
     {
         /// <summary>
         /// MEM writes this to every single package file it modifies
         /// </summary>
-        private const string MEMPackageTag = "ThisIsMEMEndOfFileMarker"; //TODO NET 7: make this a utf8 literal
-        private const int MEMPackageTagLength = 24;
+        public static ReadOnlySpan<byte> MEMPackageTag => "ThisIsMEMEndOfFileMarker"u8;
+
+        public const int MEMPackageTagLength = 24;
 
         /// <summary>
         /// LEC-saved LE packages will always end in this, assuming MEM did not save later
         /// </summary>
-        private const string LECPackageTag = "LECL"; //TODO NET 7: make this a utf8 literal
+        private static ReadOnlySpan<byte> LECPackageTag => "LECL"u8;
         private const int LECPackageTagLength = 4;
         private const int LECPackageTag_Version_EmptyData = 1;
         private const int LECPackageTag_Version_JSON = 2;
-
 
         /// <summary>
         /// Player.sav in ME1 save files starts with this and needs to be scrolled forward to find actual start of package
@@ -79,7 +81,7 @@ namespace LegendaryExplorerCore.Packages
         public int PackageTypeId { get; }
 
         /// <summary>
-        /// This is not useful for modding but we should not be changing the format of the package file.
+        /// Present only on persistent level packages. List of sublevel files that are also part of this map
         /// </summary>
         public readonly List<string> AdditionalPackagesToCook = new();
 
@@ -92,6 +94,8 @@ namespace LegendaryExplorerCore.Packages
             get => IsModified;
             set => IsModified = value;
         }
+
+        public bool IsMemoryPackage { get; set; }
 
         public Endian Endian { get; }
         public MEGame Game { get; private set; } //can only be ME1, ME2, ME3, LE1, LE2, LE3. UDK is a separate class
@@ -116,7 +120,7 @@ namespace LegendaryExplorerCore.Packages
         /// <summary>
         /// Metadata that is serialized to the end of the package file and contains useful information for tooling
         /// </summary>
-        public LECLData LECLTagData { get; }
+        public LECLData LECLTagData { get; } = new LECLData();
 
         public byte[] getHeader()
         {
@@ -126,9 +130,9 @@ namespace LegendaryExplorerCore.Packages
         }
 
         #region HeaderMisc
-        private int Gen0ExportCount;
-        private int Gen0NameCount;
-        private int Gen0NetworkedObjectCount;
+        public int Gen0ExportCount;
+        public int Gen0NameCount;
+        public int Gen0NetworkedObjectCount;
         private int ImportExportGuidsOffset;
         //private int ImportGuidsCount;
         //private int ExportGuidsCount;
@@ -366,7 +370,6 @@ namespace LegendaryExplorerCore.Packages
             ImportCount = packageReader.ReadInt32();
             ImportOffset = packageReader.ReadInt32();
 
-
             if (Game.IsLEGame() || Game != MEGame.ME1 || Platform != GamePlatform.Xenon)
             {
                 // Seems this doesn't exist on ME1 Xbox
@@ -436,8 +439,6 @@ namespace LegendaryExplorerCore.Packages
             var savedPos = packageReader.Position;
             packageReader.Skip(NumCompressedChunksAtLoad * 16); //skip chunk table so we can find package tag
 
-
-
             packageSource = packageReader.ReadUInt32(); //this needs to be read in so it can be properly written back out.
 
             if ((Game is MEGame.ME2 or MEGame.ME1) && Platform != GamePlatform.PS3)
@@ -472,8 +473,10 @@ namespace LegendaryExplorerCore.Packages
 
             packageReader.Position = savedPos; //restore position to chunk table
             Stream inStream = fs;
+            bool wasOriginallyCompressed = false; // Used to know if we should dispose the stream used for decompressed data
             if (IsCompressed && NumCompressedChunksAtLoad > 0)
             {
+                wasOriginallyCompressed = true;
                 inStream = CompressionHelper.DecompressPackage(packageReader, compressionFlagPosition, game: Game, platform: Platform,
                                                                canUseLazyDecompression: tablesInOrder && !platformNeedsResolved);
             }
@@ -597,7 +600,7 @@ namespace LegendaryExplorerCore.Packages
                     {
                         long tagOffsetFromEnd = -LECPackageTagLength; 
                         fs.Seek(-MEMPackageTagLength, SeekOrigin.End);
-                        if (fs.ReadStringASCII(MEMPackageTagLength) == MEMPackageTag)
+                        if (MEMPackageTag.SequenceEqual(fs.ReadToBuffer(MEMPackageTagLength)))
                         {
                             taggedByMEM = true;
                             tagOffsetFromEnd -= MEMPackageTagLength;
@@ -605,7 +608,7 @@ namespace LegendaryExplorerCore.Packages
                         }
 
                         fs.Seek(tagOffsetFromEnd, SeekOrigin.End);
-                        if (fs.ReadStringASCII(LECPackageTagLength) == LECPackageTag)
+                        if (LECPackageTag.SequenceEqual(fs.ReadToBuffer(LECPackageTagLength)))
                         {
                             taggedByLEC = true;
 
@@ -624,7 +627,7 @@ namespace LegendaryExplorerCore.Packages
                         }
                     }
 
-                    LECLTagData = leclv2Data != null ? JsonConvert.DeserializeObject<LECLData>(leclv2Data) : new LECLData();
+                    LECLTagData = (leclv2Data != null ? JsonConvert.DeserializeObject<LECLData>(leclv2Data) : new LECLData()) ?? new LECLData(); // This prevents invalid parsing of LECLTagData from causing package to be unable to save
                     LECLTagData.WasSavedWithMEM = taggedByMEM;
                     LECLTagData.WasSavedWithLEC = taggedByLEC;
                 }
@@ -634,8 +637,11 @@ namespace LegendaryExplorerCore.Packages
                 }
             }
 
-            packageReader.Dispose();
-
+            if (wasOriginallyCompressed)
+            {
+                // Do not dispose if the package was compressed as it will close the input stream
+                packageReader.Dispose();
+            }
 
             if (filePath != null)
             {
@@ -651,8 +657,6 @@ namespace LegendaryExplorerCore.Packages
             }
 #endif
         }
-
-
 
         public static Action<MEPackage, string, bool, bool, bool, bool, object> RegisterSaver() => saveByReconstructing;
 
@@ -735,7 +739,6 @@ namespace LegendaryExplorerCore.Packages
                           + exportTableSize
                           + dependencyTableSize
                           + mePackage.exports.Sum(exp => exp.DataSize);
-
 
             var ms = MemoryManager.GetMemoryStream(totalSize);
 
@@ -876,7 +879,6 @@ namespace LegendaryExplorerCore.Packages
                     }
                 }
 
-
                 switch (package.Game)
                 {
                     case MEGame.ME1:
@@ -899,7 +901,6 @@ namespace LegendaryExplorerCore.Packages
                         nameTableSize += 4 * invalidNameCount; // 4 bytes for size and nothing else. Null and empty strings are just the length of 0
                         break;
                 }
-
 
                 int importTableSize = package.imports.Count * ImportEntry.HeaderLength;
                 int exportTableSize = package.exports.Sum(exp => exp.HeaderLength);
@@ -1040,8 +1041,6 @@ namespace LegendaryExplorerCore.Packages
                     Array.Clear(uncompressedData, (int)ms.Position, dependencyTableSize);
                     positionInChunkData = (int)ms.Position + dependencyTableSize;
                 }
-
-
 
                 var compressionOutputSize = compressionType switch
                 {
@@ -1212,7 +1211,7 @@ namespace LegendaryExplorerCore.Packages
             }
 
             ms.WriteInt32((int)(ms.Position - pos)); // Size of the LECL data & version tag in bytes
-            ms.WriteStringASCII(LECPackageTag);
+            ms.Write(LECPackageTag);
         }
 
         //Must not change export's DataSize!
@@ -1331,6 +1330,7 @@ namespace LegendaryExplorerCore.Packages
 
             //Write 1 generation
             ms.WriteInt32(1);
+            // Todo: Properly calculate these on save (for LE)
             ms.WriteInt32(Gen0ExportCount);
             ms.WriteInt32(Gen0NameCount);
             ms.WriteInt32(Gen0NetworkedObjectCount);
@@ -1357,7 +1357,6 @@ namespace LegendaryExplorerCore.Packages
                     ms.WriteInt32(65643);
                     break;
             }
-
 
             if (Game == MEGame.ME2 || Game == MEGame.ME1)
             {
@@ -1409,7 +1408,6 @@ namespace LegendaryExplorerCore.Packages
             {
                 ms.WriteInt32(-1);
             }
-
 
             if (chunks == null || !chunks.Any() || compressionType == CompressionType.None)
             {

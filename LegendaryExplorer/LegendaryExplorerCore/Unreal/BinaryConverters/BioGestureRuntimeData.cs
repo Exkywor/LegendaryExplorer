@@ -1,30 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Numerics;
-using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Unreal.Collections;
 
 namespace LegendaryExplorerCore.Unreal.BinaryConverters
 {
     public class BioGestureRuntimeData : ObjectBinary
     {
-        public OrderedMultiValueDictionary<NameReference, NameReference> m_mapAnimSetOwners;//ME3/2
-        public OrderedMultiValueDictionary<NameReference, BioMeshPropData> m_mapMeshProps;//ME3/2
-        public OrderedMultiValueDictionary<NameReference, BioGestCharOverride> m_mapCharTypeOverrides;//ME1
+        public UMultiMap<NameReference, NameReference> m_mapAnimSetOwners;//ME3/2  //TODO: Make this a UMap
+        public UMultiMap<NameReference, BioMeshPropData> m_mapMeshProps;//ME3/2  //TODO: Make this a UMap
+        public UMultiMap<NameReference, BioGestCharOverride> m_mapCharTypeOverrides;//ME1  //TODO: Make this a UMap
 
-        protected override void Serialize(SerializingContainer2 sc)
+        protected override void Serialize(SerializingContainer sc)
         {
-            sc.Serialize(ref m_mapAnimSetOwners, SCExt.Serialize, SCExt.Serialize);
+            sc.Serialize(ref m_mapAnimSetOwners, sc.Serialize, sc.Serialize);
             if (sc.Game.IsGame1())
             {
-                sc.Serialize(ref m_mapCharTypeOverrides, SCExt.Serialize, SCExt.Serialize);
+                sc.Serialize(ref m_mapCharTypeOverrides, sc.Serialize, sc.Serialize);
             }
             else
             {
-                sc.Serialize(ref m_mapMeshProps, SCExt.Serialize, SCExt.Serialize);
+                sc.Serialize(ref m_mapMeshProps, sc.Serialize, sc.Serialize);
             }
         }
 
@@ -32,9 +28,9 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
         {
             return new()
             {
-                m_mapAnimSetOwners = new OrderedMultiValueDictionary<NameReference, NameReference>(),
-                m_mapMeshProps = new OrderedMultiValueDictionary<NameReference, BioMeshPropData>(),
-                m_mapCharTypeOverrides = new OrderedMultiValueDictionary<NameReference, BioGestCharOverride>()
+                m_mapAnimSetOwners = new(),
+                m_mapMeshProps = new(),
+                m_mapCharTypeOverrides = new()
             };
         }
 
@@ -42,48 +38,54 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
         {
             List<(NameReference, string)> names = base.GetNames(game);
 
-            for (int i = 0; i < m_mapAnimSetOwners.Count; i++)
+            int i = 0;
+            foreach ((NameReference key, NameReference value) in m_mapAnimSetOwners)
             {
-                names.Add((m_mapAnimSetOwners[i].Key, $"{nameof(m_mapAnimSetOwners)}[{i}].Key"));
-                names.Add((m_mapAnimSetOwners[i].Value, $"{nameof(m_mapAnimSetOwners)}[{i}].Value"));
+                names.Add((key, $"{nameof(m_mapAnimSetOwners)}[{i}].Key"));
+                names.Add((value, $"{nameof(m_mapAnimSetOwners)}[{i}].Value"));
+                i++;
             }
 
             if (game.IsGame1())
             {
-                for (int i = 0; i < m_mapCharTypeOverrides.Count; i++)
+                i = 0;
+                foreach ((NameReference key, BioGestCharOverride value) in m_mapCharTypeOverrides)
                 {
-                    names.Add((m_mapCharTypeOverrides[i].Key, $"{nameof(m_mapCharTypeOverrides)}[{i}].Key"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Female, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Female)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Asari, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Asari)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Turian, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Turian)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Salarian, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Salarian)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Quarian, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Quarian)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Other, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Other)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Krogan, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Krogan)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Geth, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Geth)}"));
-                    names.Add((m_mapCharTypeOverrides[i].Value.nm_Other_Artificial, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Other_Artificial)}"));
+                    names.Add((key, $"{nameof(m_mapCharTypeOverrides)}[{i}].Key"));
+                    names.Add((value.nm_Female, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Female)}"));
+                    names.Add((value.nm_Asari, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Asari)}"));
+                    names.Add((value.nm_Turian, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Turian)}"));
+                    names.Add((value.nm_Salarian, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Salarian)}"));
+                    names.Add((value.nm_Quarian, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Quarian)}"));
+                    names.Add((value.nm_Other, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Other)}"));
+                    names.Add((value.nm_Krogan, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Krogan)}"));
+                    names.Add((value.nm_Geth, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Geth)}"));
+                    names.Add((value.nm_Other_Artificial, $"{nameof(m_mapCharTypeOverrides)}[{i}].Value.{nameof(BioGestCharOverride.nm_Other_Artificial)}"));
+                    i++;
                 }
             }
             else
             {
-                for (int i = 0; i < m_mapMeshProps.Count; i++)
+                i = 0;
+                foreach ((NameReference key, BioMeshPropData value) in m_mapMeshProps)
                 {
-                    var meshProp = m_mapMeshProps[i];
-                    names.Add((meshProp.Key, $"{nameof(m_mapMeshProps)}[{i}].Key"));
-                    names.Add((meshProp.Value.nmPropName, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.nmPropName)}"));
-                    names.Add((meshProp.Value.nmAttachTo, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.nmAttachTo)}"));
-                    for (int j = 0; j < meshProp.Value.mapActions.Count; j++)
+                    names.Add((key, $"{nameof(m_mapMeshProps)}[{i}].Key"));
+                    names.Add((value.nmPropName, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.nmPropName)}"));
+                    names.Add((value.nmAttachTo, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.nmAttachTo)}"));
+                    int j = 0;
+                    foreach ((NameReference innerKey, BioMeshPropActionData innerValue) in value.mapActions)
                     {
-                        var mapAction = meshProp.Value.mapActions[j];
-                        names.Add((mapAction.Key, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.mapActions)}.Key"));
-                        names.Add((mapAction.Value.nmActionName, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.mapActions)}[{j}].Value.{nameof(BioMeshPropActionData.nmActionName)}"));
-                        names.Add((mapAction.Value.nmAttachTo, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.mapActions)}[{j}].Value.{nameof(BioMeshPropActionData.nmAttachTo)}"));
+                        names.Add((innerKey, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.mapActions)}.Key"));
+                        names.Add((innerValue.nmActionName, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.mapActions)}[{j}].Value.{nameof(BioMeshPropActionData.nmActionName)}"));
+                        names.Add((innerValue.nmAttachTo, $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.mapActions)}[{j}].Value.{nameof(BioMeshPropActionData.nmAttachTo)}"));
                         if (game.IsGame3())
                         {
-                            names.Add((mapAction.Value.TSpawnParams.nmHitBone,
+                            names.Add((innerValue.TSpawnParams.nmHitBone,
                                 $"{nameof(m_mapMeshProps)}[{i}].Value.{nameof(BioMeshPropData.mapActions)}[{j}].Value.{nameof(BioMeshPropActionData.TSpawnParams)}.{nameof(BioPropClientEffectParams.nmHitBone)}"));
                         }
+                        j++;
                     }
+                    i++;
                 }
             }
 
@@ -98,7 +100,7 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
             public Vector3 vOffsetLocation;
             public Rotator rOffsetRotation;
             public Vector3 vOffsetScale;
-            public OrderedMultiValueDictionary<NameReference, BioMeshPropActionData> mapActions;
+            public UMultiMap<NameReference, BioMeshPropActionData> mapActions; //TODO: Make this a UMap
         }
 
         public class BioMeshPropActionData
@@ -138,73 +140,73 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
         }
     }
 
-    public static partial class SCExt
+    public partial class SerializingContainer
     {
-        public static void Serialize(this SerializingContainer2 sc, ref BioGestureRuntimeData.BioPropClientEffectParams p)
+        public void Serialize(ref BioGestureRuntimeData.BioPropClientEffectParams p)
         {
-            if (sc.IsLoading)
+            if (IsLoading)
             {
                 p = new BioGestureRuntimeData.BioPropClientEffectParams();
             }
-            sc.Serialize(ref p.vHitLocation);
-            sc.Serialize(ref p.vHitNormal);
-            sc.Serialize(ref p.nmHitBone);
-            sc.Serialize(ref p.vRayDir);
-            sc.Serialize(ref p.vSpawnValue);
+            Serialize(ref p.vHitLocation);
+            Serialize(ref p.vHitNormal);
+            Serialize(ref p.nmHitBone);
+            Serialize(ref p.vRayDir);
+            Serialize(ref p.vSpawnValue);
         }
-        public static void Serialize(this SerializingContainer2 sc, ref BioGestureRuntimeData.BioMeshPropActionData d)
+        public void Serialize(ref BioGestureRuntimeData.BioMeshPropActionData d)
         {
-            if (sc.IsLoading)
+            if (IsLoading)
             {
                 d = new BioGestureRuntimeData.BioMeshPropActionData();
             }
-            sc.Serialize(ref d.nmActionName);
-            if (sc.Game.IsGame2())
+            Serialize(ref d.nmActionName);
+            if (Game.IsGame2())
             {
-                sc.Serialize(ref d.sClientEffect);
+                Serialize(ref d.sClientEffect);
             }
-            sc.Serialize(ref d.bActivate);
-            sc.Serialize(ref d.nmAttachTo);
-            sc.Serialize(ref d.vOffsetLocation);
-            sc.Serialize(ref d.rOffsetRotation);
-            sc.Serialize(ref d.vOffsetScale);
-            if (sc.Game.IsGame3())
+            Serialize(ref d.bActivate);
+            Serialize(ref d.nmAttachTo);
+            Serialize(ref d.vOffsetLocation);
+            Serialize(ref d.rOffsetRotation);
+            Serialize(ref d.vOffsetScale);
+            if (Game.IsGame3())
             {
-                sc.Serialize(ref d.sParticleSys);
-                sc.Serialize(ref d.sClientEffect);
-                sc.Serialize(ref d.bCooldown);
-                sc.Serialize(ref d.TSpawnParams);
+                Serialize(ref d.sParticleSys);
+                Serialize(ref d.sClientEffect);
+                Serialize(ref d.bCooldown);
+                Serialize(ref d.TSpawnParams);
             }
         }
-        public static void Serialize(this SerializingContainer2 sc, ref BioGestureRuntimeData.BioMeshPropData d)
+        public void Serialize(ref BioGestureRuntimeData.BioMeshPropData d)
         {
-            if (sc.IsLoading)
+            if (IsLoading)
             {
                 d = new BioGestureRuntimeData.BioMeshPropData();
             }
-            sc.Serialize(ref d.nmPropName);
-            sc.Serialize(ref d.sMesh);
-            sc.Serialize(ref d.nmAttachTo);
-            sc.Serialize(ref d.vOffsetLocation);
-            sc.Serialize(ref d.rOffsetRotation);
-            sc.Serialize(ref d.vOffsetScale);
-            sc.Serialize(ref d.mapActions, Serialize, Serialize);
+            Serialize(ref d.nmPropName);
+            Serialize(ref d.sMesh);
+            Serialize(ref d.nmAttachTo);
+            Serialize(ref d.vOffsetLocation);
+            Serialize(ref d.rOffsetRotation);
+            Serialize(ref d.vOffsetScale);
+            Serialize(ref d.mapActions, Serialize, Serialize);
         }
-        public static void Serialize(this SerializingContainer2 sc, ref BioGestureRuntimeData.BioGestCharOverride o)
+        public void Serialize(ref BioGestureRuntimeData.BioGestCharOverride o)
         {
-            if (sc.IsLoading)
+            if (IsLoading)
             {
                 o = new BioGestureRuntimeData.BioGestCharOverride();
             }
-            sc.Serialize(ref o.nm_Female);
-            sc.Serialize(ref o.nm_Asari);
-            sc.Serialize(ref o.nm_Turian);
-            sc.Serialize(ref o.nm_Salarian);
-            sc.Serialize(ref o.nm_Quarian);
-            sc.Serialize(ref o.nm_Other);
-            sc.Serialize(ref o.nm_Krogan);
-            sc.Serialize(ref o.nm_Geth);
-            sc.Serialize(ref o.nm_Other_Artificial);
+            Serialize(ref o.nm_Female);
+            Serialize(ref o.nm_Asari);
+            Serialize(ref o.nm_Turian);
+            Serialize(ref o.nm_Salarian);
+            Serialize(ref o.nm_Quarian);
+            Serialize(ref o.nm_Other);
+            Serialize(ref o.nm_Krogan);
+            Serialize(ref o.nm_Geth);
+            Serialize(ref o.nm_Other_Artificial);
         }
     }
 }

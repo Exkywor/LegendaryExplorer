@@ -39,7 +39,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase.Scanners
 
         public override void ScanExport(ExportScanInfo e, ConcurrentAssetDB db, AssetDBScanOptions options)
         {
-            if (!options.ScanPlotUsages || !classesWithPlotData.Contains(e.ClassName) || e.IsDefault) return;
+            if (!classesWithPlotData.Contains(e.ClassName) || e.IsDefault) return;
             this.db = db;
 
             switch (e.ClassName)
@@ -254,7 +254,8 @@ namespace LegendaryExplorer.Tools.AssetDatabase.Scanners
                         // Cache FileLib between function exports
                         if (e.FileLib is null) e.FileLib = new FileLib(e.Export.FileRef);
 
-                        var (node, text) = UnrealScriptCompiler.DecompileExport(e.Export, e.FileLib);
+                        UnrealScriptOptionsPackage usop = new UnrealScriptOptionsPackage();
+                            var (node, text) = UnrealScriptCompiler.DecompileExport(e.Export, e.FileLib, usop);
                         var spltFunc = text.Split(' ', '.', '(', ')');
                         for(int i = 0; i < spltFunc.Length; i++)
                         {
@@ -292,7 +293,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase.Scanners
 
         public void ScanCndFile(string file, int fileKey, ConcurrentAssetDB db, AssetDBScanOptions options)
         {
-            if (!options.ScanPlotUsages || !file.EndsWith(".cnd", StringComparison.InvariantCultureIgnoreCase)) return;
+            if (!file.EndsWith(".cnd", StringComparison.InvariantCultureIgnoreCase)) return;
             this.db = db;
             var cndFile = CNDFile.FromFile(file);
             bool isMod = file.Contains("DLC_MOD");

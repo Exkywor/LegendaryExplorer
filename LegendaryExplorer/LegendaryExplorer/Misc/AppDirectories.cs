@@ -5,6 +5,7 @@ using DocumentFormat.OpenXml.Office2010.ExcelAc;
 using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Misc;
+using LegendaryExplorerCore.Misc.ME3Tweaks;
 using LegendaryExplorerCore.Packages;
 using Microsoft.Win32;
 
@@ -16,7 +17,6 @@ namespace LegendaryExplorer.Misc
         public static string AppDataFolder => Directory.CreateDirectory(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\LegendaryExplorer\").FullName;
         public static string StaticExecutablesDirectory => Directory.CreateDirectory(Path.Combine(AppDataFolder, "staticexecutables")).FullName; //ensures directory will always exist.
 
-        // TODO: IMPLEMENT INTO LEX PROPERLY
         /// <summary>
         /// Static files base URL points to the static directory on the LegendaryExplorer github and will have executable and other files that are no distributed in the initial download of LegendaryExplorer.
         /// </summary>
@@ -52,6 +52,19 @@ namespace LegendaryExplorer.Misc
                         {
                             list.Add(new FileDialogCustomPlace(libraryPath.Value));
                         }
+                        else
+                        {
+                            // Read registry key for local lookup
+                            var executable = ModManagerIntegration.GetModManagerExecutableLocation();
+                            if (executable != null)
+                            {
+                                var path = Path.Combine(Directory.GetParent(executable).FullName, "mods");
+                                if (Directory.Exists(path))
+                                {
+                                    list.Add(new FileDialogCustomPlace(path));
+                                }
+                            }
+                        }
                     }
                     catch (Exception)
                     {
@@ -61,7 +74,6 @@ namespace LegendaryExplorer.Misc
                 return list;
             }
         }
-
 
         /// <summary>
         /// Shared method for getting a standard open file dialog.

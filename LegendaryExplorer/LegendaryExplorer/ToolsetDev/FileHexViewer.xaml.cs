@@ -56,7 +56,10 @@ namespace LegendaryExplorer.ToolsetDev
 
         private void OpenFile_Click(object sender, RoutedEventArgs e)
         {
-            var d = new OpenFileDialog();
+            var d = new OpenFileDialog()
+            {
+                CustomPlaces = AppDirectories.GameCustomPlaces
+            };
             if (d.ShowDialog() == true)
             {
                 LoadFile(d.FileName);
@@ -183,7 +186,6 @@ namespace LegendaryExplorer.ToolsetDev
                     }
                     else
                     {
-
                         used.Add(new UsedSpace
                         {
                             UsedFor = $"{Path.GetFileName(fes.FileName)} Data Block {i}",
@@ -224,7 +226,6 @@ namespace LegendaryExplorer.ToolsetDev
                 //unusedSpace.Add(usedSpace);
                 endOffset = usedSpace.UsedSpaceEnd;
             }
-
 
             UnusedSpaceList.AddRange(used);
             UnusedSpaceList.AddRange(unusedSpace);
@@ -400,7 +401,6 @@ namespace LegendaryExplorer.ToolsetDev
 
         private void hb1_SelectionChanged(object sender, EventArgs e)
         {
-
             int start = (int)Interpreter_Hexbox.SelectionStart;
             int len = (int)Interpreter_Hexbox.SelectionLength;
             int size = (int)Interpreter_Hexbox.ByteProvider.Length;

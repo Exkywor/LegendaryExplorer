@@ -1,46 +1,45 @@
-﻿using LegendaryExplorerCore.Misc;
-using LegendaryExplorerCore.Packages;
+﻿using LegendaryExplorerCore.Packages;
 using System.Drawing;
-using Microsoft.Toolkit.HighPerformance;
+using LegendaryExplorerCore.Unreal.Collections;
 using UIndex = System.Int32;
 
 namespace LegendaryExplorerCore.Unreal.BinaryConverters
 {
     public class SoundCue : ObjectBinary
     {
-        public OrderedMultiValueDictionary<UIndex, Point> EditorData; //Worthless info, but it didn't get cooked out
+        public UMultiMap<UIndex, Point> EditorData; //Worthless info, but it didn't get cooked out //TODO: Replace with UMap
 
-        protected override void Serialize(SerializingContainer2 sc)
+        protected override void Serialize(SerializingContainer sc)
         {
-            sc.Serialize(ref EditorData, SCExt.Serialize, SCExt.Serialize);
+            sc.Serialize(ref EditorData, sc.Serialize, sc.Serialize);
         }
 
         public static SoundCue Create()
         {
             return new()
             {
-                EditorData = new OrderedMultiValueDictionary<UIndex, Point>()
+                EditorData = []
             };
         }
         
         public override void ForEachUIndex<TAction>(MEGame game, in TAction action)
         {
-            ForEachUIndexKeyInOrderedMultiValueDictionary(action, EditorData.AsSpan(), nameof(EditorData));
+            ForEachUIndexKeyInMultiMap(action, EditorData, nameof(EditorData));
         }
     }
 
-    public static partial class SCExt
+    public partial class SerializingContainer
     {
-        public static void Serialize(this SerializingContainer2 sc, ref Point p)
+        public void Serialize(ref Point p)
         {
-            if (sc.IsLoading)
+            if (IsLoading)
             {
-                p = new Point(sc.ms.ReadInt32(), sc.ms.ReadInt32());
+                p = new Point(ms.ReadInt32(), ms.ReadInt32());
             }
             else
             {
-                sc.ms.Writer.WriteInt32(p.X);
-                sc.ms.Writer.WriteInt32(p.Y);
+                ms.Writer.WriteInt32(p.X);
+                ms.Writer.WriteInt32(p.Y);
             }
         }
     }

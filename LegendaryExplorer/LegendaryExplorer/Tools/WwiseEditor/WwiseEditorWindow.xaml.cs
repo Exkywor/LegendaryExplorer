@@ -132,7 +132,7 @@ namespace LegendaryExplorer.Tools.WwiseEditor
             }
         }
 
-        private WwiseBank CurrentWwiseBank;
+        private WwiseBankParsed CurrentWwiseBank;
 
         public ICommand OpenCommand { get; set; }
         public ICommand SaveCommand { get; set; }
@@ -169,7 +169,11 @@ namespace LegendaryExplorer.Tools.WwiseEditor
 
         private void OpenFile()
         {
-            OpenFileDialog d = new (){ Filter = GameFileFilters.ME3ME2SaveFileFilter };
+            OpenFileDialog d = new ()
+            {
+                Filter = GameFileFilters.ME3ME2SaveFileFilter,
+                CustomPlaces = AppDirectories.GameCustomPlaces
+            };
             if (d.ShowDialog() == true)
             {
 #if !DEBUG
@@ -207,7 +211,6 @@ namespace LegendaryExplorer.Tools.WwiseEditor
                 graphEditor.edgeLayer.RemoveAllChildren();
 
                 WwiseBankExports.ReplaceAll(Pcc.Exports.Where(exp => exp.ClassName == "WwiseBank"));
-
 
                 if (WwiseBankExports.IsEmpty())
                 {
@@ -257,7 +260,7 @@ namespace LegendaryExplorer.Tools.WwiseEditor
             graphEditor.Enabled = false;
             graphEditor.UseWaitCursor = true;
 
-            CurrentWwiseBank = export.GetBinaryData<WwiseBank>();
+            CurrentWwiseBank = export.GetBinaryData<WwiseBankParsed>();
             SetupJSON(export);
             Properties_InterpreterWPF.LoadExport(export);
             binaryInterpreter.LoadExport(export);
@@ -303,16 +306,16 @@ namespace LegendaryExplorer.Tools.WwiseEditor
             }
         }
 
-        private void GetObjects(WwiseBank bank)
+        private void GetObjects(WwiseBankParsed bank)
         {
             var newObjs = new List<WwiseHircObjNode>();
-            foreach ((uint id, WwiseBank.HIRCObject hircObject) in CurrentWwiseBank.HIRCObjects)
+            foreach ((uint id, WwiseBankParsed.HIRCObject hircObject) in CurrentWwiseBank.HIRCObjects)
             {
                 newObjs.Add(hircObject switch
                 {
-                    WwiseBank.Event evt => new WEvent(evt, 0, 0, graphEditor),
-                    WwiseBank.EventAction evtAct => new WEventAction(evtAct, 0, 0, graphEditor),
-                    WwiseBank.SoundSFXVoice sfxvoice => new WSoundSFXVoice(sfxvoice, 0, 0, graphEditor),
+                    WwiseBankParsed.Event evt => new WEvent(evt, 0, 0, graphEditor),
+                    WwiseBankParsed.EventAction evtAct => new WEventAction(evtAct, 0, 0, graphEditor),
+                    WwiseBankParsed.SoundSFXVoice sfxvoice => new WSoundSFXVoice(sfxvoice, 0, 0, graphEditor),
                     _ => new WGeneric(hircObject, 0, 0, graphEditor)
                 });
             }
@@ -464,7 +467,6 @@ namespace LegendaryExplorer.Tools.WwiseEditor
             foreach (WwiseEdEdge edge in graphEditor.edgeLayer)
                 WwiseGraphEditor.UpdateEdge(edge);
 
-
             void LayoutTree(WwiseHircObjNode WGeneric, float verticalSpacing)
             {
                 if (firstNode == null) firstNode = WGeneric;
@@ -586,7 +588,6 @@ namespace LegendaryExplorer.Tools.WwiseEditor
                 bool showContextMenu = false;
                 if (contextMenu.GetChild("openInPackEdMenuItem") is MenuItem openInPackEdMenuItem)
                 {
-
                     if (obj is WExport)
                     {
                         openInPackEdMenuItem.Visibility = Visibility.Visible;

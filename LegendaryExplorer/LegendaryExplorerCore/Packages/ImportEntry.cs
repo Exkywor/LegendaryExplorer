@@ -3,8 +3,8 @@ using System.Buffers.Binary;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
-using System.Xml.Linq;
 using LegendaryExplorerCore.Gammtek.IO;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Unreal;
@@ -39,22 +39,17 @@ namespace LegendaryExplorerCore.Packages
         /// Creates an import that would represent the specified export if it was to be placed in the specified fakeDestPackage.
         /// </summary>
         /// <param name="sourceExport">Export to convert. The link in the dest package must exist or be the root.</param>
+        /// <param name="parentIdx">idxLink in DESTINATION package it will attach to</param>
         /// <param name="fakeDestPackage">Package to associate this object with. The import is not installed to the import table.</param>
         public ImportEntry(ExportEntry sourceExport, int parentIdx, IMEPackage fakeDestPackage)
         {
             FileRef = fakeDestPackage;
+            FileRef.AllowLookupTableInvalidation(false);
             idxLink = parentIdx;
             ClassName = sourceExport.ClassName;
             ObjectName = sourceExport.ObjectName;
-            var classInfo = GlobalUnrealObjectInfo.GetClassOrStructInfo(fakeDestPackage.Game, sourceExport.ClassName);
-            if (classInfo != null)
-            {
-                PackageFile = Path.GetFileNameWithoutExtension(classInfo.pccPath).UpperFirst();
-            }
-            else
-            {
-                PackageFile = @"Core"; // ?? This could be engine, sfxgame...
-            }
+            PackageFile = GetPackageFile(sourceExport); // may want to use sourceExport as this may not have yet been attached to package 
+            FileRef.AllowLookupTableInvalidation(true);
         }
 
         /// <summary>
@@ -74,6 +69,7 @@ namespace LegendaryExplorerCore.Packages
         public ImportEntry(IMEPackage pccFile, ImportEntry clone)
         {
             FileRef = pccFile;
+            FileRef.AllowLookupTableInvalidation(false);
             if (clone.idxLink != 0)
             {
                 var link = pccFile.FindEntry(clone.ParentInstancedFullPath);
@@ -86,10 +82,11 @@ namespace LegendaryExplorerCore.Packages
             {
                 idxLink = 0; // root level like SFXGame
             }
-            
+
             ObjectName = clone.ObjectName;
             PackageFile = clone.PackageFile;
             ClassName = clone.ClassName;
+            FileRef.AllowLookupTableInvalidation(true);
         }
 
         public ImportEntry(IMEPackage pccFile, IEntry parent, NameReference name) : this(pccFile, parent?.UIndex ?? 0, name) { }
@@ -152,7 +149,7 @@ namespace LegendaryExplorerCore.Packages
             }
             if (value.Length != HeaderLength)
             {
-                throw new ArgumentException(nameof(value), $"Import header must be exactly {HeaderLength} bytes");
+                throw new ArgumentException($"Import header must be exactly {HeaderLength} bytes", nameof(value));
             }
             var existingHeader = GenerateHeader();
             if (existingHeader.AsSpan().SequenceEqual(value))
@@ -187,13 +184,13 @@ namespace LegendaryExplorerCore.Packages
             var buff = new byte[HeaderLength];
             if (FileRef.Endian.IsNative)
             {
-                MemoryMarshal.Write(buff, ref _header);
+                MemoryMarshal.Write(buff, in _header);
             }
             else
             {
                 var reversedHeader = _header;
                 reversedHeader.ReverseEndianness();
-                MemoryMarshal.Write(buff, ref _header);
+                MemoryMarshal.Write(buff, in _header);
             }
             return buff;
         }
@@ -218,6 +215,11 @@ namespace LegendaryExplorerCore.Packages
             {
                 if (_header.PackageFileNameIndex != value)
                 {
+                    if (HeaderOffset != 0 && value == FileRef.findName("None"))
+                    {
+                        throw new Exception("Cannot set PackageFile to none");
+                    }
+
                     _header.PackageFileNameIndex = value;
                     HeaderChanged = true;
                 }
@@ -237,10 +239,10 @@ namespace LegendaryExplorerCore.Packages
             }
         }
 
-        private int idxClassName
+        public int idxClassName
         {
             get => _header.ClassNameIndex;
-            set
+            private set
             {
                 if (_header.ClassNameIndex != value)
                 {
@@ -308,7 +310,6 @@ namespace LegendaryExplorerCore.Packages
             }
         }
 
-
         public string ClassName
         {
             get => FileRef.Names[idxClassName];
@@ -340,7 +341,47 @@ namespace LegendaryExplorerCore.Packages
         public string FullPath => FileRef.IsEntry(idxLink) ? $"{ParentFullPath}.{ObjectNameString}" : ObjectNameString;
 
         public string ParentInstancedFullPath => FileRef.GetEntry(idxLink)?.InstancedFullPath ?? "";
-        public string InstancedFullPath => FileRef.IsEntry(idxLink) ? ObjectName.AddToPath(ParentInstancedFullPath) : ObjectName.Instanced;
+
+        public string InstancedFullPath
+        {
+            get
+            {
+                var parent = Parent;
+                if (parent is not null)
+                {
+                    int fullLength = ObjectName.GetInstancedLength();
+                    IEntry entry = parent;
+                    do
+                    {
+                        fullLength += 1 + entry.ObjectName.GetInstancedLength();
+                        entry = entry.Parent;
+                    } while (entry is not null);
+                    return string.Create(fullLength, (IEntry)this, static (span, entry) =>
+                    {
+                        int curNameStartIdx = span.Length;
+                        while (true)
+                        {
+                            NameReference curName = entry.ObjectName;
+                            int curNameLength = curName.GetInstancedLength();
+                            curNameStartIdx -= curNameLength;
+                            curName.FormatInstanced(span.Slice(curNameStartIdx, curNameLength));
+                            entry = entry.Parent;
+                            if (entry is not null)
+                            {
+                                curNameStartIdx -= 1;
+                                span[curNameStartIdx] = '.';
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    });
+                }
+                return ObjectName.Instanced;
+            }
+        }
+        public string MemoryFullPath => InstancedFullPath; // Imports will always be nested under their root package file
 
         bool headerChanged;
         public bool HeaderChanged
@@ -354,7 +395,6 @@ namespace LegendaryExplorerCore.Packages
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HeaderChanged)));
             }
         }
-
 
         private bool _entryHasPendingChanges;
         public bool EntryHasPendingChanges
@@ -371,24 +411,28 @@ namespace LegendaryExplorerCore.Packages
         }
         public bool IsClass => ClassName == "Class";
 
-        public ImportEntry Clone(int newIndex = -1)
+        public ImportEntry Clone(int newIndex = -1, int newParentUIndex = int.MaxValue)
         {
             ImportEntry newImport = (ImportEntry)MemberwiseClone();
             if (newIndex >= 0)
             {
                 _header.ObjectNameIndex = newIndex;
             }
+            if (newParentUIndex != int.MaxValue)
+            {
+                _header.Link = newParentUIndex;
+            }
             return newImport;
         }
 
-        IEntry IEntry.Clone(bool incrementIndex)
+        IEntry IEntry.Clone(bool incrementIndex, int newParentUIndex)
         {
             if (incrementIndex)
             {
-                return Clone(FileRef.GetNextIndexForInstancedName(this));
+                return Clone(FileRef.GetNextIndexForInstancedName(this), newParentUIndex);
             }
 
-            return Clone();
+            return Clone(newParentUIndex: newParentUIndex);
         }
 
         /// <summary>
@@ -397,14 +441,66 @@ namespace LegendaryExplorerCore.Packages
         /// <returns></returns>
         public string GetRootName()
         {
+            return GetRoot().InstancedFullPath;
+        }
+
+        /// <summary>
+        /// Gets the top level object by following the idxLink up the chain.
+        /// </summary>
+        /// <returns></returns>
+        public IEntry GetRoot()
+        {
             IEntry current = this;
             while (current.Parent != null)
             {
                 current = current.Parent;
             }
-            return current.InstancedFullPath;
+            return current;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+
+        /// <summary>
+        /// Looks up the class info for the given class and returns which package file should contain it. Use this for the PackageFile attribute on ImportEntries.
+        /// </summary>
+        /// <param name="game"></param>
+        /// <param name="className"></param>
+        /// <returns></returns>
+        public static string GetPackageFile(MEGame game, string className)
+        {
+            var classInfo = GlobalUnrealObjectInfo.GetClassOrStructInfo(game, className);
+            if (classInfo != null)
+            {
+                return Path.GetFileNameWithoutExtension(classInfo.pccPath).UpperFirst();
+            }
+            else
+            {
+                return @"Core"; // ?? This could be engine, sfxgame...
+            }
+        }
+
+        /// <summary>
+        /// Looks up the class info for the given Export's class and returns which package file should contain it. Use this for the PackageFile attribute on ImportEntries.
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns></returns>
+        public static string GetPackageFile(ExportEntry entry)
+        {
+            var entryClass = entry.Class;
+            if (entryClass == null)
+                return @"Core"; // Class is defined in Core
+            if (entryClass.HasParent)
+            {
+                // ForcedExport parent? Take the first forced export?
+                return entryClass.InstancedFullPath.Split(".").First();
+            }
+
+            return GetPackageFile(entry.Game, entry.ClassName);
+        }
+
+        public string GetLinker()
+        {
+            return IEntry.GetLinker(this);
+        }
     }
 }

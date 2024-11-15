@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -29,9 +30,14 @@ using LegendaryExplorerCore.Unreal.BinaryConverters;
 using LegendaryExplorerCore.TLK;
 using Microsoft.WindowsAPICodePack.Taskbar;
 using BinaryPack;
+using LegendaryExplorer.GameInterop;
 using LegendaryExplorer.SharedUI.Controls;
 using LegendaryExplorer.Tools.AssetDatabase.Filters;
+using LegendaryExplorer.Tools.AssetViewer;
+using LegendaryExplorer.Tools.LiveLevelEditor;
 using LegendaryExplorer.Tools.PlotDatabase;
+using LegendaryExplorer.UserControls.ExportLoaderControls;
+using LegendaryExplorer.UserControls.ExportLoaderControls.MaterialEditor;
 using LegendaryExplorerCore.Memory;
 using LegendaryExplorerCore.PlotDatabase;
 
@@ -43,19 +49,44 @@ namespace LegendaryExplorer.Tools.AssetDatabase
     public partial class AssetDatabaseWindow : TrackingNotifyPropertyChangedWindowBase
     {
         #region Declarations
-        public const string dbCurrentBuild = "7.2"; //If changes are made that invalidate old databases edit this.
+
+        public const string dbCurrentBuild = "8.0"; //If changes are made that invalidate old databases edit this.
         private int previousView { get; set; }
         private int _currentView;
-        public int currentView { get => _currentView; set { previousView = _currentView; SetProperty(ref _currentView, value); } }
+        public int currentView
+        {
+            get => _currentView;
+            set
+            {
+                previousView = _currentView;
+                SetProperty(ref _currentView, value);
+            }
+        }
 
         private bool _isBusy;
-        public bool IsBusy { get => _isBusy; set => SetProperty(ref _isBusy, value); }
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set => SetProperty(ref _isBusy, value);
+        }
         private string _busyText;
-        public string BusyText { get => _busyText; set => SetProperty(ref _busyText, value); }
+        public string BusyText
+        {
+            get => _busyText;
+            set => SetProperty(ref _busyText, value);
+        }
         private string _busyHeader;
-        public string BusyHeader { get => _busyHeader; set => SetProperty(ref _busyHeader, value); }
+        public string BusyHeader
+        {
+            get => _busyHeader;
+            set => SetProperty(ref _busyHeader, value);
+        }
         private bool _BusyBarInd;
-        public bool BusyBarInd { get => _BusyBarInd; set => SetProperty(ref _BusyBarInd, value); }
+        public bool BusyBarInd
+        {
+            get => _BusyBarInd;
+            set => SetProperty(ref _BusyBarInd, value);
+        }
         public MEGame currentGame;
         public MEGame CurrentGame
         {
@@ -64,7 +95,11 @@ namespace LegendaryExplorer.Tools.AssetDatabase
         }
 
         private MELocalization _localization = MELocalization.INT;
-        public MELocalization Localization { get => _localization; set => SetProperty(ref _localization, value); }
+        public MELocalization Localization
+        {
+            get => _localization;
+            set => SetProperty(ref _localization, value);
+        }
 
         public ObservableCollectionExtended<MELocalization> AvailableLocalizations { get; set; } = new()
         {
@@ -124,11 +159,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
         private ConcurrentAssetDB GeneratedDB = new();
 
         /// <summary>
-        /// Items show in the list that are currently being processed
-        /// </summary>
-        public ObservableCollectionExtended<SingleFileScanner> CurrentDumpingItems { get; set; } = new();
-
-        /// <summary>
         /// All items in the queue
         /// </summary>
         private List<SingleFileScanner> AllDumpingItems;
@@ -177,16 +207,21 @@ namespace LegendaryExplorer.Tools.AssetDatabase
         private IMEPackage audioPcc;
         private GridViewColumnHeader _lastHeaderClicked = null;
         private ListSortDirection _lastDirection = ListSortDirection.Ascending;
-        private bool _parseConvos;
-        public bool ParseConvos { get => _parseConvos; set => SetProperty(ref _parseConvos, value); }
-        private bool _parsePlotUsages;
-        public bool ParsePlotUsages { get => _parsePlotUsages; set => SetProperty(ref _parsePlotUsages, value); }
+
         private BlockingCollection<ConvoLine> _linequeue = new();
         private Tuple<string, string, int, string, bool> _currentConvo = new(null, null, -1, null, false); //ConvoName, FileName, export, contentdir, isAmbient
-        public Tuple<string, string, int, string, bool> CurrentConvo { get => _currentConvo; set => SetProperty(ref _currentConvo, value); }
+        public Tuple<string, string, int, string, bool> CurrentConvo
+        {
+            get => _currentConvo;
+            set => SetProperty(ref _currentConvo, value);
+        }
         public ObservableCollectionExtended<string> SpeakerList { get; } = new();
         private bool _isGettingTLKs;
-        public bool IsGettingTLKs { get => _isGettingTLKs; set => SetProperty(ref _isGettingTLKs, value); }
+        public bool IsGettingTLKs
+        {
+            get => _isGettingTLKs;
+            set => SetProperty(ref _isGettingTLKs, value);
+        }
         public const string CustomListDesc = "Custom File Lists allow the database to be filtered so only assets that are in certain files or groups of files are shown. Lists can be saved/reloaded.";
         public ICommand GenerateDBCommand { get; set; }
         public ICommand SaveDBCommand { get; set; }
@@ -209,20 +244,20 @@ namespace LegendaryExplorer.Tools.AssetDatabase
         public ICommand OpenInPlotDBCommand { get; set; }
         public ICommand OpenPEDefinitionCommand { get; set; }
         public ICommand ChangeLocalizationCommand { get; set; }
+
         private bool CanCancelDump(object obj)
         {
             return ProcessingQueue != null && ProcessingQueue.Completion.Status == TaskStatus.WaitingForActivation && !DumpCanceled;
         }
+
         private bool IsClassSelected(object obj)
         {
             return lstbx_Classes.SelectedIndex >= 0 && currentView == 1;
         }
+
         private bool IsUsageSelected(object obj)
         {
-            return (lstbx_Usages.SelectedIndex >= 0 && currentView == 1) || (lstbx_MatUsages.SelectedIndex >= 0 && currentView == 2) || (lstbx_AnimUsages.SelectedIndex >= 0 && currentView == 5)
-                || (lstbx_MeshUsages.SelectedIndex >= 0 && currentView == 3) || (lstbx_PSUsages.SelectedIndex >= 0 && currentView == 6) || (lstbx_TextureUsages.SelectedIndex >= 0 && currentView == 4)
-                || (lstbx_GUIUsages.SelectedIndex >= 0 && currentView == 7) || (lstbx_Lines.SelectedIndex >= 0 && currentView == 8) || (currentView == 9 && lstbx_PlotUsages.SelectedIndex >= 0)
-                || (currentView == 0 && IsNotCND(lstbx_Files.SelectedItem));
+            return (lstbx_Usages.SelectedIndex >= 0 && currentView == 1) || (lstbx_MatUsages.SelectedIndex >= 0 && currentView == 2) || (lstbx_AnimUsages.SelectedIndex >= 0 && currentView == 5) || (lstbx_MeshUsages.SelectedIndex >= 0 && currentView == 3) || (lstbx_PSUsages.SelectedIndex >= 0 && currentView == 6) || (lstbx_TextureUsages.SelectedIndex >= 0 && currentView == 4) || (lstbx_GUIUsages.SelectedIndex >= 0 && currentView == 7) || (lstbx_Lines.SelectedIndex >= 0 && currentView == 8) || (currentView == 9 && lstbx_PlotUsages.SelectedIndex >= 0) || (currentView == 0 && IsNotCND(lstbx_Files.SelectedItem));
         }
 
         private bool IsNotCND(object obj)
@@ -254,10 +289,12 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             };
             return currentView == tabIndex;
         }
+
         private bool CanUseAnimViewer(object obj)
         {
             return currentView == 5 && CurrentGame == MEGame.ME3 && lstbx_Anims.SelectedIndex >= 0 && !((lstbx_Anims.SelectedItem as AnimationRecord)?.IsAmbPerf ?? true);
         }
+
         private bool IsAnimSequenceSelected() => currentView == 5 && lstbx_Anims.SelectedIndex >= 0 && !((lstbx_Anims.SelectedItem as AnimationRecord)?.IsAmbPerf ?? true);
 
         private bool IsPlotElementSelected() => GetSelectedPlotRecord() != null;
@@ -277,8 +314,8 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             CurrentGame = game;
 
             InitializeComponent();
-
         }
+
         private void LoadCommands()
         {
             GenerateDBCommand = new GenericCommand(GenerateDatabase);
@@ -328,6 +365,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             }
             Activate();
         }
+
         private void AssetDB_Closing(object sender, CancelEventArgs e)
         {
             if (e.Cancel)
@@ -340,6 +378,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             SoundpanelWPF_ADB?.Dispose();
             BIKExternalExportLoaderTab_BIKExternalExportLoader?.Dispose();
             EmbeddedTextureViewerTab_EmbeddedTextureViewer?.Dispose();
+            MaterialEditorExportLoader_Control?.Dispose();
 
             audioPcc?.Dispose();
             meshPcc?.Dispose();
@@ -357,7 +396,8 @@ namespace LegendaryExplorer.Tools.AssetDatabase
 
         #endregion
 
-        #region Database I/O        
+        #region Database I/O
+
         /// <summary>
         /// Load the database or a particular database table.
         /// </summary>
@@ -401,7 +441,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                             estream.CopyTo(ms);
                         }
                         ms.Position = 0;
-                        return JsonFileParse(ms, cancel);
+                        return DeserializeDB(ms, cancel);
                     }
                     //Wrong build - send dummy pdb back and ask user to refresh
                     AssetDB pdb = new();
@@ -424,12 +464,12 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             }
             return null;
         }
-        private static AssetDB JsonFileParse(Stream ms, CancellationToken ct)
-        {
 
+        private static AssetDB DeserializeDB(MemoryStream ms, CancellationToken ct)
+        {
             try
             {
-                var readData = BinaryConverter.Deserialize<AssetDB>(ms);
+                var readData = BinaryConverter.Deserialize<AssetDB>(ms.GetBuffer().AsSpan(0, (int)ms.Length));
                 if (ct.IsCancellationRequested)
                 {
                     Console.WriteLine("Cancelled ParseDB");
@@ -452,11 +492,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             IsBusy = true;
             CurrentOverallOperationText = "Database saving...";
 
-            if (!ParseConvos && !CurrentGame.IsGame1())
-            {
-                CurrentDataBase.Lines.Clear();
-            }
-
             await using (var fileStream = new FileStream(CurrentDBPath, FileMode.Create))
             {
                 using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, true))
@@ -471,8 +506,9 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             CurrentOverallOperationText = $"Database saved.";
             IsBusy = false;
             await Task.Delay(3000);
-            CurrentOverallOperationText = $"Database generated {CurrentDataBase.GenerationDate} Classes: {CurrentDataBase.ClassRecords.Count} Animations: {CurrentDataBase.Animations.Count} Materials: {CurrentDataBase.Materials.Count} Meshes: {CurrentDataBase.Meshes.Count} Particles: { CurrentDataBase.Particles.Count} Textures: { CurrentDataBase.Textures.Count} Elements: { CurrentDataBase.GUIElements.Count}";
+            CurrentOverallOperationText = $"Database generated {CurrentDataBase.GenerationDate} Classes: {CurrentDataBase.ClassRecords.Count} Animations: {CurrentDataBase.Animations.Count} Materials: {CurrentDataBase.Materials.Count} Meshes: {CurrentDataBase.Meshes.Count} Particles: {CurrentDataBase.Particles.Count} Textures: {CurrentDataBase.Textures.Count} Elements: {CurrentDataBase.GUIElements.Count}";
         }
+
         public void ClearDataBase()
         {
             CurrentDataBase.Clear();
@@ -487,6 +523,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             FilterBox.Clear();
             Filter();
         }
+
         private void GetConvoLinesBackground()
         {
             if (CurrentGame.IsGame1())
@@ -519,6 +556,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             }
             _linequeue.CompleteAdding();
         }
+
         private void dbworker_LineWorkCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             dbworker.CancelAsync();
@@ -533,15 +571,15 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 if (spkrs.All(s => s != line.Speaker))
                     spkrs.Add(line.Speaker);
             }
-            var emptylines = CurrentDataBase.Lines.Where(l => l.Line == "No Data").ToList();
-            foreach (var line in emptylines)
-            {
-                CurrentDataBase.Lines.Remove(line);
-            }
+
+            int lineCountWithEmptyLines = CurrentDataBase.Lines.Count;
+            CurrentDataBase.Lines.RemoveAll(l => l.Line == "No Data");
+            int numEmptyLines = lineCountWithEmptyLines - CurrentDataBase.Lines.Count;
+
             GeneratedDB.GeneratedLines.Clear();
             spkrs.Sort();
             SpeakerList.AddRange(spkrs);
-            if (!emptylines.IsEmpty())
+            if (numEmptyLines > 0)
             {
                 menu_SaveXEmptyLines.IsEnabled = true;
             }
@@ -551,10 +589,11 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 MessageBox.Show("Line list is empty! Make sure you have TLKs loaded in TLK Manager.");
             }
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine($"ADB: {emptylines.Count} empty lines");
+            System.Diagnostics.Debug.WriteLine($"ADB: {numEmptyLines} empty lines");
             System.Diagnostics.Debug.WriteLine("Line worker done");
 #endif
         }
+
         private void GetLineStrings(object sender, DoWorkEventArgs e)
         {
             foreach (var ol in _linequeue.GetConsumingEnumerable(CancellationToken.None))
@@ -588,9 +627,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
 
         public void GenerateDatabase()
         {
-            var shouldGenerate = MessageBox.Show($"Generate a new database for {CurrentGame}?", "Generating new DB",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question) == MessageBoxResult.Yes;
+            var shouldGenerate = MessageBox.Show($"Generate a new database for {CurrentGame}?", "Generating new DB", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
             if (shouldGenerate)
             {
                 ScanGame();
@@ -616,6 +653,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             textPcc?.Dispose();
             btn_TextRenderToggle.IsChecked = false;
             btn_TextRenderToggle.Content = "Toggle Texture Rendering";
+            MaterialEditorExportLoader_Control?.UnloadExport();
             SoundpanelWPF_ADB.UnloadExport();
             audioPcc?.Dispose();
             SoundpanelWPF_ADB.FreeAudioResources();
@@ -635,7 +673,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 case "ME1":
                     CurrentGame = MEGame.ME1;
                     switchME1_menu.IsChecked = true;
-                    btn_LinePlaybackToggle.IsEnabled = false;
                     break;
                 case "ME2":
                     CurrentGame = MEGame.ME2;
@@ -648,7 +685,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 case "LE1":
                     CurrentGame = MEGame.LE1;
                     switchLE1_menu.IsChecked = true;
-                    btn_LinePlaybackToggle.IsEnabled = false;
                     break;
                 case "LE2":
                     CurrentGame = MEGame.LE2;
@@ -681,7 +717,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 {
                     if (CurrentDataBase.DatabaseVersion == null || CurrentDataBase.DatabaseVersion != dbCurrentBuild)
                     {
-
                         var warn = MessageBox.Show($"This database is out of date (v {CurrentDataBase.DatabaseVersion} versus v {dbCurrentBuild})\nA new version is required. Do you wish to rebuild?", "Warning", MessageBoxButton.OKCancel);
                         if (warn == MessageBoxResult.Cancel)
                         {
@@ -707,29 +742,62 @@ namespace LegendaryExplorer.Tools.AssetDatabase
 
                         Localization = CurrentDataBase.Localization;
                         AssetFilters.MaterialFilter.LoadFromDatabase(CurrentDataBase);
-                        ParseConvos = !CurrentDataBase.Lines.IsEmpty();
-                        ParsePlotUsages = CurrentDataBase.PlotUsages.Any();
                         IsBusy = false;
                         CurrentOverallOperationText = $"Database generated {CurrentDataBase.GenerationDate} Classes: {CurrentDataBase.ClassRecords.Count} " +
                                                       $"Animations: {CurrentDataBase.Animations.Count} Materials: {CurrentDataBase.Materials.Count} Meshes: {CurrentDataBase.Meshes.Count} " +
-                                                      $"Particles: { CurrentDataBase.Particles.Count} Textures: { CurrentDataBase.Textures.Count} Elements: { CurrentDataBase.GUIElements.Count}";
-                        if (ParseConvos)
-                        {
-                            CurrentOverallOperationText = CurrentOverallOperationText + $" Lines: { CurrentDataBase.Lines.Count}";
-                        }
+                                                      $"Particles: {CurrentDataBase.Particles.Count} Textures: {CurrentDataBase.Textures.Count} Elements: {CurrentDataBase.GUIElements.Count} " +
+                                                      $"Lines: {CurrentDataBase.Lines.Count}";
 #if DEBUG
                         var end = DateTime.UtcNow;
                         double length = (end - start).TotalMilliseconds;
                         CurrentOverallOperationText = $"{CurrentOverallOperationText} LoadTime: {length}ms";
 #endif
 
-                        if (ParseConvos)
-                        {
-                            GetConvoLinesBackground();
-                        }
+                        GetConvoLinesBackground();
                     }
-                });
+                }).ContinueWith(x =>
+                {
+                    // RESEARCH
+                    //var shaderCacheF = @"S:\SteamLibrary\steamapps\common\Mass Effect Legendary Edition\Game\ME3\BioGame\CookedPCConsole\RefShaderCache-PC-D3D-SM5.upk";
+                    //var shaderCacheP = MEPackageHandler.OpenMEPackage(shaderCacheF);
+                    //var shaderCache = ObjectBinary.From<ShaderCache>(shaderCacheP.Exports.FirstOrDefault());
+                    //Dictionary<Guid, string> refGuidMap = new();
+                    //foreach (var sm in shaderCache.MaterialShaderMaps)
+                    //{
+                    //    refGuidMap[sm.Value.ID] = sm.Value.FriendlyName;
+                    //}
 
+                    //Dictionary<Guid, string> materialGuidMap = new();
+                    //int testIdx = 0;
+                    //foreach (var mat in CurrentDataBase.Materials)
+                    //{
+                    //    testIdx++;
+                    //    if (testIdx % 40 == 0)
+                    //    {
+                    //        Debug.WriteLine($"Reading materials... {testIdx}/{CurrentDataBase.Materials.Count}");
+                    //    }
+                    //    var usage = mat.AssetUsages.First();
+                    //    var path = GetFilePath(usage.FileKey);
+                    //    using var package = MEPackageHandler.UnsafePartialLoad(path, x => x.UIndex == usage.UIndex);
+                    //    var uMat = package.GetUExport(usage.UIndex);
+                    //    var guid = ObjectBinary.From<Material>(uMat).SM3MaterialResource.ID;
+                    //    materialGuidMap[guid] = uMat.ObjectName.Instanced;
+                    //}
+
+                    //foreach (var mgm in materialGuidMap)
+                    //{
+                    //    if (refGuidMap.Remove(mgm.Key))
+                    //    {
+                    //        Debug.WriteLine($"Removed {mgm.Key} from ref map");
+                    //    }
+                    //}
+
+                    //Debug.WriteLine($"Unreferenced shaders");
+                    //foreach (var extraRef in refGuidMap.OrderBy(x=>x.Value))
+                    //{
+                    //    Debug.WriteLine($"{extraRef.Value} ({extraRef.Key})");
+                    //}
+                });
             }
             else
             {
@@ -737,6 +805,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 CurrentOverallOperationText = "No database found.";
             }
         }
+
         public static string GetDBPath(MEGame game)
         {
             return Path.Combine(AppDirectories.AppDataFolder, $"AssetDB{game}.zip");
@@ -811,7 +880,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             {
                 MessageBox.Show("SuperClass not found.");
             }
-
         }
 
         private (string, string, int, int) GetSelectedUsageInfo()
@@ -874,7 +942,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 var pu = (PlotUsage)lstbx_PlotUsages.SelectedItem;
                 (usagepkg, contentdir, usagemount) = FileListExtended[pu.FileKey];
                 usageUID = pu.UIndex;
-
             }
             else if (lstbx_Files.SelectedIndex >= 0 && currentView == 0)
             {
@@ -921,13 +988,14 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 return;
             }
 
-            OpenInToolkit(tool, GetFilePath(usagepkg, contentdir), usageUID, strRef);
+            OpenInToolkit(tool, GetFilePath(usagepkg, contentdir), usageUID, strRef, usagepkg);
         }
+
         private void OpenSourcePkg(object obj)
         {
             var cr = (ClassRecord)lstbx_Classes.SelectedItem;
             var sourcepkg = cr.DefinitionFile;
-            var sourceexp = cr.Definition_UID;
+            var sourceexp = cr.DefinitionUIndex;
 
             if (sourcepkg < 0)
             {
@@ -954,14 +1022,54 @@ namespace LegendaryExplorer.Tools.AssetDatabase
 
             if (filePath == null)
             {
+                if (CurrentGame == MEGame.ME3)
+                {
+                    // This is very inefficient...
+                    var testFile = Directory.EnumerateFiles(rootPath, "Default.sfar", SearchOption.AllDirectories).FirstOrDefault(f => f.Contains(contentdir));
+                    if (testFile != null)
+                    {
+                        DLCPackage dlp = new DLCPackage(testFile);
+                        var dlpFile = dlp.FindFileEntry(filename);
+                        if (dlpFile != -1)
+                        {
+                            return testFile; // It's in the SFAR
+                        }
+                    }
+                }
                 MessageBox.Show($"File {filename} not found in content directory {contentdir}.");
                 return null;
             }
 
             return filePath;
         }
-        private void OpenInToolkit(string tool, string filePath, int uindex = 0, int strRef = 0)
+
+        private void OpenInToolkit(string tool, string filePath, int uindex = 0, int strRef = 0, string realFilename = null)
         {
+            if (filePath == null)
+                return; // Do nothing.
+
+
+            IMEPackage package = null;
+            ExportEntry exportEntry = null;
+            if(tool != "CndEd") // don't try to OpenMEPackage on a .cnd file
+            {
+                if (Path.GetFileName(filePath) == "Default.sfar")
+                {
+                    // Must open sfar
+                    DLCPackage dlp = new DLCPackage(filePath);
+                    var dlpFile = dlp.FindFileEntry(realFilename);
+                    if (dlpFile != -1)
+                    {
+                        package = MEPackageHandler.OpenMEPackageFromStream(dlp.DecompressEntry(dlpFile), realFilename);
+                    }
+                }
+                else
+                {
+                    package = MEPackageHandler.OpenMEPackage(filePath);
+                }
+                if(package.TryGetUExport(uindex, out var goodExport)) exportEntry = goodExport;
+            }
+
             switch (tool)
             {
                 case "Meshplorer":
@@ -977,7 +1085,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     }
                     break;
                 case "PathEd":
-                    var pathEd = new PathfindingEditor.PathfindingEditorWindow(filePath);
+                    var pathEd = new PathfindingEditor.PathfindingEditorWindow(package);
                     pathEd.Show();
                     break;
                 case "DlgEd":
@@ -994,15 +1102,15 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     }
                     break;
                 case "SeqEd":
-                    var SeqEd = new Sequence_Editor.SequenceEditorWPF();
-                    SeqEd.Show();
-                    if (uindex != 0)
+                    if (exportEntry is not null)
                     {
-                        SeqEd.LoadFile(filePath, uindex);
+                        var SeqEd = new Sequence_Editor.SequenceEditorWPF(exportEntry);
+                        SeqEd.Show();
                     }
                     else
                     {
-                        SeqEd.LoadFile(filePath);
+                        var SeqEd = new Sequence_Editor.SequenceEditorWPF(package);
+                        SeqEd.Show();
                     }
                     break;
                 case "SoundExplorer":
@@ -1028,14 +1136,16 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     packEditor.Show();
                     if (uindex != 0)
                     {
-                        packEditor.LoadFile(filePath, uindex);
+                        packEditor.LoadPackage(package, uindex);
                     }
                     else
                     {
-                        packEditor.LoadFile(filePath);
+                        packEditor.LoadPackage(package);
                     }
                     break;
             }
+            // We dispose of package here so it loses the package handler reference, since we don't open it in a using block.
+            package?.Dispose();
         }
 
         /// <summary>
@@ -1045,6 +1155,8 @@ namespace LegendaryExplorer.Tools.AssetDatabase
         /// <param name="usage"></param>
         private void OpenInPlotEditor(string filePath, PlotUsage usage)
         {
+            if (filePath == null)
+                return;
             var plotEditor = new PlotEditor.PlotEditorWindow();
             plotEditor.Show();
             plotEditor.LoadFile(filePath);
@@ -1088,8 +1200,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
         private void OpenInPlotDB()
         {
             var record = GetSelectedPlotRecord();
-            var plotElement = PlotDatabases.FindPlotElementFromID(record.ElementID, record.ElementType.ToPlotElementType(),
-                CurrentGame);
+            var plotElement = PlotDatabases.FindPlotElementFromID(record.ElementID, record.ElementType.ToPlotElementType(), CurrentGame);
             var plotDB = new PlotManagerWindow(CurrentGame.ToLEVersion(), plotElement);
             plotDB.Show();
             plotDB.SelectPlotElement(plotElement, CurrentGame.ToLEVersion());
@@ -1114,10 +1225,11 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
                 else if (record.BaseUsage.Context is PlotUsageContext.CndFile)
                 {
-                    // TODO
+                    OpenInToolkit("CndEd", GetFilePath(usagepkg, contentdir), usageUID);
                 }
             }
         }
+
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) //Fires if Tab moves away
         {
             e.Handled = true;
@@ -1168,6 +1280,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 previousView = currentView;
             }
         }
+
         private void lstbx_Meshes_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             e.Handled = true;
@@ -1176,6 +1289,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 ToggleRenderMesh();
             }
         }
+
         private void lstbx_Textures_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             e.Handled = true;
@@ -1184,6 +1298,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 ToggleRenderTexture();
             }
         }
+
         private void lstbx_Lines_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             e.Handled = true;
@@ -1200,8 +1315,8 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
             }
             CurrentConvo = new Tuple<string, string, int, string, bool>(null, null, 0, null, false);
-
         }
+
         private void PETabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             e.Handled = true;
@@ -1211,6 +1326,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 Filter();
             }
         }
+
         private void lstbx_PlotElement_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             e.Handled = true;
@@ -1224,6 +1340,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
             }
         }
+
         private void btn_TextRenderToggle_Click(object sender, RoutedEventArgs e)
         {
             ToggleRenderTexture();
@@ -1236,6 +1353,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 btn_TextRenderToggle.Content = "Toggle Texture Rendering";
             }
         }
+
         private void btn_MeshRenderToggle_Click(object sender, RoutedEventArgs e)
         {
             ToggleRenderMesh();
@@ -1248,6 +1366,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 btn_MeshRenderToggle.Content = "Toggle Mesh Rendering";
             }
         }
+
         private void btn_LinePlaybackToggle_Click(object sender, RoutedEventArgs e)
         {
             ToggleLinePlayback();
@@ -1260,6 +1379,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 btn_LinePlaybackToggle.Content = "Toggle Line Playback";
             }
         }
+
         private void ToggleRenderMesh()
         {
             bool showmesh = btn_MeshRenderToggle.IsChecked == true && lstbx_Meshes.SelectedIndex >= 0 && CurrentDataBase.Meshes[lstbx_Meshes.SelectedIndex].Usages.Count > 0 && currentView == 3;
@@ -1283,7 +1403,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             }
             filename = $"{filename}.*";
 
-
             var files = Directory.GetFiles(rootPath, filename, SearchOption.AllDirectories);
             if (files.IsEmpty())
             {
@@ -1291,15 +1410,13 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 return;
             }
 
-
-
             if (meshPcc != null) //unload existing file
             {
                 MeshRendererTab_MeshRenderer.UnloadExport();
                 meshPcc.Dispose();
             }
 
-            foreach (var filePath in files)  //handle cases of mods/dlc having same file.
+            foreach (var filePath in files) //handle cases of mods/dlc having same file.
             {
                 bool isBaseFile = cdir.ToLower() == "biogame";
                 bool isDLCFile = filePath.ToLower().Contains("dlc");
@@ -1321,6 +1438,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 meshPcc.Dispose();
             }
         }
+
         private void ToggleRenderTexture()
         {
             bool showText = btn_TextRenderToggle.IsChecked == true && lstbx_Textures.SelectedIndex >= 0 && CurrentDataBase.Textures[lstbx_Textures.SelectedIndex].Usages.Count > 0 && currentView == 4;
@@ -1361,7 +1479,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 textPcc.Dispose();
             }
 
-            foreach (var filePath in files)  //handle cases of mods/dlc having same file.
+            foreach (var filePath in files) //handle cases of mods/dlc having same file.
             {
                 bool isBaseFile = cdir.ToLower() == "biogame";
                 bool isDLCFile = filePath.ToLower().Contains("dlc");
@@ -1369,8 +1487,8 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 {
                     continue;
                 }
-                textPcc = MEPackageHandler.OpenMEPackage(filePath); // maybe use unsafe load?
-                //textPcc = MEPackageHandler.UnsafePartialLoad(filePath, x=>x.UIndex == selecteditem.Usages[0].UIndex); // maybe use unsafe load?
+                //textPcc = MEPackageHandler.UnsafePartialLoad(filePath, x=>x.UIndex); // maybe use unsafe load?
+                textPcc = MEPackageHandler.UnsafePartialLoad(filePath, x => x.UIndex == selecteditem.Usages[0].UIndex); // maybe use unsafe load?
                 var uexpIdx = selecteditem.Usages[0].UIndex;
                 if (uexpIdx <= textPcc.ExportCount)
                 {
@@ -1401,9 +1519,10 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 textPcc.Dispose();
             }
         }
+
         private void ToggleLinePlayback()
         {
-            bool showAudio = btn_LinePlaybackToggle.IsChecked == true && lstbx_Lines.SelectedIndex >= 0 && CurrentConvo.Item1 != null && !CurrentGame.IsGame1() && currentView == 8;
+            bool showAudio = btn_LinePlaybackToggle.IsChecked == true && lstbx_Lines.SelectedIndex >= 0 && CurrentConvo.Item1 != null && currentView == 8;
 
             if (!showAudio)
             {
@@ -1449,7 +1568,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 audioPcc.Dispose();
             }
 
-            foreach (var filePath in files)  //handle cases of mods/dlc having same file.
+            foreach (var filePath in files) //handle cases of mods/dlc having same file.
             {
                 bool isBaseFile = cdir.ToLower() == "biogame";
                 bool isDLCFile = filePath.ToLower().Contains("dlc");
@@ -1458,15 +1577,29 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     continue;
                 }
                 audioPcc = MEPackageHandler.OpenMEPackage(filePath);
-                var stream = audioPcc.Exports.FirstOrDefault(x => x.ClassName == "WwiseStream" && x.ObjectNameString.ToLower().Contains(searchWav));
-                if (stream != null)
+                if (currentGame.IsGame1())
                 {
-                    SoundpanelWPF_ADB.LoadExport(stream);
-                    break;
+                    var stream = audioPcc.Exports.FirstOrDefault(x => x.ClassName == "SoundNodeWave" && x.InstancedFullPath.ToLower().EndsWith(searchWav));
+                    if (stream != null)
+                    {
+                        SoundpanelWPF_ADB.LoadExport(stream);
+                        break;
+                    }
+                    audioPcc.Dispose();
                 }
-                audioPcc.Dispose();
+                else
+                {
+                    var stream = audioPcc.Exports.FirstOrDefault(x => x.ClassName == "WwiseStream" && x.ObjectNameString.ToLower().Contains(searchWav));
+                    if (stream != null)
+                    {
+                        SoundpanelWPF_ADB.LoadExport(stream);
+                        break;
+                    }
+                    audioPcc.Dispose();
+                }
             }
         }
+
         private void SetCRCScan(object obj)
         {
             if (menu_checkCRC.IsChecked)
@@ -1481,8 +1614,8 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     menu_checkCRC.IsChecked = true;
                 }
             }
-
         }
+
         private void OpenInAnimViewer(object obj)
         {
             if (lstbx_Anims.SelectedItem is AnimationRecord anim)
@@ -1507,6 +1640,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
             }
         }
+
         private void ExportToPSA()
         {
             if (lstbx_Anims.SelectedItem is AnimationRecord anim && anim.Usages.Any())
@@ -1514,9 +1648,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 var (fileListIndex, animUIndex, _) = anim.Usages[0];
                 string filePath = GetFilePath(fileListIndex);
                 using IMEPackage pcc = MEPackageHandler.OpenMEPackage(filePath);
-                if (pcc.IsUExport(animUIndex) &&
-                    pcc.GetUExport(animUIndex) is ExportEntry animSeqExp &&
-                    ObjectBinary.From(animSeqExp) is AnimSequence animSequence)
+                if (pcc.IsUExport(animUIndex) && pcc.GetUExport(animUIndex) is ExportEntry animSeqExp && ObjectBinary.From(animSeqExp) is AnimSequence animSequence)
                 {
                     var dlg = new SaveFileDialog
                     {
@@ -1532,6 +1664,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
             }
         }
+
         private void OpenInAnimationImporter()
         {
             if (lstbx_Anims.SelectedItem is AnimationRecord anim && anim.Usages.Any())
@@ -1543,19 +1676,40 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 animImporter.Activate();
             }
         }
+
         private string GetFilePath(int fileListIndex)
         {
             (string filename, string contentdir, int mount) = FileListExtended[fileListIndex];
-            return Directory.GetFiles(MEDirectories.GetDefaultGamePath(CurrentGame), $"{filename}.*", SearchOption.AllDirectories).FirstOrDefault(f => f.Contains(contentdir));
+            var retFile = Directory.GetFiles(MEDirectories.GetDefaultGamePath(CurrentGame), $"{filename}.*", SearchOption.AllDirectories).FirstOrDefault(f => f.Contains(contentdir));
+            if (retFile != null)
+                return retFile;
+            if (CurrentGame == MEGame.ME3)
+            {
+                var sfar = Path.Combine(MEDirectories.GetDLCPath(MEGame.ME3), contentdir, "CookedPCConsole", "Default.sfar");
+                if (File.Exists(sfar))
+                {
+                    DLCPackage dlp = new DLCPackage(sfar);
+                    var dlpFile = dlp.FindFileEntry(filename);
+                    if (dlpFile != -1)
+                    {
+                        // Technically we should check this is not an override by checking the uindex, but I don't care.
+                        return sfar; // It's in the SFAR
+                    }
+                }
+            }
+
+            return null;
         }
 
         private void genderTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (currentView == 8 && (btn_LinePlaybackToggle.IsChecked ?? false))
             {
-                ToggleLinePlayback(); ;
+                ToggleLinePlayback();
+                ;
             }
         }
+
         private void CopyStringToClipboard(object obj)
         {
             if (!(obj is string cmd))
@@ -1585,6 +1739,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
         #endregion
 
         #region Filters
+
         bool LineFilter(object d)
         {
             if (d is ConvoLine line)
@@ -1612,6 +1767,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
 
             return false;
         }
+
         private bool FileFilter(object d)
         {
             bool showthis = true;
@@ -1633,7 +1789,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             AssetFilters.SetSearch(FilterBox.Text);
             switch (currentView)
             {
-                case 1:  //Classes
+                case 1: //Classes
                     ICollectionView viewC = CollectionViewSource.GetDefaultView(CurrentDataBase.ClassRecords);
                     viewC.Filter = AssetFilters.ClassFilter.Filter;
                     lstbx_Classes.ItemsSource = viewC;
@@ -1686,9 +1842,10 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     break;
             }
         }
+
         private void SetFilters(object obj)
         {
-            if(!AssetFilters.ToggleFilter(obj))
+            if (!AssetFilters.ToggleFilter(obj))
             {
                 var param = obj as string;
                 switch (param)
@@ -1712,6 +1869,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             }
             Filter();
         }
+
         private void FilterBox_KeyUp(object sender, KeyEventArgs e)
         {
             if (IsGettingTLKs && currentView == 8)
@@ -1721,6 +1879,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             }
             Filter();
         }
+
         private void views_ColumnHeader_Click(object sender, RoutedEventArgs e)
         {
             if (e.OriginalSource is GridViewColumnHeader headerClicked)
@@ -1785,13 +1944,11 @@ namespace LegendaryExplorer.Tools.AssetDatabase
 
                     if (direction == ListSortDirection.Ascending)
                     {
-                        headerClicked.Column.HeaderTemplate =
-                          Resources["HeaderTemplateArrowUp"] as DataTemplate;
+                        headerClicked.Column.HeaderTemplate = Resources["HeaderTemplateArrowUp"] as DataTemplate;
                     }
                     else
                     {
-                        headerClicked.Column.HeaderTemplate =
-                          Resources["HeaderTemplateArrowDown"] as DataTemplate;
+                        headerClicked.Column.HeaderTemplate = Resources["HeaderTemplateArrowDown"] as DataTemplate;
                     }
 
                     // Remove arrow from previously sorted header
@@ -1805,11 +1962,13 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
             }
         }
+
         private void cmbbx_filterSpkrs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             e.Handled = true;
             Filter();
         }
+
         private void SaveCustomFileList()
         {
             if (FileListFilter.CustomFileList.IsEmpty())
@@ -1838,6 +1997,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 MessageBox.Show("Done.");
             }
         }
+
         private void LoadCustomFileList()
         {
             string directory = Path.GetDirectoryName(CurrentDBPath);
@@ -1847,7 +2007,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 InitialDirectory = directory,
                 FileName = $"ADB_{CurrentGame}_*.txt",
                 AddExtension = true
-
             };
             if (d.ShowDialog() == true)
             {
@@ -1880,11 +2039,9 @@ namespace LegendaryExplorer.Tools.AssetDatabase
 
                         if (fdp is null)
                         {
-                            fdp = FileListExtended.FirstOrDefault(t =>
-                                t.FileName == fileName && t.Directory == fileDir);
+                            fdp = FileListExtended.FirstOrDefault(t => t.FileName == fileName && t.Directory == fileDir);
                             key = FileListExtended.IndexOf(fdp);
                         }
-
 
                         if (fdp is not null)
                         {
@@ -1901,6 +2058,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
             }
         }
+
         private void EditCustomFileList(object obj)
         {
             var action = obj as string;
@@ -1922,7 +2080,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     {
                         var s = (MeshUsage)lstbx_MeshUsages.SelectedItem;
                         FileKey = s.FileKey;
-
                     }
                     else if (lstbx_TextureUsages.SelectedIndex >= 0 && currentView == 4)
                     {
@@ -1933,7 +2090,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                     {
                         var a = (AnimUsage)lstbx_AnimUsages.SelectedItem;
                         FileKey = a.FileKey;
-
                     }
                     else if (lstbx_PSUsages.SelectedIndex >= 0 && currentView == 6)
                     {
@@ -2020,9 +2176,11 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 });
             }
         }
+
         #endregion
 
         #region Scan
+
         private async void ScanGame()
         {
             string rootPath = MEDirectories.GetDefaultGamePath(CurrentGame);
@@ -2036,8 +2194,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             rootPath = Path.GetFullPath(rootPath);
             var supportedExtensions = new List<string> { ".u", ".upk", ".sfm", ".pcc", ".cnd" };
             string ShaderCacheName = CurrentGame.IsLEGame() ? "RefShaderCache-PC-D3D-SM5.upk" : "RefShaderCache-PC-D3D-SM3.upk";
-            List<string> files = Directory.GetFiles(rootPath, "*.*", SearchOption.AllDirectories)
-                                          .Where(s => supportedExtensions.Contains(Path.GetExtension(s.ToLower())) && !s.EndsWith(ShaderCacheName)).ToList();
+            List<string> files = Directory.GetFiles(rootPath, "*.*", SearchOption.AllDirectories).Where(s => supportedExtensions.Contains(Path.GetExtension(s.ToLower())) && !s.EndsWith(ShaderCacheName)).ToList();
 
             //MemoryManager.SetUsePooledMemory(true, blockSize: (int)FileSize.MebiByte, maxBufferSizeMB: 128);
             await dumpPackages(files, CurrentGame);
@@ -2102,28 +2259,23 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             {
                 if (x.DumpCanceled)
                 {
-                    //OverallProgressValue++;
                     return;
                 }
-                Application.Current.Dispatcher.Invoke(() => CurrentDumpingItems.Add(x));
-                x.DumpPackageFile(game, GeneratedDB); // What to do on each item
-                Application.Current.Dispatcher.Invoke(() =>
+                x.DumpPackageFile(game, GeneratedDB);
+                Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     BusyText = $"Scanned {OverallProgressValue}/{OverallProgressMaximum} files\n\n{GeneratedDB.GetProgressString()}";
                     OverallProgressValue++; //Concurrency 
-                    CurrentDumpingItems.Remove(x);
                 });
             }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 4) });
 
             AllDumpingItems = new List<SingleFileScanner>();
-            CurrentDumpingItems.ClearEx();
-            var scanOptions = new AssetDBScanOptions(scanCRC, ParseConvos, ParsePlotUsages, CurrentDataBase.Localization);
+            var scanOptions = new AssetDBScanOptions(scanCRC, CurrentDataBase.Localization);
             foreach (var fkey in fileKeys)
             {
                 var threadtask = new SingleFileScanner(fkey.Item2, fkey.Item1, scanOptions);
                 AllDumpingItems.Add(threadtask); //For setting cancelation value
                 ProcessingQueue.Post(threadtask); // Post all items to the block
-
             }
 
             Exception caughtException = null;
@@ -2140,8 +2292,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             }
             finally
             {
-
-
                 if (DumpCanceled)
                 {
                     DumpCanceled = false;
@@ -2174,6 +2324,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             CommandManager.InvalidateRequerySuggested();
 
             AssetDB pdb = await Task.Run(GeneratedDB.CollateDataBase);
+            GeneratedDB.Clear();
             //Add and sort Classes
             CurrentDataBase.AddRecords(pdb);
 
@@ -2187,7 +2338,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 FileListExtended.Add(new(fileName, cd, mount));
             }
 
-            GeneratedDB.Clear();
             AssetFilters.MaterialFilter.LoadFromDatabase(CurrentDataBase);
             Settings.AssetDBGame = CurrentDataBase.Game.ToString();
             isProcessing = false;
@@ -2198,14 +2348,9 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             var elapsed = DateTime.Now - beginTime;
             MessageBox.Show(this, $"{CurrentGame} Database generated in {elapsed:mm\\:ss}");
             MemoryAnalyzer.ForceFullGC(true);
-            if (!CurrentGame.IsGame1() && ParseConvos)
-            {
-                GetConvoLinesBackground();
-            }
-            if (ParsePlotUsages)
-            {
-                CurrentDataBase.PlotUsages.LoadPlotPaths(game);
-            }
+            // 08/27/2023 - Removed !IsGame1() check on GetConvoLinesBackground()
+            GetConvoLinesBackground();
+            CurrentDataBase.PlotUsages.LoadPlotPaths(game);
         }
 
         private void CancelDump(object obj)
@@ -2246,7 +2391,7 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             {
                 text = string.Join("\n", ge.Usages.Select(x => FileListExtended[x.FileKey]?.FileName).Distinct());
             }
-            
+
             if (text != null)
             {
                 try
@@ -2255,8 +2400,137 @@ namespace LegendaryExplorer.Tools.AssetDatabase
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Error copying to clipboard", MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    MessageBox.Show(ex.Message, "Error copying to clipboard", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+
+        private void Animation_PlayInAssetViewer(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.DataContext is AnimationRecord ar)
+            {
+                var usage = ar.AssetUsages.First();
+                var fpath = GetFilePath(usage.FileKey);
+                if (GameController.IsGameOpen(CurrentGame) && File.Exists(fpath))
+                {
+                    Debug.WriteLine($"File exists: {fpath}");
+                    using var package = MEPackageHandler.OpenMEPackage(fpath);
+                    if (package.TryGetUExport(usage.UIndex, out var export) && AssetViewerWindow.SupportsAsset(export))
+                    {
+                        AssetViewerWindow.PreviewAsset(export);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"File doesn't exist: {fpath}");
+                }
+            }
+        }
+
+        private void VFX_PlayInAssetViewer(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.DataContext is ParticleSysRecord psr)
+            {
+                var usage = psr.AssetUsages.First();
+                var fpath = GetFilePath(usage.FileKey);
+                if (GameController.IsGameOpen(CurrentGame) && File.Exists(fpath))
+                {
+                    Debug.WriteLine($"File exists: {fpath}");
+                    using var package = MEPackageHandler.OpenMEPackage(fpath);
+                    if (package.TryGetUExport(usage.UIndex, out var export) && AssetViewerWindow.SupportsAsset(export))
+                    {
+                        AssetViewerWindow.PreviewAsset(export);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"File doesn't exist: {fpath}");
+                }
+            }
+        }
+
+        private void Mesh_PlayInAssetViewer(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.DataContext is MeshRecord psr)
+            {
+                var usage = psr.AssetUsages.First();
+                var fpath = GetFilePath(usage.FileKey);
+                if (GameController.IsGameOpen(CurrentGame) && File.Exists(fpath))
+                {
+                    Debug.WriteLine($"File exists: {fpath}");
+                    using var package = MEPackageHandler.OpenMEPackage(fpath);
+                    if (package.TryGetUExport(usage.UIndex, out var export) && AssetViewerWindow.SupportsAsset(export))
+                    {
+                        AssetViewerWindow.PreviewAsset(export);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"File doesn't exist: {fpath}");
+                }
+            }
+        }
+
+        private void SelectedMaterial_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            MaterialEditorExportLoader_Control?.UnloadExport();
+            if (sender is ListBoxScroll lbs && lbs.SelectedItem is MaterialRecord mr)
+            {
+                var usage = mr.Usages.FirstOrDefault();
+                if (usage != null)
+                {
+                    var (fileListIndex, expUIndex, _) = usage;
+                    string filePath = GetFilePath(fileListIndex);
+                    if (File.Exists(filePath))
+                    {
+                        if (Path.GetFileName(filePath) == "Default.sfar")
+                        {
+                            (string filename, string contentdir, int mount) = FileListExtended[fileListIndex];
+                            DLCPackage dlp = new DLCPackage(filePath);
+                            var index = dlp.FindFileEntry(filename);
+                            var pcc = MEPackageHandler.OpenMEPackageFromStream(dlp.DecompressEntry(index), filename);
+                            if (pcc.IsUExport(expUIndex) && pcc.GetUExport(expUIndex) is ExportEntry exp &&
+                                MaterialEditorExportLoader_Control.CanParse(exp))
+                            {
+                                MaterialEditorExportLoader_Control.LoadExport(exp);
+                            }
+                        }
+                        else
+                        {
+                            using IMEPackage pcc = MEPackageHandler.OpenMEPackage(filePath);
+                            if (pcc.IsUExport(expUIndex) && pcc.GetUExport(expUIndex) is ExportEntry exp &&
+                                MaterialEditorExportLoader_Control.CanParse(exp))
+                            {
+                                MaterialEditorExportLoader_Control.LoadExport(exp);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show($"File not found: {filePath}");
+                    }
+                }
+            }
+        }
+
+        private void Material_LoadInLiveMaterialEditor(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.DataContext is MaterialRecord mr && LELiveLevelEditorWindow.Instance(CurrentGame) != null)
+            {
+                var usage = mr.AssetUsages.First();
+                var fpath = GetFilePath(usage.FileKey);
+                if (GameController.IsGameOpen(CurrentGame) && File.Exists(fpath))
+                {
+                    using var package = MEPackageHandler.OpenMEPackage(fpath);
+                    if (package.TryGetUExport(usage.UIndex, out var export))
+                    {
+                        LELiveLevelEditorWindow.Instance(CurrentGame).SetCustomMaterial(export);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"File doesn't exist: {fpath}");
                 }
             }
         }
@@ -2276,7 +2550,6 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             {
                 return parent;
             }
-
         }
 
         #endregion
@@ -2302,5 +2575,4 @@ namespace LegendaryExplorer.Tools.AssetDatabase
             return null; //not needed
         }
     }
-
 }

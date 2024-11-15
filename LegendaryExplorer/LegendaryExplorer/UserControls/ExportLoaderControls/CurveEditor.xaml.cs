@@ -301,7 +301,8 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             var oDlg = new OpenFileDialog //Load Excel
             {
                 Filter = "Excel Files (*.xlsx)|*.xlsx",
-                Title = "Import Excel table"
+                Title = "Import Excel table",
+                CustomPlaces = AppDirectories.GameCustomPlaces
             };
 
             if (oDlg.ShowDialog() != true)
@@ -403,7 +404,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 MessageBox.Show($"{e.FlattenException()}", "Error");
 #endif
             }
-
         }
 
         public override void UnloadExport()

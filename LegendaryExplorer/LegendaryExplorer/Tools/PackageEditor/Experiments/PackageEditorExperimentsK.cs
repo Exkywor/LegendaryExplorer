@@ -6,8 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.ExtendedProperties;
+using DocumentFormat.OpenXml.Wordprocessing;
 using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.Misc;
+using LegendaryExplorer.Tools.AssetDatabase;
 using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Gammtek.Extensions;
 using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
@@ -17,10 +21,13 @@ using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
+using LegendaryExplorerCore.Unreal.Collections;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Newtonsoft.Json;
+using static LegendaryExplorer.Tools.ScriptDebugger.DebuggerInterface;
+using Path = System.IO.Path;
 
 namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 {
@@ -471,7 +478,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             public LevelConversionData()
             {
-
             }
         }
 
@@ -486,7 +492,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             j.Filters.Add(new CommonFileDialogFilter("JSON files", "*.json"));
             if (j.ShowDialog(pewpf) == CommonFileDialogResult.Ok)
             {
-
                 pewpf.BusyText = "Recook level files";
                 pewpf.IsBusy = true;
                 Task.Run(() =>
@@ -518,7 +523,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             j.Filters.Add(new CommonFileDialogFilter("JSON files", "*.json"));
             if (j.ShowDialog(pewpf) == CommonFileDialogResult.Ok)
             {
-
                 pewpf.BusyText = "Recook level files";
                 pewpf.IsBusy = true;
                 Task.Run(() =>
@@ -576,7 +580,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         p.Pcc.replaceName(i, newname);
                         break;
                     }
-
                 }
 
                 var pkgguid = Guid.NewGuid();
@@ -592,7 +595,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             }
         }
 
-
         public static async void TrashCompactor(PackageEditorWindow pewpf, IMEPackage pcc)
         {
             var chkdlg = MessageBox.Show($"WARNING: Confirm you wish to recook this file?\n" +
@@ -605,7 +607,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             //Find all level references
             if (pcc.Exports.FirstOrDefault(exp => exp.ClassName == "Level") is ExportEntry levelExport)
             {
-                Level level = ObjectBinary.From<Level>(levelExport);
+                LegendaryExplorerCore.Unreal.BinaryConverters.Level level = ObjectBinary.From<LegendaryExplorerCore.Unreal.BinaryConverters.Level>(levelExport);
                 HashSet<int> norefsList = await Task.Run(() => pcc.GetReferencedEntries(false));
                 pewpf.BusyText = "Recooking the Persistant Level";
                 //Get all items in the persistent level not actors
@@ -624,7 +626,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 references.Clear();
 
                 //Clean up Cached PhysSM Data && Rebuild Data Store
-                var newPhysSMmap = new OrderedMultiValueDictionary<int, CachedPhysSMData>();
+                var newPhysSMmap = new UMultiMap<int, CachedPhysSMData>();
                 var newPhysSMstore = new List<KCachedConvexData>();
                 foreach (var r in level.CachedPhysSMDataMap)
                 {
@@ -639,7 +641,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         var kvp = level.CachedPhysSMDataStore[oldidx];
                         map.CachedDataIndex = newPhysSMstore.Count;
                         newPhysSMstore.Add(level.CachedPhysSMDataStore[oldidx]);
-                        newPhysSMmap.Add(new KeyValuePair<int, CachedPhysSMData>(reference, map));
+                        newPhysSMmap.Add(reference, map);
                     }
                 }
                 level.CachedPhysSMDataMap = newPhysSMmap;
@@ -647,7 +649,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 references.Clear();
 
                 //Clean up Cached PhysPerTri Data
-                var newPhysPerTrimap = new OrderedMultiValueDictionary<int, CachedPhysSMData>();
+                var newPhysPerTrimap = new UMultiMap<int, CachedPhysSMData>();
                 var newPhysPerTristore = new List<KCachedPerTriData>();
                 foreach (var s in level.CachedPhysPerTriSMDataMap)
                 {
@@ -662,7 +664,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         var kvp = level.CachedPhysPerTriSMDataStore[oldidx];
                         map.CachedDataIndex = newPhysPerTristore.Count;
                         newPhysPerTristore.Add(level.CachedPhysPerTriSMDataStore[oldidx]);
-                        newPhysPerTrimap.Add(new KeyValuePair<int, CachedPhysSMData>(reference, map));
+                        newPhysPerTrimap.Add(reference, map);
                     }
                 }
                 level.CachedPhysPerTriSMDataMap = newPhysPerTrimap;
@@ -679,16 +681,16 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     level.NavListEnd = 0;
                 }
                 var newNavArray = new List<int>();
-                newNavArray.AddRange(level.NavPoints);
+                newNavArray.AddRange(level.NavRefs);
 
-                for (int n = 0; n < level.NavPoints.Count; n++)
+                for (int n = 0; n < level.NavRefs.Count; n++)
                 {
                     if (norefsList.Contains(newNavArray[n]))
                     {
                         newNavArray[n] = 0;
                     }
                 }
-                level.NavPoints = newNavArray;
+                level.NavRefs = newNavArray;
 
                 //Clean up Coverlink Lists => pare down guid2byte? table [Just null unwanted refs]
                 if (norefsList.Contains(level.CoverListStart))
@@ -700,16 +702,15 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     level.CoverListEnd = 0;
                 }
                 var newCLArray = new List<int>();
-                newCLArray.AddRange(level.CoverLinks);
-                for (int l = 0; l < level.CoverLinks.Count;l++)
+                newCLArray.AddRange(level.CoverLinkRefs);
+                for (int l = 0; l < level.CoverLinkRefs.Count;l++)
                 {
                     if (norefsList.Contains(newCLArray[l]))
                     {
                         newCLArray[l] = 0;
                     }
                 }
-                level.CoverLinks = newCLArray;
-
+                level.CoverLinkRefs = newCLArray;
 
                 if (pcc.Game.IsGame3())
                 {
@@ -725,7 +726,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
 
                 //Cross Level Actors
-                level.CoverLinks = newCLArray;
+                level.CoverLinkRefs = newCLArray;
                 var newXLArray = new List<int>();
                 newXLArray.AddRange(level.CrossLevelActors);
                 foreach (int xlvlactor in level.CrossLevelActors)
@@ -738,12 +739,12 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 level.CrossLevelActors = newXLArray;
 
                 //Clean up int lists if empty of NAV points
-                if (level.NavPoints.IsEmpty() && level.CoverLinks.IsEmpty() && level.CrossLevelActors.IsEmpty() && (!pcc.Game.IsGame3() || level.PylonListStart == 0))
+                if (level.NavRefs.IsEmpty() && level.CoverLinkRefs.IsEmpty() && level.CrossLevelActors.IsEmpty() && (!pcc.Game.IsGame3() || level.PylonListStart == 0))
                 {
-                    level.guidToIntMap.Clear();
-                    level.guidToIntMap2.Clear();
-                    level.intToByteMap.Clear();
-                    level.numbers.Clear();
+                    level.CrossLevelCoverGuidRefs.Clear();
+                    level.CoverIndexPairs.Clear();
+                    level.CoverIndexPairs.Clear();
+                    level.NavRefIndicies.Clear();
                 }
 
                 levelExport.WriteBinary(level);
@@ -780,7 +781,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
 
                 EntryPruner.TrashEntries(pcc, itemsToTrash);
-
             }
             //pewpf.AllowRefresh = true;
             pewpf.EndBusy();
@@ -890,7 +890,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
         public static void ChangeClassesGlobally(PackageEditorWindow pewpf)
         {
-
             if (pewpf.SelectedItem.Entry.ClassName != "Class")
             {
                 MessageBox.Show("Class that is being replaced not selected.", "Error");
@@ -947,8 +946,8 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             var mainshaderpcc = maincachefile.Exports.FirstOrDefault(x => x.ClassName == "ShaderCache");
             var mainshader = mainshaderpcc.GetBinaryData<ShaderCache>();
 
-            var newTypeCRC = new OrderedMultiValueDictionary<NameReference, uint>();
-            var newVertexFact = new OrderedMultiValueDictionary<NameReference, uint>();
+            var newTypeCRC = new UMap<NameReference, uint>();
+            var newVertexFact = new UMap<NameReference, uint>();
 
             foreach (var kvp in tgtshader.VertexFactoryTypeCRCMap)
             {
@@ -999,7 +998,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             if (pewpf.SelectedItem.Entry is not ExportEntry gmObj)
                 return;
 
-
             if (!gmObj.IsA("SFXGalaxyMapObject"))
             {
                 MessageBox.Show("Not a Galaxy Map Object.", "Warning", MessageBoxButton.OK);
@@ -1031,6 +1029,301 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         {
                             ChangeMapNames(gmChild);
                         }
+                    }
+                }
+            }
+        }
+
+        public static void ShiftInterpTrackMovesInPackageWithRotation(IMEPackage package, Func<ExportEntry, bool> predicate)
+        {
+            try
+            {
+                var originX = float.Parse(PromptDialog.Prompt(null, "Enter X origin", "Origin X", "0", true));
+                var originY = float.Parse(PromptDialog.Prompt(null, "Enter Y origin", "Origin Y", "0", true));
+                var originZ = float.Parse(PromptDialog.Prompt(null, "Enter Z origin", "Origin Z", "0", true));
+                var originYaw = float.Parse(PromptDialog.Prompt(null, "Enter Yaw origin", "Origin Yaw", "0", true));
+                var targetX = float.Parse(PromptDialog.Prompt(null, "Enter X target", "Target X", "0", true));
+                var targetY = float.Parse(PromptDialog.Prompt(null, "Enter Y target", "Target Y", "0", true));
+                var targetZ = float.Parse(PromptDialog.Prompt(null, "Enter Z target", "Target Z", "0", true));
+                var targetYaw = float.Parse(PromptDialog.Prompt(null, "Enter Yaw target", "Target Yaw", "0", true));
+                foreach (var exp in package.Exports.Where(x => x.ClassName == "InterpTrackMove"))
+                {
+                    if (predicate == null || predicate.Invoke(exp))
+                    {
+
+                        var interpTrackMove = exp;
+                        var props = interpTrackMove.GetProperties();
+                        var posTrack = props.GetProp<StructProperty>("PosTrack");
+                        var points = posTrack.GetProp<ArrayProperty<StructProperty>>("Points");
+                        var eulerTrack = props.GetProp<StructProperty>("EulerTrack");
+                        var eulerPoints = eulerTrack.GetProp<ArrayProperty<StructProperty>>("Points");
+
+                        for (int n = 0; n < points.Count; n++)
+                        {
+                            //Get start positions
+                            var outval = points[n].GetProp<StructProperty>("OutVal");
+                            var startX = outval.GetProp<FloatProperty>("X").Value;
+                            var startY = outval.GetProp<FloatProperty>("Y").Value;
+                            var startZ = outval.GetProp<FloatProperty>("Z").Value;
+                            var outYaw = eulerPoints[n].GetProp<StructProperty>("OutVal");
+                            var startYaw = outYaw.GetProp<FloatProperty>("Z").Value;
+
+                            var oldRelativeX = startX - originX;
+                            var oldRelativeY = startY - originY;
+                            var oldRelativeZ = startZ - originZ;
+                            float rotateYawRadians = MathF.PI * ((targetYaw - originYaw) / 180); //Convert to radians
+                            float sinCalcYaw = MathF.Sin(rotateYawRadians);
+                            float cosCalcYaw = MathF.Cos(rotateYawRadians);
+
+                            //Get new rotation x' = x cos θ − y sin θ
+                            //y' = x sin θ + y cos θ
+                            float newRelativeX = oldRelativeX * cosCalcYaw - oldRelativeY * sinCalcYaw;
+                            float newRelativeY = oldRelativeX * sinCalcYaw + oldRelativeY * cosCalcYaw;
+
+                            float newX = targetX + newRelativeX;
+                            float newY = targetY + newRelativeY;
+                            float newZ = targetZ + startZ - originZ;
+                            float newYaw = startYaw + targetYaw - originYaw;
+
+                            //write new location
+                            outval.GetProp<FloatProperty>("X").Value = newX;
+                            outval.GetProp<FloatProperty>("Y").Value = newY;
+                            outval.GetProp<FloatProperty>("Z").Value = newZ;
+                            outYaw.GetProp<FloatProperty>("Z").Value = newYaw;
+                        }
+                        interpTrackMove.WriteProperties(props);
+                    }
+                }
+                MessageBox.Show("All InterpTrackMoves shifted.", "Complete", MessageBoxButton.OK);
+            }
+            catch
+            {
+                return; //handle escape on blocks
+            }
+        }
+
+        public static void MakeInterpTrackMovesStageRelative(IMEPackage package, Func<ExportEntry, bool> predicate)
+        {
+            try
+            {
+                var stageX = float.Parse(PromptDialog.Prompt(null, "Enter Anchor X Location", "Anchor X", "0", true));
+                var stageY = float.Parse(PromptDialog.Prompt(null, "Enter Anchor Y Location", "Anchor Y", "0", true));
+                var stageZ = float.Parse(PromptDialog.Prompt(null, "Enter Anchor Z Location", "Anchor Z", "0", true));
+                var stageYaw = float.Parse(PromptDialog.Prompt(null, "Enter Anchor Yaw in Degrees", "Anchor Yaw", "0", true));
+                foreach (var exp in package.Exports.Where(x => x.ClassName == "InterpTrackMove"))
+                {
+                    if (predicate == null || predicate.Invoke(exp))
+                    {
+                        var interpTrackMove = exp;
+                        var props = interpTrackMove.GetProperties();
+                        var posTrack = props.GetProp<StructProperty>("PosTrack");
+                        var points = posTrack.GetProp<ArrayProperty<StructProperty>>("Points");
+                        var eulerTrack = props.GetProp<StructProperty>("EulerTrack");
+                        var eulerPoints = eulerTrack.GetProp<ArrayProperty<StructProperty>>("Points");
+
+                        for (int n = 0; n < points.Count; n++)
+                        {
+                            //Get start positions
+                            var outval = points[n].GetProp<StructProperty>("OutVal");
+                            var startX = outval.GetProp<FloatProperty>("X").Value;
+                            var startY = outval.GetProp<FloatProperty>("Y").Value;
+                            var startZ = outval.GetProp<FloatProperty>("Z").Value;
+                            var outRot = eulerPoints[n].GetProp<StructProperty>("OutVal");
+                            var startYaw = outRot.GetProp<FloatProperty>("Z").Value;
+
+                            //write relative location
+                            outval.GetProp<FloatProperty>("X").Value = stageX - startX;
+                            outval.GetProp<FloatProperty>("Y").Value = stageY - startY;
+                            outval.GetProp<FloatProperty>("Z").Value = startZ - stageZ;
+                            outRot.GetProp<FloatProperty>("Z").Value = startYaw - stageYaw; 
+                        }
+                        var f = new EnumProperty("EInterpTrackMoveFrame", exp.FileRef.Game, "MoveFrame");
+                        f.Value = "IMF_AnchorObject";
+                        props.AddOrReplaceProp(f);
+                        interpTrackMove.WriteProperties(props);
+                    }
+                }
+
+                MessageBox.Show("All InterpTrackMoves are now relative to that location.", "Complete", MessageBoxButton.OK);
+            }
+            catch
+            {
+                return; //handle escape on blocks
+            }
+        }
+
+        public static void ReplaceTLKRefs(PackageEditorWindow pewpf, IMEPackage package)
+        {
+            int oldStart = 0;
+            int oldEnd = 0;
+            int newStart = 0;
+
+            string searchFirst = PromptDialog.Prompt(pewpf, "Input First TLK Ref to be replaced:", "Search and Replace TLK Refs",
+                defaultValue: "tlk ref", selectText: true);
+            if (string.IsNullOrEmpty(searchFirst) || !int.TryParse(searchFirst, out oldStart))
+                return;
+
+            string searchLast = PromptDialog.Prompt(pewpf, "Input Last TLK Ref to be replaced:", "Search and Replace TLK Refs",
+                defaultValue: "Leave blank to do a single line", selectText: true);
+            if (!int.TryParse(searchLast, out oldEnd))
+            {
+                oldEnd = oldStart;
+                searchLast = searchFirst;
+            }
+
+
+            string replacestr = PromptDialog.Prompt(pewpf, "Input First TLK Ref to move to:", "Search and Replace TLK Refs",
+                    defaultValue: "tlk ref", selectText: true);
+            if (string.IsNullOrEmpty(replacestr) || !int.TryParse(replacestr, out newStart) || newStart <= 0)
+                return;
+
+            var wdlg = MessageBox.Show(
+                $"This will replace every tlk reference starting with \"{searchFirst}\" ending with \"{searchLast}\"" +
+                $"with a new range starting from \"{replacestr}\".\n" +
+                $"This may break any dialogue if done incorrectly. Please confirm.", "WARNING:",
+                MessageBoxButton.OKCancel);
+            if (wdlg == MessageBoxResult.Cancel)
+                return;
+
+            int rangelength = oldEnd - oldStart;
+            for (int n = 0; n <= rangelength; n++)
+            {
+                
+                var searchtlkref = (oldStart + n).ToString();
+                var replacetlkref = (newStart + n).ToString();
+                //Replace Names
+                for (int i = 0; i < package.Names.Count; i++)
+                {
+                    string name = package.Names[i];
+                    if (name.Contains(searchtlkref))
+                    {
+                        var newName = name.Replace(searchtlkref, replacetlkref);
+                        package.replaceName(i, newName);
+                    }
+                }
+
+                //Replace TLK ref in Conversations
+                foreach (var export in package.Exports.Where(x => x.ClassName == "BioConversation"))
+                {
+                    bool needsWrite = false;
+                    var props = export.GetProperties();
+                    var entries = props.GetProp<ArrayProperty<StructProperty>>("m_EntryList");
+                    if(entries != null)
+                    {
+                        foreach (var e in entries)
+                        {
+                            var tlkref = e.GetProp<StringRefProperty>("srText");
+                            if (tlkref != null && tlkref.Value == oldStart + n)
+                            {
+                                tlkref.Value = newStart + n;
+                                e.Properties.AddOrReplaceProp(tlkref);
+                                needsWrite = true;
+                            }
+                            var matineeref = e.GetProp<StringRefProperty>("nExportID");
+                            if (matineeref != null && matineeref.Value == oldStart + n)
+                            {
+                                matineeref.Value = newStart + n;
+                                e.Properties.AddOrReplaceProp(matineeref);
+                                needsWrite = true;
+                            }
+                        }
+                    }
+                    var replies = props.GetProp<ArrayProperty<StructProperty>>("m_ReplyList");
+                    if(replies != null)
+                    {
+                        foreach (var r in replies)
+                        {
+                            var tlkref = r.GetProp<StringRefProperty>("srText");
+                            if (tlkref != null && tlkref.Value == oldStart + n)
+                            {
+                                tlkref.Value = newStart + n;
+                                r.Properties.AddOrReplaceProp(tlkref);
+                                needsWrite = true;
+                            }
+                            var matineeref = r.GetProp<StringRefProperty>("nExportID");
+                            if (matineeref != null && matineeref.Value == oldStart + n)
+                            {
+                                matineeref.Value = newStart + n;
+                                r.Properties.AddOrReplaceProp(matineeref);
+                                needsWrite = true;
+                            }
+                        }
+                    }
+
+                    if (needsWrite)
+                    {
+                        props.AddOrReplaceProp(entries);
+                        export.WriteProperties(props);
+                    }
+                }
+
+                //Replace in FaceFX
+                foreach (var export in package.Exports.Where(x => x.ClassName == "FaceFXAnimSet"))
+                {
+                    bool needsWrite = false;
+                    FaceFXAnimSet fxa = export.GetBinaryData<FaceFXAnimSet>();
+                    var newNameList = new List<string>();
+                    for (int i = 0; i<fxa.Names.Count; i++)
+                    {
+                        
+                        var name = fxa.Names[i];
+                        bool isFem = false;
+                        
+                        if (name.EndsWith("_F"))
+                            isFem = true;
+                        string nameRef = name.Replace("FXA_", "").Replace("_F", "").Replace("_M", "");
+                        if (nameRef == searchtlkref)
+                        {
+                            name = "FXA_" + replacetlkref + (isFem ? "_F" : "_M");
+                            needsWrite = true;
+                        }
+                        newNameList.Add(name);
+                    }
+                    if(needsWrite)
+                    {
+                        fxa.Names.ReplaceAll(newNameList);
+                    }
+
+                    var eventRefs = export.GetProperty<ArrayProperty<ObjectProperty>>("ReferencedSoundCues");
+                    foreach (var fx in fxa.Lines)
+                    {
+
+                        if(fx.ID == (oldStart + n).ToString())
+                        {
+                            fx.ID = (newStart + n).ToString();
+                            needsWrite = true;
+                            if (eventRefs != null)
+                            {
+                                var wwiseevent = package.GetEntry(eventRefs[fx.Index].Value);
+                                if (wwiseevent != null)
+                                {
+                                    fx.Path = wwiseevent.FullPath;
+                                }
+                            }
+                        }
+                    }
+
+                    if (needsWrite)
+                    {
+                        export.WriteBinary(fxa);
+                    }
+                }
+
+                //Replace in InterpData 
+                foreach (var export in package.Exports.Where(x => x.ClassName == "BioEvtSysTrackVOElements"))
+                {
+                    bool needsWrite = false;
+                    var props = export.GetProperties();
+                    var tlkref = props.GetProp<IntProperty>("m_nStrRefID");
+                    if (tlkref == oldStart + n)
+                    {
+                        tlkref = new IntProperty(newStart + n, "m_nStrRefID");
+                        needsWrite = true;
+                    }
+                    if (needsWrite)
+                    {
+                        props.AddOrReplaceProp(tlkref);
+                        export.WriteProperties(props);
                     }
                 }
             }

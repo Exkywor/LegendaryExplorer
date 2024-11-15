@@ -6,11 +6,12 @@ using System.IO;
 using System.Linq;
 using LegendaryExplorerCore.DebugTools;
 using LegendaryExplorerCore.GameFilesystem;
+using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Helpers;
-using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
+using LegendaryExplorerCore.Unreal.Collections;
 
 namespace LegendaryExplorerCore.Unreal.ObjectInfo
 {
@@ -35,7 +36,6 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                 _ => false,
             };
 
-
         // do not remove as other projects outside of LEX use this method
         /// <summary>
         /// Tests if this entry inherits from another class. This should only be used on objects that have a class of 'Class'.
@@ -44,9 +44,23 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         /// <param name="baseClass"></param>
         /// <param name="customClassInfos"></param>
         /// <returns></returns>
-        public static bool InheritsFrom(this IEntry entry, string baseClass, Dictionary<string, ClassInfo> customClassInfos = null) => IsA(entry.ObjectName.Name, baseClass, entry.FileRef.Game, customClassInfos, (entry as ExportEntry)?.SuperClassName);
+        public static bool InheritsFrom(this IEntry entry, string baseClass,
+            Dictionary<string, ClassInfo> customClassInfos = null)
+        {
+#if DEBUG
+
+            if (entry.ClassName != @"Class")
+            {
+                Debug.WriteLine(
+                    @"InheritsFrom() is being used on a non-class object. This is likely bad design - Use IsA() for non-class objects.");
+                Console.WriteLine(
+                    @"InheritsFrom() is being used on a non-class object. This is likely bad design - Use IsA() for non-class objects.");
+            }
+#endif
+            return IsA(entry.ObjectName.Name, baseClass, entry.FileRef.Game, customClassInfos, (entry as ExportEntry)?.SuperClassName);
+        }
         public static bool IsA(this ClassInfo info, string baseClass, MEGame game, Dictionary<string, ClassInfo> customClassInfos = null) => IsA(info.ClassName, baseClass, game, customClassInfos);
-        public static bool IsA(this IEntry entry, string baseClass, Dictionary<string, ClassInfo> customClassInfos = null) => IsA(entry.ClassName, baseClass, entry.Game, customClassInfos);
+        public static bool IsA(this IEntry entry, string baseClass, Dictionary<string, ClassInfo> customClassInfos = null) => IsA(entry.ClassName, baseClass, entry.Game, customClassInfos, ((entry as ExportEntry)?.Class as ExportEntry)?.SuperClassName);
         public static bool IsA(string className, string baseClass, MEGame game, Dictionary<string, ClassInfo> customClassInfos = null, string knownSuperClass = null)
         {
             if (className == baseClass) return true;
@@ -172,11 +186,10 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
 
         public static SequenceObjectInfo GetSequenceObjectInfo(MEGame game, string className)
         {
-
             return GetSequenceObjects(game).TryGetValue(className, out SequenceObjectInfo seqInfo) ? seqInfo : null;
         }
 
-        public static string GetEnumType(MEGame game, NameReference propName, string typeName, ClassInfo nonVanillaClassInfo = null) => 
+        public static string GetEnumType(MEGame game, NameReference propName, string typeName, ClassInfo nonVanillaClassInfo = null) =>
             GetPropertyInfo(game, propName, typeName, nonVanillaClassInfo)?.Reference;
 
         public static List<NameReference> GetEnumValues(MEGame game, string enumName, bool includeNone = false)
@@ -195,7 +208,6 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         }
 
         public static bool IsValidEnum(MEGame game, string enumName) => GetEnums(game)?.ContainsKey(enumName) ?? false;
-
 
         /// <summary>
         /// Recursively gets class defaults, traveling up inheritance chain, but stopping at <paramref name="notIncludingClass"></paramref>
@@ -287,7 +299,32 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                 if (export.IsClass)
                 {
                     ClassInfo currentInfo = generateClassInfo(export, packageCache: packageCache);
-                    p = GetPropertyInfo(game, propName, className, currentInfo, export, packageCache);
+                    if (currentInfo != null) // If during relink we find invalid data - this could occur
+                    {
+                        if (currentInfo.ClassName != export.ObjectName.Instanced)
+                        {
+                            // generateClassInfo will return parent info if it was also not in DB
+                            // We must re-fetch data now that it was added
+                            currentInfo = generateClassInfo(export, packageCache: packageCache);
+                        }
+
+                        p = GetPropertyInfo(game, propName, className, currentInfo, export, packageCache);
+                    }
+                }
+                else if (export.ClassName == "ScriptStruct")
+                {
+                    ClassInfo currentInfo = generateClassInfo(export, packageCache: packageCache, isStruct: true);
+                    if (currentInfo != null) // If during relink we find invalid data - this could occur
+                    {
+                        if (currentInfo.ClassName != export.ObjectName.Instanced)
+                        {
+                            // generateClassInfo will return parent info if it was also not in DB
+                            // We must re-fetch data now that it was added
+                            currentInfo = generateClassInfo(export, packageCache: packageCache, isStruct: true);
+                        }
+
+                        p = GetPropertyInfo(game, propName, className, currentInfo, export, packageCache);
+                    }
                 }
             }
             if (p is null)
@@ -406,7 +443,6 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
             return p;
         }
 
-
         /// <summary>
         /// Gets the default values for a struct
         /// </summary>
@@ -416,7 +452,7 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         /// <param name="packageCache"></param>
         /// <param name="shouldReturnClone">Return a deep copy of the struct</param>
         /// <returns></returns>
-        public static PropertyCollection getDefaultStructValue(MEGame game, string structName, bool stripTransients, PackageCache packageCache = null, bool shouldReturnClone = true)
+        public static PropertyCollection getDefaultStructValue(MEGame game, string structName, bool stripTransients, IMEPackage package, PackageCache packageCache = null, bool shouldReturnClone = true)
         {
             var defaultStructValues = game switch
             {
@@ -437,6 +473,8 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
             bool isImmutable = IsImmutable(structName, game);
             if (structs.TryGetValue(structName, out ClassInfo info))
             {
+                IMEPackage importPcc = null;
+
                 try
                 {
                     PropertyCollection props = new();
@@ -450,20 +488,23 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                                 continue;
                             }
 
-                            if (GetDefaultProperty(game, propName, propInfo, packageCache, stripTransients, isImmutable) is Property prop)
+                            if (GetDefaultProperty(game, propName, propInfo, packageCache, package, stripTransients,
+                                    isImmutable) is Property prop)
                             {
                                 props.Add(prop);
                                 if (propInfo.IsStaticArray())
                                 {
                                     for (int i = 1; i < propInfo.StaticArrayLength; i++)
                                     {
-                                        prop = GetDefaultProperty(game, propName, propInfo, packageCache, stripTransients, isImmutable);
+                                        prop = GetDefaultProperty(game, propName, propInfo, packageCache, package,
+                                            stripTransients, isImmutable);
                                         prop.StaticArrayIndex = i;
                                         props.Add(prop);
                                     }
                                 }
                             }
                         }
+
                         string filepath = null;
                         if (MEDirectories.GetBioGamePath(game) is string bioGamePath)
                         {
@@ -471,22 +512,22 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                         }
 
                         Stream loadStream = null;
-                        IMEPackage cachedPackage = null;
                         if (packageCache != null)
                         {
-                            packageCache.TryGetCachedPackage(filepath, true, out cachedPackage);
-                            if (cachedPackage == null)
-                                packageCache.TryGetCachedPackage(info.pccPath, true, out cachedPackage); // some cache types may have different behavior (such as relative package cache)
+                            packageCache.TryGetCachedPackage(filepath, true, out importPcc);
+                            if (importPcc == null)
+                                packageCache.TryGetCachedPackage(info.pccPath, true,
+                                    out importPcc); // some cache types may have different behavior (such as relative package cache)
 
-                            if (cachedPackage != null)
+                            if (importPcc != null)
                             {
                                 // Use this one
-                                readDefaultProps(cachedPackage, props, packageCache: packageCache);
+                                readDefaultProps(importPcc, props, packageCache: packageCache);
                             }
                         }
-                        else if (filepath != null && MEPackageHandler.TryGetPackageFromCache(filepath, out cachedPackage))
+                        else if (filepath != null && MEPackageHandler.TryGetPackageFromCache(filepath, out importPcc))
                         {
-                            readDefaultProps(cachedPackage, props, packageCache: packageCache);
+                            readDefaultProps(importPcc, props, packageCache: packageCache);
                         }
                         else if (File.Exists(info.pccPath))
                         {
@@ -505,29 +546,73 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                                 MEGame.LE3 => "GAMERESOURCES_LE3",
                                 _ => throw new ArgumentOutOfRangeException(nameof(game), game, null)
                             };
-                            loadStream = LegendaryExplorerCoreUtilities.LoadFileFromCompressedResource("GameResources.zip", LegendaryExplorerCoreLib.CustomResourceFileName(game));
+                            loadStream = LegendaryExplorerCoreUtilities.LoadFileFromCompressedResource(
+                                "GameResources.zip", LegendaryExplorerCoreLib.CustomResourceFileName(game));
                         }
                         else if (filepath != null && File.Exists(filepath))
                         {
                             loadStream = MEPackageHandler.ReadAllFileBytesIntoMemoryStream(filepath);
                         }
 
-                        if (cachedPackage == null && loadStream != null)
+                        if (importPcc == null && loadStream != null)
                         {
-                            using IMEPackage importPcc = MEPackageHandler.OpenMEPackageFromStream(loadStream, filepath, useSharedPackageCache: true);
+                            // Seeing if this is faster...
+                            // We would somehow need to know the dependencies of the object, which isn't something we can
+                            // really do without loading it to begin wiht
+                            //importPcc = MEPackageHandler.UnsafePartialLoadFromStream(loadStream, filepath,
+                            //    x => x.ClassName.CaseInsensitiveEquals("ScriptStruct") ||
+                            //         x.ClassName.EndsWith("Property", StringComparison.OrdinalIgnoreCase));
+
+                            importPcc = MEPackageHandler.OpenMEPackageFromStream(loadStream, filepath,
+                                useSharedPackageCache: true);
                             readDefaultProps(importPcc, props, packageCache);
                         }
+
                         structs.TryGetValue(info.baseClass, out info);
                     }
+
                     props.Add(new NoneProperty());
 
-                    defaultStructValues.TryAdd(structName, props);
-                    return shouldReturnClone ? props.DeepClone() : props;
+
+                    // Do not cache anything with object properties; they will need relinked.
+                    bool canCache = true;
+                    var propsToReturn = props;
+                    if (shouldReturnClone)
+                    {
+                        propsToReturn = props.DeepClone();
+
+                        if (package != null)
+                        {
+                            // We should make sure object references are correct for the package the defaults are being returned to
+                            // I don't think for this call the export being relinked matters. Normally it is passed through relinker,
+                            // but we are not relinking an export, but it is used for filerefs.
+                            Relinker.RelinkPropertyCollection(importPcc, package, propsToReturn, new RelinkerOptionsPackage() { PortExportsAsImportsWhenPossible = true }, out var hasObjectProperties);
+                            if (hasObjectProperties)
+                                canCache = false;
+                        }
+                    }
+                    else
+                    {
+                        // This does not relink - it just tells us if it has object properties or not.
+                        Relinker.RelinkPropertyCollection(importPcc, null, propsToReturn, new RelinkerOptionsPackage(), out var hasObjectProperties);
+                        canCache = !hasObjectProperties;
+                    }
+
+                    if (canCache)
+                    {
+                        defaultStructValues.TryAdd(structName, props);
+                    }
+
+                    return propsToReturn;
                 }
                 catch (Exception e)
                 {
                     LECLog.Warning($@"Exception getting default {game} struct property for {structName}: {e.Message}");
                     return null;
+                }
+                finally
+                {
+                    importPcc?.Dispose();
                 }
             }
             return null;
@@ -554,9 +639,9 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         private static readonly ConcurrentDictionary<string, PropertyCollection> DefaultStructValuesWithTransientsLE3 = new();
         private static readonly ConcurrentDictionary<string, PropertyCollection> DefaultStructValuesWithTransientsUDK = new();
 
-        public static OrderedMultiValueDictionary<NameReference, PropertyInfo> GetAllProperties(MEGame game, string typeName)
+        public static UMultiMap<NameReference, PropertyInfo> GetAllProperties(MEGame game, string typeName)
         {
-            var props = new OrderedMultiValueDictionary<NameReference, PropertyInfo>();
+            var props = new UMultiMap<NameReference, PropertyInfo>();
 
             ClassInfo info = GetClassOrStructInfo(game, typeName);
             while (info != null)
@@ -570,11 +655,14 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
 
         public static ClassInfo GetClassOrStructInfo(MEGame game, string typeName)
         {
+            if (typeName == @"Class")
+                return null; // Has nothing we can use.
+
             ClassInfo result;
             _ = GetClasses(game).TryGetValue(typeName, out result) || GetStructs(game).TryGetValue(typeName, out result);
             if (result is null && game is MEGame.UDK)
             {
-                _ = ME3UnrealObjectInfo.Classes.TryGetValue(typeName, out result) || ME3UnrealObjectInfo.Structs.TryGetValue(typeName, out result);
+                _ = GetClasses(game).TryGetValue(typeName, out result) || GetStructs(game).TryGetValue(typeName, out result);
             }
 
             return result;
@@ -584,13 +672,13 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         {
             return game switch
             {
-                MEGame.ME1 => ME1UnrealObjectInfo.Classes,
-                MEGame.ME2 => ME2UnrealObjectInfo.Classes,
-                MEGame.ME3 => ME3UnrealObjectInfo.Classes,
-                MEGame.LE1 => LE1UnrealObjectInfo.Classes,
-                MEGame.LE2 => LE2UnrealObjectInfo.Classes,
-                MEGame.LE3 => LE3UnrealObjectInfo.Classes,
-                MEGame.UDK => UDKUnrealObjectInfo.Classes,
+                MEGame.ME1 => ME1UnrealObjectInfo.ObjectInfo.Classes,
+                MEGame.ME2 => ME2UnrealObjectInfo.ObjectInfo.Classes,
+                MEGame.ME3 => ME3UnrealObjectInfo.ObjectInfo.Classes,
+                MEGame.LE1 => LE1UnrealObjectInfo.ObjectInfo.Classes,
+                MEGame.LE2 => LE2UnrealObjectInfo.ObjectInfo.Classes,
+                MEGame.LE3 => LE3UnrealObjectInfo.ObjectInfo.Classes,
+                MEGame.UDK => UDKUnrealObjectInfo.ObjectInfo.Classes,
                 _ => null
             };
         }
@@ -599,13 +687,13 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         {
             return game switch
             {
-                MEGame.ME1 => ME1UnrealObjectInfo.Structs,
-                MEGame.ME2 => ME2UnrealObjectInfo.Structs,
-                MEGame.ME3 => ME3UnrealObjectInfo.Structs,
-                MEGame.LE1 => LE1UnrealObjectInfo.Structs,
-                MEGame.LE2 => LE2UnrealObjectInfo.Structs,
-                MEGame.LE3 => LE3UnrealObjectInfo.Structs,
-                MEGame.UDK => UDKUnrealObjectInfo.Structs,
+                MEGame.ME1 => ME1UnrealObjectInfo.ObjectInfo.Structs,
+                MEGame.ME2 => ME2UnrealObjectInfo.ObjectInfo.Structs,
+                MEGame.ME3 => ME3UnrealObjectInfo.ObjectInfo.Structs,
+                MEGame.LE1 => LE1UnrealObjectInfo.ObjectInfo.Structs,
+                MEGame.LE2 => LE2UnrealObjectInfo.ObjectInfo.Structs,
+                MEGame.LE3 => LE3UnrealObjectInfo.ObjectInfo.Structs,
+                MEGame.UDK => UDKUnrealObjectInfo.ObjectInfo.Structs,
                 _ => null
             };
         }
@@ -614,13 +702,13 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         {
             return game switch
             {
-                MEGame.ME1 => ME1UnrealObjectInfo.Enums,
-                MEGame.ME2 => ME2UnrealObjectInfo.Enums,
-                MEGame.ME3 => ME3UnrealObjectInfo.Enums,
-                MEGame.LE1 => LE1UnrealObjectInfo.Enums,
-                MEGame.LE2 => LE2UnrealObjectInfo.Enums,
-                MEGame.LE3 => LE3UnrealObjectInfo.Enums,
-                MEGame.UDK => UDKUnrealObjectInfo.Enums,
+                MEGame.ME1 => ME1UnrealObjectInfo.ObjectInfo.Enums,
+                MEGame.ME2 => ME2UnrealObjectInfo.ObjectInfo.Enums,
+                MEGame.ME3 => ME3UnrealObjectInfo.ObjectInfo.Enums,
+                MEGame.LE1 => LE1UnrealObjectInfo.ObjectInfo.Enums,
+                MEGame.LE2 => LE2UnrealObjectInfo.ObjectInfo.Enums,
+                MEGame.LE3 => LE3UnrealObjectInfo.ObjectInfo.Enums,
+                MEGame.UDK => UDKUnrealObjectInfo.ObjectInfo.Enums,
                 _ => null
             };
         }
@@ -629,13 +717,13 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         {
             return game switch
             {
-                MEGame.ME1 => ME1UnrealObjectInfo.SequenceObjects,
-                MEGame.ME2 => ME2UnrealObjectInfo.SequenceObjects,
-                MEGame.ME3 => ME3UnrealObjectInfo.SequenceObjects,
-                MEGame.LE1 => LE1UnrealObjectInfo.SequenceObjects,
-                MEGame.LE2 => LE2UnrealObjectInfo.SequenceObjects,
-                MEGame.LE3 => LE3UnrealObjectInfo.SequenceObjects,
-                MEGame.UDK => UDKUnrealObjectInfo.SequenceObjects,
+                MEGame.ME1 => ME1UnrealObjectInfo.ObjectInfo.SequenceObjects,
+                MEGame.ME2 => ME2UnrealObjectInfo.ObjectInfo.SequenceObjects,
+                MEGame.ME3 => ME3UnrealObjectInfo.ObjectInfo.SequenceObjects,
+                MEGame.LE1 => LE1UnrealObjectInfo.ObjectInfo.SequenceObjects,
+                MEGame.LE2 => LE2UnrealObjectInfo.ObjectInfo.SequenceObjects,
+                MEGame.LE3 => LE3UnrealObjectInfo.ObjectInfo.SequenceObjects,
+                MEGame.UDK => UDKUnrealObjectInfo.ObjectInfo.SequenceObjects,
                 _ => null
             };
         }
@@ -681,10 +769,14 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                 baseClass = export.SuperClassName,
                 exportIndex = export.UIndex,
                 ClassName = export.ObjectName.Instanced,
-                isAbstract = uClass.ClassFlags.Has(UnrealFlags.EClassFlags.Abstract),
+                isAbstract = Enums.Has(uClass.ClassFlags, UnrealFlags.EClassFlags.Abstract),
                 pccPath = pcc.FilePath.Contains("BioGame", StringComparison.InvariantCultureIgnoreCase)
                     ? pcc.FilePath[(pcc.FilePath.LastIndexOf("BIOGame", StringComparison.InvariantCultureIgnoreCase) + 8)..]
-                    : pcc.FilePath
+                    : pcc.FilePath,
+
+                // Populated only at runtime ---
+                forcedExport = uClass.Export.IsForcedExport,
+                instancedFullPath = uClass.Export.InstancedFullPath,
             };
 
             Dictionary<string, ClassInfo> classInfos = GetClasses(game);
@@ -698,7 +790,7 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                 };
                 if (classExport is not null)
                 {
-                    return AddOrReplaceClassInDB(classExport.GetBinaryData<UClass>());
+                    AddOrReplaceClassInDB(classExport.GetBinaryData<UClass>());
                 }
             }
 
@@ -763,7 +855,10 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                                     type = PropertyType.ByteProperty;
                                     reference = pcc.getObjectName(uByteProperty.Enum);
                                     break;
-                                //case UClassProperty:
+                                case UClassProperty uClassProperty:
+                                    type = PropertyType.ObjectProperty;
+                                    reference = pcc.getObjectName(uClassProperty.ClassRef);
+                                    break;
                                 //case UComponentProperty:
                                 //case UInterfaceProperty:
                                 case UObjectProperty uObjectProperty:
@@ -816,7 +911,7 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                             }
                             if (type is not null)
                             {
-                                bool transient = uProperty.PropertyFlags.Has(UnrealFlags.EPropertyFlags.Transient);
+                                bool transient = Enums.Has(uProperty.PropertyFlags, UnrealFlags.EPropertyFlags.Transient);
                                 info.properties.Add(childExport.ObjectName.Instanced, new PropertyInfo((PropertyType)type, reference, transient, uProperty.ArraySize));
                             }
                             break;
@@ -827,7 +922,7 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
             }
         }
 
-        public static Property GetDefaultProperty(MEGame game, NameReference propName, PropertyInfo propInfo, PackageCache packageCache, bool stripTransients = true, bool isImmutable = false)
+        public static Property GetDefaultProperty(MEGame game, NameReference propName, PropertyInfo propInfo, PackageCache packageCache, IMEPackage package, bool stripTransients = true, bool isImmutable = false)
         {
             return propInfo.Type switch
             {
@@ -857,7 +952,7 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                     ArrayType.Byte => new ImmutableByteArrayProperty(propName),
                     _ => null
                 },
-                PropertyType.StructProperty => new StructProperty(propInfo.Reference, getDefaultStructValue(game, propInfo.Reference, stripTransients, packageCache), propName,
+                PropertyType.StructProperty => new StructProperty(propInfo.Reference, getDefaultStructValue(game, propInfo.Reference, stripTransients, package, packageCache), propName,
                     isImmutable || IsImmutable(propInfo.Reference, game)),
                 PropertyType.None => null,
                 PropertyType.Unknown => null,
@@ -887,7 +982,6 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
             }
         }
 
-
         // Shared global methods for loading custom data
 
         /// <summary>
@@ -905,7 +999,6 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                     throw new ArgumentOutOfRangeException($"{nameof(GenerateSequenceObjectInfoForClassDefaults)}() does not accept export for game {exportEntry.Game}");
                 }
             }
-
 
             string className = exportEntry.ClassName;
             if (!infos.TryGetValue(className, out SequenceObjectInfo seqObjInfo))
@@ -954,6 +1047,189 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
         {
             var classes = GetClasses(game) ?? throw new ArgumentOutOfRangeException($"{nameof(InstallCustomClassInfo)}() does not accept game {game}");
             classes[className] = info;
+        }
+
+        public static string GetExpectedClassTypeForObjectProperty(ExportEntry entry, ObjectProperty op, string containingClassOrStructName, Property parentProperty)
+        {
+            if (parentProperty is ArrayProperty<ObjectProperty> apop)
+            {
+                // Try to get the type of object array
+                // This code doesn't work for nested structs as the containing class is different
+                PropertyInfo p = GlobalUnrealObjectInfo.GetPropertyInfo(entry.FileRef.Game, parentProperty.Name, entry.ClassName, containingExport: entry);
+                if (p != null)
+                {
+                    return p.Reference;
+                }
+            }
+            else
+            {
+                // Object Property
+                string propType = op.InternalPropType.ToString();
+                if (op.Name.Name != null)
+                {
+                    string container = entry.ClassName;
+                    if (parentProperty is StructProperty psp)
+                    {
+                        container = psp.StructType;
+                    }
+
+                    var type = GlobalUnrealObjectInfo.GetPropertyInfo(entry.Game, op.Name, container,
+                        containingExport: entry);
+                    if (type != null)
+                    {
+                        return type.Reference;
+                    }
+                }
+                else
+                {
+                    return propType;
+                }
+            }
+
+            return null; // We don't know
+
+            /*
+            var referencedEntry = op.ResolveToEntry(entry.FileRef);
+            //if (referencedEntry.FullPath.Equals(@"SFXGame.BioDeprecated", StringComparison.InvariantCulture)) return; //This will appear as wrong even though it's technically not
+            //if (entry.FileRef.Game == MEGame.ME2)
+            //{
+            //    if (op.Name == "m_oAreaMap" && referencedEntry.ClassName == @"BioSWF") return; //This will appear as wrong even though it's technically not (deprecated leftover)
+            //    if (op.Name == "AIController" && referencedEntry.ObjectName.Name.StartsWith("BioAI_")) return; //These are all deprecated. A few things use them still but the inheritance is wrong
+            //    if (op.Name == "TrackingSound" && entry.ClassName == "SFXSeqAct_SecurityCam" && referencedEntry.ClassName == "WwiseEvent") return; // Appears to be incorrect in vanilla. Don't report it as an issue
+            //}
+
+            var propInfo = GlobalUnrealObjectInfo.GetPropertyInfo(entry.Game, op.Name.Instanced ?? parentPropertyName, containingClassOrStructName, containingExport: entry as ExportEntry);
+            var customClassInfos = new Dictionary<string, ClassInfo>();
+
+            if (referencedEntry != null && referencedEntry.ClassName == @"Class" && op.Value > 0)
+            {
+
+                // Make sure we have info about this class.
+                var lookupEnt = referencedEntry as ExportEntry;
+                while (lookupEnt != null && lookupEnt.IsClass && !GlobalUnrealObjectInfo.GetClasses(entry.FileRef.Game).ContainsKey(lookupEnt.ObjectName))
+                {
+                    // Needs dynamically generated
+                    var cc = GlobalUnrealObjectInfo.generateClassInfo(lookupEnt);
+                    customClassInfos[lookupEnt.ObjectName] = cc;
+                    lookupEnt = lookupEnt.Parent as ExportEntry;
+                }
+
+                // If we did not pull it previously, we should try again with our custom info.
+                if (propInfo == null && customClassInfos.Any())
+                {
+                    propInfo = GlobalUnrealObjectInfo.GetPropertyInfo(entry.Game, op.Name,
+                        containingClassOrStructName, customClassInfos[referencedEntry.ObjectName],
+                        containingExport: entry as ExportEntry);
+                }
+            }
+
+            if (propInfo != null && propInfo.Reference != null)
+            {
+                return propInfo.Reference;
+            }
+
+            return null; // We don't know
+            */
+        }
+
+        public static void AddIntrinsicClasses(Dictionary<string, ClassInfo> classes, MEGame game)
+        {
+            string corePath = game switch
+            {
+                MEGame.UDK => @"Script\Core.u",
+                MEGame.ME1 => @"CookedPC\Core.u",
+                MEGame.ME2 => @"CookedPC\Core.pcc",
+                _ => @"CookedPCConsole\Core.pcc"
+            };
+            string enginePath = game switch
+            {
+                MEGame.UDK => @"Script\Engine.u",
+                MEGame.ME1 => @"CookedPC\Engine.u",
+                MEGame.ME2 => @"CookedPC\Engine.pcc",
+                _ => @"CookedPCConsole\Engine.pcc"
+            };
+
+            if (game >= MEGame.ME3)
+            {
+                AddCore("Package", "Object");
+            }
+
+            AddCore("Field", "Object");
+            AddCore("Struct", "Field");
+            AddCore("ScriptStruct", "Struct");
+            AddCore("State", "Struct");
+            AddCore("Function", "Struct");
+            AddCore("Enum", "Field");
+            AddCore("Const", "Field");
+            //AddCore("Class", "State"); Causes infinite loop
+
+            AddCore("Property", "Field");
+            AddCore("ByteProperty", "Property");
+            AddCore("IntProperty", "Property");
+            AddCore("BoolProperty", "Property");
+            AddCore("FloatProperty", "Property");
+            AddCore("ObjectProperty", "Property");
+            AddCore("ComponentProperty", "Property");
+            AddCore("ClassProperty", "Property");
+            AddCore("InterfaceProperty", "Property");
+            AddCore("NameProperty", "Property");
+            AddCore("StrProperty", "Property");
+            AddCore("ArrayProperty", "Property");
+            AddCore("MapProperty", "Property");
+            AddCore("StructProperty", "Property");
+            AddCore("DelegateProperty", "Property");
+            AddCore("StringRefProperty", "Property");
+
+            if (game == MEGame.LE3)
+            {
+                // Exists in executable but is not in any package file, so was not exposed to packages.
+                AddCore("ObjectRedirector", "Object");
+            }
+
+            classes["LevelBase"] = new ClassInfo
+            {
+                baseClass = "Object",
+                pccPath = enginePath
+            };
+            classes["Level"] = new ClassInfo
+            {
+                baseClass = "LevelBase",
+                pccPath = enginePath
+            };
+            classes["PendingLevel"] = new ClassInfo
+            {
+                baseClass = "LevelBase",
+                pccPath = enginePath
+            };
+            classes["Model"] = new ClassInfo
+            {
+                baseClass = "Object",
+                pccPath = enginePath
+            };
+            classes["World"] = new ClassInfo
+            {
+                baseClass = "Object",
+                pccPath = enginePath
+            };
+            classes["Polys"] = new ClassInfo
+            {
+                baseClass = "Object",
+                pccPath = enginePath
+            };
+            classes["GuidCache"] = new ClassInfo
+            {
+                baseClass = "Object",
+                pccPath = enginePath
+            };
+
+            void AddCore(string className, string baseClass)
+            {
+                classes[className] = new ClassInfo
+                {
+                    baseClass = baseClass,
+                    pccPath = corePath
+                };
+            }
         }
     }
 }

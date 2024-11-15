@@ -32,6 +32,7 @@ using Microsoft.Win32;
 using Image = LegendaryExplorerCore.Textures.Image;
 using LegendaryExplorerCore.Helpers;
 using SharpDX.Direct3D11;
+using LegendaryExplorer.Misc;
 
 namespace LegendaryExplorer.UserControls.ExportLoaderControls
 {
@@ -40,7 +41,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
     /// </summary>
     public partial class TextureViewerExportLoader : ExportLoaderControl, ISceneRenderContextConfigurable
     {
-
         // Renderer
         private TextureRenderContext TextureContext { get; } = new TextureRenderContext();
         public ObservableCollectionExtended<Texture2DMipInfo> MipList { get; } = new ObservableCollectionExtended<Texture2DMipInfo>();
@@ -122,8 +122,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             }
         }
 
-
-
         private bool _showBlueChannel = true;
         public bool ShowBlueChannel
         {
@@ -142,8 +140,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 RequestRender();
             }
         }
-
-
 
         private bool _showAlphaChannel = true;
         public bool ShowAlphaChannel
@@ -183,7 +179,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             get => _cannotShowTextureTextVisibility;
             set => SetProperty(ref _cannotShowTextureTextVisibility, value);
         }
-
 
         private uint _textureCRC;
         public uint TextureCRC
@@ -307,10 +302,11 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             {
                 Title = "Select texture file",
 #if WINDOWS
-                Filter = "All supported types|*.png;*.dds;*.tga|PNG files (*.png)|*.png|DDS files (*.dds)|*.dds|TGA files (*.tga)|*.tga"
+                Filter = "All supported types|*.png;*.dds;*.tga;*.jpg|PNG files (*.png)|*.png|DDS files (*.dds)|*.dds|TGA files (*.tga)|*.tga|JPEG files (*.jpg)|*.jpg",
 #else
-                Filter = "Texture (DDS PNG BMP TGA)|*.dds;*.png;*.bmp;*.tga"
+                Filter = "Texture (DDS PNG BMP TGA)|*.dds;*.png;*.bmp;*.tga",
 #endif
+                CustomPlaces = AppDirectories.GameCustomPlaces
             };
             var result = selectDDS.ShowDialog();
             if (result.HasValue && result.Value)
@@ -339,7 +335,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                                 defaultTfcName = $"Textures_{possibleDLCName}";
                             }
                         }
-
                     }
                     PromptDialog p = new PromptDialog("Enter name for a new TFC. It must start with Textures_DLC_MOD_, and will be created in the local directory of this package file.", "Enter new name for TFC", defaultTfcName, true, "Textures_DLC_MOD_".Length) { Owner = Window.GetWindow(this) };
                     var hasResult = p.ShowDialog();
@@ -440,7 +435,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             options.Add(PACKAGE_STORED_STRING);
             
 
-
             return InputComboBoxWPF.GetValue(Window.GetWindow(this),
                 "Select where the new texture should be stored. TFCs are better for game performance.",
                 "Select storage location", options, options.First());
@@ -466,7 +460,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 t2d.ExportToPNG(d.FileName);
 #endif
             }
-
         }
 
         private bool NonEmptyMipSelected()
@@ -534,8 +527,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                         TextureCacheName = "Package stored";
                     }
 
-
-
                     if (exportEntry.FileRef.Game == MEGame.ME1)
                     {
                         string baseName = exportEntry.FileRef.FollowLink(exportEntry.idxLink).Split('.')[0].ToUpper();
@@ -568,7 +559,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                         Mips_ListBox.SelectedIndex = MipList.IndexOf(topmip);
                     }
                 }
-
             }
             catch (Exception e)
             {
@@ -576,8 +566,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 CannotShowTextureText = e.Message;
             }
         }
-
-
 
         private void LoadMip(Texture2DMipInfo mipToLoad)
         {
@@ -713,8 +701,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 }
             }
         }
-
-
 
         public override void PoppedOut(ExportLoaderHostedWindow window)
         {

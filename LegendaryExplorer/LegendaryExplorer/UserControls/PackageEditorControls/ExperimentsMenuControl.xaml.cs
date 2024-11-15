@@ -12,6 +12,7 @@ using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.Misc;
 using LegendaryExplorer.SharedUI;
 using LegendaryExplorer.Tools.CustomFilesManager;
+using LegendaryExplorer.Tools.LiveLevelEditor;
 using LegendaryExplorer.Tools.PackageEditor;
 using LegendaryExplorer.Tools.PackageEditor.Experiments;
 using LegendaryExplorerCore.GameFilesystem;
@@ -43,7 +44,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         }
 
         public ICommand ForceReloadPackageCommand { get; set; }
-
 
         private void LoadCommands()
         {
@@ -85,7 +85,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
 
         internal bool CanForceReload() => GetPEWindow()?.Pcc != null;
 
-
         public PackageEditorWindow GetPEWindow()
         {
             if (Window.GetWindow(this) is PackageEditorWindow pew)
@@ -105,7 +104,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             var exp = GetPEWindow().InterpreterTab_Interpreter.CurrentLoadedExport;
             var properties = exp?.GetProperties();
         }
-
 
         private void BuildME1ObjectInfo_Clicked(object sender, RoutedEventArgs e)
         {
@@ -155,7 +153,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
                 MessageBox.Show(GetPEWindow(), "Done");
             });
         }
-
 
         private void BuildLE2ObjectInfo_Clicked(object sender, RoutedEventArgs e)
         {
@@ -255,7 +252,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
 
 
 
-
         }
 
         private void BuildAllObjectInfo_Clicked(object sender, RoutedEventArgs e)
@@ -301,13 +297,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsM.SearchObjectInfos(GetPEWindow());
         }
 
-
         private void ReInventoryCustomClasses_Click(object sender, RoutedEventArgs e)
         {
             // Todo: Move this into a 'general' class
             PackageEditorExperimentsM.RebuildInternalResourceClassInformations(GetPEWindow());
         }
-
 
         private void GenerateObjectInfoDiff_Click(object sender, RoutedEventArgs e)
         {
@@ -316,13 +310,13 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             var structsDiff = new Dictionary<string, (ClassInfo, ClassInfo)>();
             var classesDiff = new Dictionary<string, (ClassInfo, ClassInfo)>();
 
-            var immutableME1Structs = ME1UnrealObjectInfo.Structs
+            var immutableME1Structs = ME1UnrealObjectInfo.ObjectInfo.Structs
                 .Where(kvp => ME1UnrealObjectInfo.IsImmutableStruct(kvp.Key))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-            var immutableME2Structs = ME2UnrealObjectInfo.Structs
+            var immutableME2Structs = ME2UnrealObjectInfo.ObjectInfo.Structs
                 .Where(kvp => ME2UnrealObjectInfo.IsImmutableStruct(kvp.Key))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-            var immutableME3Structs = ME2UnrealObjectInfo.Structs
+            var immutableME3Structs = ME2UnrealObjectInfo.ObjectInfo.Structs
                 .Where(kvp => ME3UnrealObjectInfo.IsImmutableStruct(kvp.Key))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
@@ -358,12 +352,12 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
                     Formatting.Indented));
             return;
 
-            var srcEnums = ME2UnrealObjectInfo.Enums;
-            var compareEnums = ME3UnrealObjectInfo.Enums;
-            var srcStructs = ME2UnrealObjectInfo.Structs;
-            var compareStructs = ME3UnrealObjectInfo.Structs;
-            var srcClasses = ME2UnrealObjectInfo.Classes;
-            var compareClasses = ME3UnrealObjectInfo.Classes;
+            var srcEnums = ME2UnrealObjectInfo.ObjectInfo.Enums;
+            var compareEnums = ME3UnrealObjectInfo.ObjectInfo.Enums;
+            var srcStructs = ME2UnrealObjectInfo.ObjectInfo.Structs;
+            var compareStructs = ME3UnrealObjectInfo.ObjectInfo.Structs;
+            var srcClasses = ME2UnrealObjectInfo.ObjectInfo.Classes;
+            var compareClasses = ME3UnrealObjectInfo.ObjectInfo.Classes;
 
             foreach ((string enumName, List<NameReference> values) in srcEnums)
             {
@@ -407,13 +401,39 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             new CustomFilesManagerWindow().Show();
         }
 
-        private void MakeVTestDonor_Click(object sender, RoutedEventArgs e)
+        private void ImportStaticLighting_Click(object sender, RoutedEventArgs e)
         {
-            PackageEditorExperimentsM.ConvertMaterialToVtestDonor(GetPEWindow());
+            PackageEditorExperimentsM.ImportStaticLighting(GetPEWindow());
         }
-        private void RunMaterialInstanceScreenshot_Click(object sender, RoutedEventArgs e)
+
+        private void AdjustUDKLevelBrightness_Click(object sender, RoutedEventArgs e)
         {
-            PackageEditorExperimentsM.StartMatScreenshot(GetPEWindow());
+            PackageEditorExperimentsM.AdjustUDKLevelLighting(GetPEWindow().Pcc);
+        }
+
+        private void PortME1MaterialsIntoUDK_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.PortME1MaterialsIntoUDK();
+        }
+
+        private void ResynthesizePackage_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.ResynthesizePackage(GetPEWindow());
+        }
+
+        private void ImportWwiseBankTest_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.ImportBankTest(GetPEWindow());
+        }
+
+        private void BuildPreviewLevel_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.BuildPreviewLevel(GetPEWindow());
+        }
+
+        private void ExtractTextMap_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.ExtractTextMap(GetPEWindow());
         }
 
         private void OrganizeParticleSystemExports_Click(object sender, RoutedEventArgs e)
@@ -424,6 +444,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         private void ConvertSLCALightToNonSLCA(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.ConvertSLCALightToNonSLCA(GetPEWindow());
+        }
+
+        private void GlobalShaderCacheResearch_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.GlobalShaderCacheResearch();
         }
 
         //private void MakeLE1MakoMap_Click(object sender, RoutedEventArgs e)
@@ -446,6 +471,32 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsM.FindBadReference(GetPEWindow());
         }
 
+        private void DumpUScriptFromPackage_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.DumpUScriptFromPackage(GetPEWindow());
+        }
+
+        private void MaterializeModel_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.MaterializeModel(GetPEWindow());
+        }
+
+        private void LE2ConvertToSFXPawn_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.LE2ConvertBioPawnToSFXPawn(GetPEWindow());
+        }
+
+        private void GenerateTextMesh_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.GenerateTextMesh(GetPEWindow());
+        }
+
+
+        private void GigaSDKGen_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.GenerateGigaChungusClassFileForSDKGen(GetPEWindow());
+        }
+
         private void MScanner_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.MScanner(GetPEWindow());
@@ -454,11 +505,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         private void TestCurrentPackageBinary(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.TestCurrentPackageForUnknownBinary(GetPEWindow());
-        }
-
-        private void TestCrossGenClassPort_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.TestCrossGenClassPorting(GetPEWindow());
         }
 
         private void CheckNeverStream_Click(object sender, RoutedEventArgs e)
@@ -487,11 +533,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         }
 
         private void CoalesceBioActorTypesLE1_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.CoalesceBioActorTypes(GetPEWindow());
-        }
-
-        private void ForceVignetteOff_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.CoalesceBioActorTypes(GetPEWindow());
         }
@@ -526,98 +567,9 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsM.DumpAllLE1TLK(GetPEWindow());
         }
 
-        private void StartPackageBytecodeScan_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.EnumerateAllFunctions(GetPEWindow());
-        }
-
-        private void LODBiasTest_Clicked(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.TestLODBias(GetPEWindow());
-        }
-
         private void ResolveAllGameImports_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.CheckAllGameImports(GetPEWindow().Pcc);
-        }
-
-        private void BuildME1TLKDB_Clicked(object sender, RoutedEventArgs e)
-        {
-            var pew = GetPEWindow();
-            string myBasePath = ME1Directory.DefaultGamePath;
-            string[] extensions = { ".u", ".upk" };
-            FileInfo[] files = new DirectoryInfo(ME1Directory.CookedPCPath)
-                .EnumerateFiles("*", SearchOption.AllDirectories)
-                .Where(f => extensions.Contains(f.Extension.ToLower()))
-                .ToArray();
-            int i = 1;
-            var stringMapping = new SortedDictionary<int, KeyValuePair<string, List<string>>>();
-            foreach (FileInfo f in files)
-            {
-                pew.StatusBar_LeftMostText.Text = $"[{i}/{files.Length}] Scanning {f.FullName}";
-                Dispatcher.Invoke(new Action(() => { }), DispatcherPriority.ContextIdle, null);
-                int basePathLen = myBasePath.Length;
-                using (IMEPackage pack = MEPackageHandler.OpenMEPackage(f.FullName))
-                {
-                    List<ExportEntry> tlkExports = pack.Exports.Where(x =>
-                        (x.ObjectName == "tlk" || x.ObjectName == "tlk_M") && x.ClassName == "BioTlkFile").ToList();
-                    if (tlkExports.Count > 0)
-                    {
-                        string subPath = f.FullName.Substring(basePathLen);
-                        Debug.WriteLine("Found exports in " + f.FullName.Substring(basePathLen));
-                        foreach (ExportEntry exp in tlkExports)
-                        {
-                            var talkFile = new ME1TalkFile(exp);
-                            foreach (var sref in talkFile.StringRefs)
-                            {
-                                if (sref.StringID == 0) continue; //skip blank
-                                if (sref.Data == null || sref.Data == "-1" || sref.Data == "") continue; //skip blank
-
-                                if (!stringMapping.TryGetValue(sref.StringID, out var dictEntry))
-                                {
-                                    dictEntry = new KeyValuePair<string, List<string>>(sref.Data, new List<string>());
-                                    stringMapping[sref.StringID] = dictEntry;
-                                }
-
-                                if (sref.StringID == 158104)
-                                {
-                                    Debugger.Break();
-                                }
-
-                                dictEntry.Value.Add($"{subPath} in uindex {exp.UIndex} \"{exp.ObjectName}\"");
-                            }
-                        }
-                    }
-
-                    i++;
-                }
-            }
-
-            int total = stringMapping.Count;
-            using (StreamWriter file = new StreamWriter(@"C:\Users\Public\SuperTLK.txt"))
-            {
-                pew.StatusBar_LeftMostText.Text = "Writing... ";
-                Dispatcher.Invoke(new Action(() => { }), DispatcherPriority.ContextIdle, null);
-                foreach (KeyValuePair<int, KeyValuePair<string, List<string>>> entry in stringMapping)
-                {
-                    // do something with entry.Value or entry.Key
-                    file.WriteLine(entry.Key);
-                    file.WriteLine(entry.Value.Key);
-                    foreach (string fi in entry.Value.Value)
-                    {
-                        file.WriteLine(" - " + fi);
-                    }
-
-                    file.WriteLine();
-                }
-            }
-
-            pew.StatusBar_LeftMostText.Text = "Done";
-        }
-
-        private void BuildME1NativeFunctionsInfo_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.BuildME1NativeFunctionsInfo();
         }
 
         private void ListNetIndexes_Click(object sender, RoutedEventArgs e)
@@ -626,19 +578,9 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         }
 
 
-        private void PrintNatives(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.PrintAllNativeFuncsToDebug(GetPEWindow().Pcc);
-        }
-
         private void FindAllFilesWithSpecificName(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.FindNamedObject(GetPEWindow());
-        }
-
-        private void FindME12DATables_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.FindME1ME22DATables();
         }
 
         private void FindAllME3PowerCustomAction_Click(object sender, RoutedEventArgs e)
@@ -651,7 +593,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsM.FindAllME2Powers();
         }
 
-
         private void GenerateNewGUIDForPackageFile_Clicked(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.GenerateNewGUIDForFile(GetPEWindow());
@@ -661,12 +602,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         private void GenerateGUIDCacheForFolder_Clicked(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.GenerateGUIDCacheForFolder(GetPEWindow());
-        }
-
-
-        private void MakeAllGrenadesAmmoRespawn_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.MakeAllGrenadesAndAmmoRespawn(GetPEWindow());
         }
 
         private void PrintTerrainsBySize_Click(object sender, RoutedEventArgs e)
@@ -707,30 +642,9 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             Task.Run(() => PackageEditorExperimentsM.CheckImports(pew.Pcc)).ContinueWithOnUIThread(prevTask => { pew.IsBusy = false; });
         }
 
-        private void ResolveAllGameImports_Clicked(object sender, RoutedEventArgs e)
-        {
-            var pew = GetPEWindow();
-            Task.Run(() => PackageEditorExperimentsM.CheckAllGameImports(pew.Pcc)).ContinueWithOnUIThread(prevTask => { pew.IsBusy = false; });
-        }
-
-        private void CreateTestPatchDelta_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.BuildTestPatchComparison();
-        }
-
         private void TintAllNormalizedAverageColor_Clicked(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.TintAllNormalizedAverageColors(GetPEWindow().Pcc);
-        }
-
-        private void DumpAllExecFunctionSignatures_Clicked(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.DumpAllExecFunctionsFromGame();
-        }
-
-        private void RebuildLevelNetindexing_Clicked(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.RebuildFullLevelNetindexes();
         }
 
         private void BuildNativeTable_OnClick(object sender, RoutedEventArgs e)
@@ -741,6 +655,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         private void ExtractPackageTextures_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.DumpPackageTextures(GetPEWindow().Pcc, GetPEWindow());
+        }
+
+        private void FindExternalizableTextures_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.FindExternalizableTextures(GetPEWindow());
         }
 
         private void ValidateNavpointChain_Clicked(object sender, RoutedEventArgs e)
@@ -777,11 +696,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             }
         }
 
-        private void ShaderCacheResearch_Click(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsM.ShaderCacheResearch(GetPEWindow());
-        }
-
         private void PrintLoadedPackages_Clicked(object sender, RoutedEventArgs e)
         {
             MEPackageHandler.PrintOpenPackages();
@@ -815,7 +729,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
                     var prop = x.GetProperty<EnumProperty>("MoveFrame");
                     if (prop == null || prop.Value != "IMF_AnchorObject") return true;
                     return false; // IMF_AnchorObject
-                }); 
+                });
             }
         }
 
@@ -834,11 +748,32 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsM.RandomizeTerrain(GetPEWindow().Pcc);
         }
 
+        private void StripLightmap_Click(object sender, RoutedEventArgs e)
+        {
+            if (GetPEWindow().Pcc == null) return;
+            PackageEditorExperimentsM.StripLightmap(GetPEWindow());
+        }
+
+        private void ConvertExportToImport_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.ConvertExportToImport(GetPEWindow());
+        }
+
+        private void FromPackageUScriptFromFolder_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.CompilePackageUScriptFromFolder(GetPEWindow());
+        }
+
         #endregion
 
         // EXPERIMENTS: SIRCXYRTYX-----------------------------------------------------
 
         #region SirCxyrtyx's Experiments
+
+        private void GenerateGhidraStructInsertionScript(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsS.GenerateGhidraStructInsertionScript(GetPEWindow());
+        }
 
         private void CalculateProbeFuncs_OnClick(object sender, RoutedEventArgs e)
         {
@@ -892,7 +827,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             using (var tempPcc = MEPackageHandler.OpenMEPackage(tempFilePath, forceLoadFromDisk: true))
             {
                 //insert PlayerStart if neccesary
-                if (!(tempPcc.Exports.FirstOrDefault(exp => exp.ClassName == "PlayerStart") is ExportEntry playerStart))
+                if (tempPcc.Exports.FirstOrDefault(exp => exp.ClassName == "PlayerStart") is null)
                 {
                     var levelExport = tempPcc.Exports.First(exp => exp.ClassName == "Level");
                     Level level = ObjectBinary.From<Level>(levelExport);
@@ -909,12 +844,12 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
                         }
                     }
 
-                    playerStart = new ExportEntry(tempPcc, levelExport, tempPcc.GetNextIndexedName("PlayerStart"), properties: new PropertyCollection
-                    {
+                    ExportEntry playerStart = new ExportEntry(tempPcc, levelExport, tempPcc.GetNextIndexedName("PlayerStart"), properties:
+                    [
                         CommonStructs.Vector3Prop(x, y, z, "location")
-                    })
+                    ])
                     {
-                        Class = tempPcc.getEntryOrAddImport("Engine.PlayerStart")
+                        Class = tempPcc.GetEntryOrAddImport("Engine.PlayerStart", "Class")
                     };
                     tempPcc.AddExport(playerStart);
                     level.Actors.Add(playerStart.UIndex);
@@ -923,7 +858,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
 
                 tempPcc.Save();
             }
-
 
             Process.Start(MEDirectories.GetExecutablePath(Pcc.Game), $"{tempMapName} -nostartupmovies");
         }
@@ -1082,7 +1016,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
                     if (pew.Pcc.Game is MEGame.ME3)
                     {
                         (List<Token> tokens, _) = Bytecode.ParseBytecode(export.GetBinaryData<UFunction>().ScriptBytes, export);
-                        if (tokens.FirstOrDefault(tok => tok.op == opCode) is Token token)
+                        if (tokens.Find(tok => tok.op == opCode) is Token token)
                         {
                             exportsWithOpcode.Add(new EntryStringPair(export, token.posStr));
                         }
@@ -1092,7 +1026,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
                         var func = LegendaryExplorerCore.ME1.Unreal.UnhoodBytecode.UE3FunctionReader.ReadFunction(export);
                         func.Decompile(new LegendaryExplorerCore.ME1.Unreal.UnhoodBytecode.TextBuilder(), false, true);
                         if (func.Statements.statements.Count > 0
-                            && func.Statements.statements[0].Reader.ReadTokens.FirstOrDefault(tok => (short)tok.OpCode == opCode) is { })
+                            && func.Statements.statements[0].Reader.ReadTokens.Find(tok => (short)tok.OpCode == opCode) is { })
                         {
                             exportsWithOpcode.Add(new EntryStringPair(export, ""));
                         }
@@ -1120,6 +1054,22 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         private void PortShadowMaps_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsS.PortShadowMaps(GetPEWindow());
+        }
+        private void CompileLooseClassFolder_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsS.CompileLooseClassFolder(GetPEWindow());
+        }
+        private void DumpClassSource_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsS.DumpClassSource(GetPEWindow());
+        }
+        private void RegenCachedPhysBrushData_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsS.RegenCachedPhysBrushData(GetPEWindow());
+        }
+        private void JSONSerialize_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsS.JSONSerialize(GetPEWindow());
         }
 
         #endregion
@@ -1218,9 +1168,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
                         };
                         dlg.Show();
                     });
-
                 }
-
             }
             else
             {
@@ -1283,7 +1231,41 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         {
             PackageEditorExperimentsK.ParseMapNames(GetPEWindow());
         }
+        private void ShiftInterpTrackMovePackageWideScene(object sender, RoutedEventArgs e)
+        {
+            var pccLoaded = GetPEWindow().Pcc != null;
+            if (pccLoaded)
+            {
+                PackageEditorExperimentsK.ShiftInterpTrackMovesInPackageWithRotation(GetPEWindow().Pcc, x =>
+                {
+                    var prop = x.GetProperty<EnumProperty>("MoveFrame");
+                    if (prop == null || prop.Value != "IMF_AnchorObject") return true;
+                    return false; // IMF_AnchorObject
+                });
+            }
+        }
+        private void MakeInterpTrackMovesIntoAnchors(object sender, RoutedEventArgs e)
+        {
+            var pccLoaded = GetPEWindow().Pcc != null;
+            if (pccLoaded)
+            {
+                PackageEditorExperimentsK.MakeInterpTrackMovesStageRelative(GetPEWindow().Pcc, x =>
+                {
+                    var prop = x.GetProperty<EnumProperty>("MoveFrame");
+                    if (prop == null || prop.Value != "IMF_AnchorObject") return true;
+                    return false; // IMF_AnchorObject
+                });
+            }
+        }
 
+        private void ReplaceAllTlkRefs(object sender, RoutedEventArgs e)
+        {
+            var pccLoaded = GetPEWindow().Pcc != null;
+            if (pccLoaded)
+            {
+                PackageEditorExperimentsK.ReplaceTLKRefs(GetPEWindow(),GetPEWindow().Pcc);
+            }
+        }
 
         #endregion
 
@@ -1328,6 +1310,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         private void ExportBioMorphFace_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsH.ExportMorphFace(GetPEWindow());
+        }
+
+        private void ReplaceAllWems_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsH.ReplaceAllWems(GetPEWindow());
         }
 
         #endregion
@@ -1424,18 +1411,69 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsO.RenameConversationExperiment(GetPEWindow());
         }
 
-        private void RenameWwiseBank_Click(object sender, RoutedEventArgs e)
+        private void RenameAudio_Click(object sender, RoutedEventArgs e)
         {
-            PackageEditorExperimentsO.RenameWwiseBankExperiment(GetPEWindow());
+            PackageEditorExperimentsO.RenameAudioExperiment(GetPEWindow());
         }
 
-        private void UpdateWwiseBankID_Click (object sender, RoutedEventArgs e)
+        private void UpdateAmbPerfClass_Click(object sender, RoutedEventArgs e)
         {
-            PackageEditorExperimentsO.UpdateWwiseBankIDExperiment(GetPEWindow());
+            PackageEditorExperimentsO.UpdateAmbPerfClassExperiment(GetPEWindow());
+        }
+
+        private void BatchUpdateAmbPerfClass_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.BatchUpdateAmbPerfClassExperiment(GetPEWindow());
+        }
+
+        private void Replace1DLightMapColors_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.Replace1DLightMapColors(GetPEWindow());
+        } 
+
+        private void Replace1DLightMapColorsOfExports_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.Replace1DLightMapColorsOfExports(GetPEWindow());
+        } 
+
+        private void BatchReplace1DLightMapColors_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.BatchReplace1DLightMapColors(GetPEWindow());
+        }
+
+        private void MakeExportsForced_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.MakeExportsForced(GetPEWindow());
+        }
+
+        private void MakeExportsNonForced_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.MakeExportsNonForced(GetPEWindow());
+        }
+
+        private void CollectSMCsintoSMCA_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.CollectSMCsintoSMCA(GetPEWindow());
+        }
+
+        private void AddPrefabToLevel_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.AddPrefabToLevel(GetPEWindow());
+        }
+
+        private void AddStreamingKismet_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.AddStreamingKismetExperiment(GetPEWindow());
+        }
+
+        private void StreamFile_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.StreamFileExperiment(GetPEWindow());
         }
         #endregion
 
         // EXPERIMENTS: CHONKY DB---------------------------------------------------------
+        #region Object Database
         // This is for cross-game porting
         private void ChonkyDB_BuildLE1GameDB(object sender, RoutedEventArgs e)
         {
@@ -1466,7 +1504,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         {
             PackageEditorExperimentsM.BuildAllObjectsGameDB(MEGame.ME3, GetPEWindow());
         }
-
+        #endregion
 
         // PLEASE MOVE YOUR EXPERIMENT HANDLER INTO YOUR SECTION ABOVE
     }

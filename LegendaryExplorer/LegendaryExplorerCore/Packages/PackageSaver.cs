@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Memory;
-using LegendaryExplorerCore.Unreal.Classes;
 using Newtonsoft.Json;
 
 namespace LegendaryExplorerCore.Packages
@@ -62,7 +61,7 @@ namespace LegendaryExplorerCore.Packages
                 compressPackage = package.Game.IsLEGame();
             }
 
-            if (package.FilePath is null && savePath == null)
+            if ((package.IsMemoryPackage || package.FilePath == null) && savePath == null)
             {
                 throw new InvalidOperationException("Cannot save a temporary memory-based package! You must pass a save path to save a memory package.");
             }
@@ -81,7 +80,6 @@ namespace LegendaryExplorerCore.Packages
                     throw new ArgumentOutOfRangeException(nameof(package));
             }
         }
-
 
         /// <summary>
         /// Saves the package to disk on a different thread

@@ -4,15 +4,21 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
+using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.CodeCompletion;
 using ICSharpCode.AvalonEdit.Document;
+using ICSharpCode.AvalonEdit.Editing;
 using ICSharpCode.AvalonEdit.Folding;
 using LegendaryExplorer.Dialogs;
 using LegendaryExplorer.SharedUI;
 using LegendaryExplorer.Tools.PackageEditor;
+using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor.IDE;
+using LegendaryExplorerCore.Gammtek.Extensions;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
@@ -40,21 +46,28 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 if (Document is not null)
                 {
                     Document.TextChanged -= TextChanged;
+                    Document.UpdateStarted -= DocumentOnUpdateStarted;
                 }
 
                 if (foldingManager != null)
                 {
                     FoldingManager.Uninstall(foldingManager);
                 }
+                _definitionLinkGenerator.Reset();
+                textEditor.SyntaxHighlighting = SyntaxInfo.None;
                 Document = new TextDocument(value);
                 foldingManager = FoldingManager.Install(textEditor.TextArea);
                 foldingStrategy.UpdateFoldings(foldingManager, Document);
                 Document.TextChanged += TextChanged;
+                Document.UpdateStarted += DocumentOnUpdateStarted;
             });
         }
 
         public ICommand FindUsagesInFileCommand { get; set; }
         public ICommand GoToDefinitionCommand { get; set; }
+        public ICommand ToggleCommentCommand { get; set; }
+        public ICommand IncreaseFontSizeCommand { get; set; }
+        public ICommand DecreaseFontSizeCommand { get; set; }
 
         public UnrealScriptIDE() : base("UnrealScript IDE")
         {
@@ -66,16 +79,21 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             BusyText = "Initializing Script Compiler";
 
             textEditor.TextArea.TextEntered += TextAreaOnTextEntered;
+            textEditor.TextArea.TextEntering += TextAreaOnTextEntering;
             _definitionLinkGenerator = new DefinitionLinkGenerator(ScrollTo);
             textEditor.TextArea.TextView.ElementGenerators.Add(_definitionLinkGenerator);
 
             FindUsagesInFileCommand = new GenericCommand(FindUsagesInFile, CanFindReferences);
             GoToDefinitionCommand = new GenericCommand(() => VisualLineDefinitionLinkText.GoToDefinition(contextMenuDefinitionNode, ScrollTo), () => contextMenuDefinitionNode is not null && CurrentFileLib.IsInitialized);
+            ToggleCommentCommand = new GenericCommand(ToggleComment, CanToggleComment);
+
+            IncreaseFontSizeCommand = new GenericCommand(() => textEditor.UpdateFontSize(true));
+            DecreaseFontSizeCommand = new GenericCommand(() => textEditor.UpdateFontSize(false));
         }
 
         public override bool CanParse(ExportEntry exportEntry) =>
-            (exportEntry.FileRef.Platform == MEPackage.GamePlatform.PC || exportEntry.Game.IsLEGame()) // LE games all should have identical bytecode, but we do not support it (but some users might try anyways)
-            && (exportEntry.ClassName switch
+            (exportEntry.FileRef.Platform == MEPackage.GamePlatform.PC || exportEntry.Game.IsLEGame())
+            /*&& (exportEntry.ClassName switch
             {
                 "Class" => true,
                 "State" => true,
@@ -83,7 +101,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 "Enum" => true,
                 "ScriptStruct" => true,
                 _ => false
-            } || exportEntry.IsDefaultObject);
+            } || exportEntry.IsDefaultObject)*/;
 
         public override void LoadExport(ExportEntry export)
         {
@@ -91,6 +109,8 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             {
                 UnloadExport();
             }
+
+            UnrealScriptOptionsPackage usop = new UnrealScriptOptionsPackage();
             CurrentLoadedExport = export;
             if (Pcc != CurrentFileLib?.Pcc)
             {
@@ -102,7 +122,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 CurrentFileLib.InitializationStatusChange += CurrentFileLibOnInitialized;
                 if (IsVisible)
                 {
-                    CurrentFileLib?.InitializeAsync();
+                    CurrentFileLib?.InitializeAsync(usop);
                 }
             }
             else if (CurrentFileLib?.IsInitialized == true)
@@ -116,7 +136,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 BusyText = "Recompiling local classes";
                 if (IsVisible)
                 {
-                    CurrentFileLib?.InitializeAsync();
+                    CurrentFileLib?.InitializeAsync(usop);
                 }
             }
             if (!IsBusy)
@@ -137,13 +157,19 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
         {
             if (CurrentLoadedExport != null)
             {
-                var elhw = new ExportLoaderHostedWindow(new UnrealScriptIDE(), CurrentLoadedExport)
+                var elhw = new ExportLoaderHostedWindow(new UnrealScriptIDE() { PreloadedText = ScriptText }, CurrentLoadedExport)
                 {
                     Title = $"Script Viewer - {CurrentLoadedExport.UIndex} {CurrentLoadedExport.InstancedFullPath} - {CurrentLoadedExport.FileRef.FilePath}"
                 };
+                // Todo: Transfer current content to the popped out window
                 elhw.Show();
             }
         }
+
+        /// <summary>
+        /// Text to set once everything has loaded, used during popout
+        /// </summary>
+        public string PreloadedText { get; set; }
 
         public override void Dispose()
         {
@@ -164,13 +190,13 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 Document.TextChanged -= TextChanged;
             }
             textEditor.TextArea.TextEntered -= TextAreaOnTextEntered;
+            textEditor.TextArea.TextEntering -= TextAreaOnTextEntering;
         }
-
 
         private void ExportLoaderControl_Loaded(object sender, RoutedEventArgs e)
         {
             var window = Window.GetWindow(this);
-            if (window is { })
+            if (window is not null)
             {
                 window.Closed += (_, _) => UnloadFileLib();
             }
@@ -283,7 +309,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                                             "Functionality will be limited to script decompilation.\n\n\n" +
                                             "Do you want to see the compilation error log?", "Script Error", MessageBoxButton.YesNo))
                         {
-                            Dispatcher.Invoke(() => new ListDialog(CurrentFileLib.InitializationLog.AllErrors.Select(msg => msg.ToString()), 
+                            Dispatcher.Invoke(() => new ListDialog(CurrentFileLib.InitializationLog.AllErrors.Select(msg => msg.ToString()),
                                                                    "Initialization Log", "", Window.GetWindow(this)).Show());
                         }
                     }
@@ -304,7 +330,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 FullyInitialized = false;
                 if (IsVisible)
                 {
-                    CurrentFileLib?.InitializeAsync();
+                    CurrentFileLib?.InitializeAsync(new UnrealScriptOptionsPackage());
                 }
             }
         }
@@ -318,7 +344,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                     progressBarTimer.Start();
                 }
 
-                CurrentFileLib?.InitializeAsync();
+                CurrentFileLib?.InitializeAsync(new UnrealScriptOptionsPackage());
             }
             else
             {
@@ -330,7 +356,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
 
         private void outputListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (e.AddedItems?.Count == 1 && e.AddedItems[0] is PositionedMessage msg)
+            if (e.AddedItems is [PositionedMessage msg])
             {
                 ScrollTo(msg.Start, msg.End - msg.Start);
             }
@@ -339,6 +365,16 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
         private void ScrollTo(int start, int length)
         {
             textEditor.Focus();
+            int textLength = textEditor.Document.TextLength;
+            if (start >= textLength)
+            {
+                start = textLength;
+                length = 0;
+            }
+            else if (start + length > textLength)
+            {
+                length = textLength - start;
+            }
             textEditor.Select(start, length);
             var location = textEditor.Document.GetLocation(start);
             textEditor.ScrollTo(location.Line, location.Column);
@@ -349,53 +385,56 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             string scriptText = ScriptText;
             if (scriptText != null && CurrentLoadedExport != null)
             {
-                if (CurrentLoadedExport.IsDefaultObject)
+                if (!CurrentLoadedExport.IsDefaultObject && CurrentLoadedExport.IsInDefaultsTree())
                 {
-                    (_, MessageLog log) =  UnrealScriptCompiler.CompileDefaultProperties(CurrentLoadedExport, scriptText, CurrentFileLib);
-                    OutputListBox.ItemsSource = log?.Content;
+                    OutputListBox.ItemsSource = new[] { "Cannot compile properties of a subobject. You can edit the properties in the subobject declaration in the Default__ object this is descended from." };
+                    return;
                 }
-                else
+                MessageLog log;
+                UnrealScriptOptionsPackage usop = new UnrealScriptOptionsPackage();
+                switch (CurrentLoadedExport.ClassName)
                 {
-                    switch (CurrentLoadedExport.ClassName)
-                    {
-                        case "Class":
-                            {
-                                (_, MessageLog log) = UnrealScriptCompiler.CompileClass(Pcc, scriptText, CurrentFileLib, CurrentLoadedExport, CurrentLoadedExport.Parent);
-                                OutputListBox.ItemsSource = log?.Content;
-                                break;
-                            }
-                        case "Function":
-                        {
-                            (_, MessageLog log) = UnrealScriptCompiler.CompileFunction(CurrentLoadedExport, scriptText, CurrentFileLib);
-                            OutputListBox.ItemsSource = log?.Content;
-                            break;
-                        }
-                        case "State":
-                        {
-                            (_, MessageLog log) = UnrealScriptCompiler.CompileState(CurrentLoadedExport, scriptText, CurrentFileLib);
-                            OutputListBox.ItemsSource = log?.Content;
-                            break;
-                        }
-                        case "ScriptStruct":
-                        {
-                            (_, MessageLog log) = UnrealScriptCompiler.CompileStruct(CurrentLoadedExport, scriptText, CurrentFileLib);
-                            OutputListBox.ItemsSource = log?.Content;
-                            break;
-                        }
-                        case "Enum":
-                        {
-                            (_, MessageLog log) = UnrealScriptCompiler.CompileEnum(CurrentLoadedExport, scriptText, CurrentFileLib);
-                            OutputListBox.ItemsSource = log?.Content;
-                            break;
-                        }
-                        default:
-                            OutputListBox.ItemsSource = new[]
-                            {
-                                $"{CurrentLoadedExport.ClassName} compilation is not supported."
-                            };
-                            break;
-                    }
+                    case "Class":
+                        (_, log) = UnrealScriptCompiler.CompileClass(Pcc, scriptText, CurrentFileLib, usop, CurrentLoadedExport, CurrentLoadedExport.Parent);
+                        break;
+                    case "Function":
+                        (_, log) = UnrealScriptCompiler.CompileFunction(CurrentLoadedExport, scriptText, CurrentFileLib, usop);
+                        break;
+                    case "State":
+                        (_, log) = UnrealScriptCompiler.CompileState(CurrentLoadedExport, scriptText, CurrentFileLib, usop);
+                        break;
+                    case "ScriptStruct":
+                        (_, log) = UnrealScriptCompiler.CompileStruct(CurrentLoadedExport, scriptText, CurrentFileLib, usop);
+                        break;
+                    case "Enum":
+                        (_, log) = UnrealScriptCompiler.CompileEnum(CurrentLoadedExport, scriptText, CurrentFileLib, usop);
+                        break;
+                    case "Const":
+                        OutputListBox.ItemsSource = new[] { "Cannot compile const declarations" };
+                        return;
+                    case "IntProperty":
+                    case "BoolProperty":
+                    case "FloatProperty":
+                    case "NameProperty":
+                    case "StrProperty":
+                    case "StringRefProperty":
+                    case "ByteProperty":
+                    case "ObjectProperty":
+                    case "ComponentProperty":
+                    case "InterfaceProperty":
+                    case "ArrayProperty":
+                    case "StructProperty":
+                    case "BioMask4Property":
+                    case "MapProperty":
+                    case "ClassProperty":
+                    case "DelegateProperty":
+                        OutputListBox.ItemsSource = new[] { "Cannot individually compile property declarations. You can edit them as part of the class." };
+                        return;
+                    default:
+                        (_, log) = UnrealScriptCompiler.CompileDefaultProperties(CurrentLoadedExport, scriptText, CurrentFileLib, usop);
+                        break;
                 }
+                OutputListBox.ItemsSource = log?.Content;
             }
         }
 
@@ -413,19 +452,20 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             {
                 try
                 {
-                    ASTNode ast = UnrealScriptCompiler.ExportToAstNode(CurrentLoadedExport, CurrentFileLib, null);
+                    ASTNode ast = UnrealScriptCompiler.ExportToAstNode(CurrentLoadedExport, CurrentFileLib, new UnrealScriptOptionsPackage());
                     if (ast is null)
                     {
                         ScriptText = "Could not decompile!";
                         return;
                     }
                     _definitionLinkGenerator.Reset();
-                    if (FullyInitialized)
+                    if (FullyInitialized && !(CurrentLoadedExport.IsClass && CurrentLoadedExport.ObjectNameString is "Object"))
                     {
                         var codeBuilder = new CodeBuilderVisitor<PlainTextCodeFormatter>();
                         ast.AcceptVisitor(codeBuilder);
-                        string source = codeBuilder.GetOutput();
+                        string source = PreloadedText ?? codeBuilder.GetOutput();
                         ScriptText = source;
+                        PreloadedText = null; // Do not use after first decompile
                         Parse(source);
                     }
                     else
@@ -437,11 +477,10 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                         textEditor.SyntaxHighlighting = syntaxInfo;
                     }
 
-
                 }
                 catch (Exception e) //when (!App.IsDebug)
                 {
-                    ScriptText = $"/*Error occured while decompiling {CurrentLoadedExport?.InstancedFullPath}:\n\n{e.FlattenException()}*/";
+                    ScriptText = $"/*Error occurred while decompiling {CurrentLoadedExport?.InstancedFullPath}:\n\n{e.FlattenException()}*/";
                 }
             });
         }
@@ -451,7 +490,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             Parse(ScriptText);
         }
 
-        ASTNode AST;
+        private ASTNode AST;
 
         private void Parse(string source)
         {
@@ -459,37 +498,41 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             var log = new MessageLog();
             try
             {
-                (AST, TokenStream tokens) = UnrealScriptCompiler.CompileOutlineAST(source, CurrentLoadedExport.ClassName, log, Pcc.Game, CurrentLoadedExport.IsDefaultObject);
+                (AST, TokenStream tokens) = UnrealScriptCompiler.CompileOutlineAST(source, CurrentLoadedExport.ClassName, log, Pcc.Game);
 
                 if (AST != null && !log.HasErrors && FullyInitialized)
                 {
+                    UnrealScriptOptionsPackage usop = new UnrealScriptOptionsPackage();
                     log.Tokens = tokens;
                     switch (AST)
                     {
                         case Class cls:
-                            AST = UnrealScriptCompiler.CompileNewClassAST(Pcc, cls, log, CurrentFileLib, out bool vfTableChanged);
+                            AST = UnrealScriptCompiler.CompileNewClassAST(Pcc, cls, log, CurrentFileLib, out bool vfTableChanged, usop);
                             if (vfTableChanged)
                             {
                                 log.LogWarning("Compiling will cause Virtual Function Table to change! All classes that depend on this one will need recompilation to work properly!");
                             }
                             break;
                         case Function func when CurrentLoadedExport.Parent is ExportEntry funcParent:
-                            AST = UnrealScriptCompiler.CompileNewFunctionBodyAST(funcParent, func, log, CurrentFileLib);
+                            AST = UnrealScriptCompiler.CompileNewFunctionBodyAST(funcParent, func, log, CurrentFileLib, usop);
                             break;
                         case State state when CurrentLoadedExport.Parent is ExportEntry stateParent:
-                            AST = UnrealScriptCompiler.CompileNewStateBodyAST(stateParent, state, log, CurrentFileLib);
+                            AST = UnrealScriptCompiler.CompileNewStateBodyAST(stateParent, state, log, CurrentFileLib, usop);
                             break;
                         case Struct strct when CurrentLoadedExport.Parent is ExportEntry structParent:
-                            AST = UnrealScriptCompiler.CompileNewStructAST(structParent, strct, log, CurrentFileLib);
+                            AST = UnrealScriptCompiler.CompileNewStructAST(structParent, strct, log, CurrentFileLib, usop);
                             break;
                         case Enumeration enumeration when CurrentLoadedExport.Parent is ExportEntry enumParent:
-                            AST = UnrealScriptCompiler.CompileNewEnumAST(enumParent, enumeration, log, CurrentFileLib);
+                            AST = UnrealScriptCompiler.CompileNewEnumAST(enumParent, enumeration, log, CurrentFileLib, usop);
                             break;
                         case VariableDeclaration varDecl when CurrentLoadedExport.Parent is ExportEntry varParent:
-                            AST = UnrealScriptCompiler.CompileNewVarDeclAST(varParent, varDecl, log, CurrentFileLib);
+                            AST = UnrealScriptCompiler.CompileNewVarDeclAST(varParent, varDecl, log, CurrentFileLib, usop);
                             break;
-                        case DefaultPropertiesBlock propertiesBlock when CurrentLoadedExport.Class is ExportEntry classExport:
-                            AST = UnrealScriptCompiler.CompileDefaultPropertiesAST(classExport, propertiesBlock, log, CurrentFileLib);
+                        case Const cnst:
+                            //no additional processing needed for consts
+                            break;
+                        case DefaultPropertiesBlock propertiesBlock:
+                            AST = UnrealScriptCompiler.CompileDefaultPropertiesAST(propertiesBlock, log, CurrentFileLib, CurrentLoadedExport, usop);
                             break;
                         default:
                             return;
@@ -525,7 +568,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             List<int> lineLookup = tokens.LineLookup.Lines;
             if (!tokens.Any() || lineLookup.Count <= 0)
             {
-                textEditor.SyntaxHighlighting = new SyntaxInfo();
+                textEditor.SyntaxHighlighting = SyntaxInfo.None;
                 return;
             }
             var lineToIndex = new List<int>(lineLookup.Count);
@@ -540,7 +583,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 int nextLine = lineLookup[i + 1];
 
                 lineToIndex.Add(j);
-                for (;j < tokensSpan.Length && tokensSpan[j].StartPos < nextLine; ++j)
+                for (; j < tokensSpan.Length && tokensSpan[j].StartPos < nextLine; ++j)
                 {
                     ScriptToken token = tokensSpan[j];
                     syntaxSpans.Add(new SyntaxSpan(token.SyntaxType, token.EndPos - token.StartPos, token.StartPos));
@@ -581,113 +624,131 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             switch (currentToken.Type)
             {
                 case TokenType.Dot when currentTokenIdx > 0:
-                {
-                    var completionData = new List<ICompletionData>();
-                    Class currentClass = NodeUtils.GetContainingClass(AST);
-                    ScriptToken prevToken = tokensSpan[currentTokenIdx - 1];
-                    ASTNode definitionOfPrevSymbol = GetDefinitionFromToken(prevToken);
-                    definitionOfPrevSymbol = definitionOfPrevSymbol switch
                     {
-                        VariableDeclaration decl => decl.VarType,
-                        _ => definitionOfPrevSymbol
-                    };
-                    switch (definitionOfPrevSymbol)
-                    {
-                        case ObjectType objType:
-                        {
-                            if (prevToken.Type is TokenType.NameLiteral)
-                            {
-                                //this is a class literal
-                                completionData.Add(new KeywordCompletion("static"));
-                                completionData.Add(new KeywordCompletion("const"));
-                                completionData.Add(new KeywordCompletion("default"));
-                                break;
-                            }
-                            bool varsAccesible = !prevToken.Value.CaseInsensitiveEquals(Keywords.SUPER) && !prevToken.Value.CaseInsensitiveEquals(Keywords.GLOBAL);
-                            bool functionsAccesible = !prevToken.Value.CaseInsensitiveEquals(Keywords.DEFAULT);
-                            do
-                            {
-                                if (varsAccesible)
-                                {
-                                    completionData.AddRange(VariableCompletion.GenerateCompletions(objType.VariableDeclarations));
-                                }
-                                if (objType is Class classType && functionsAccesible)
-                                {
-                                    //todo: determine when iterators are valid. (will require an AST lookup)
-                                    completionData.AddRange(FunctionCompletion.GenerateCompletions(classType.Functions, currentClass));
-                                }
-                                objType = objType.Parent as ObjectType;
-                            } while (objType is not null);
-                            break;
-                        }
-                        case Enumeration enumType:
-                            completionData.AddRange(enumType.Values.Select(v => new CompletionData(v.Name, $"{v.IntVal}")));
-                            break;
-                        case null:
-                        {
-                            if (prevToken.Value.CaseInsensitiveEquals(Keywords.CONST))
-                            {
-                                if (currentTokenIdx > 3)
-                                {
-                                    ScriptToken classNameToken = tokensSpan[currentTokenIdx - 3];
-                                    if (classNameToken.Type is TokenType.NameLiteral && GetDefinitionFromToken(classNameToken) is Class cls)
-                                    {
-                                        do
-                                        {
-                                            completionData.AddRange(cls.TypeDeclarations.OfType<Const>().Select(c => new CompletionData(c.Name, $"{c.Literal?.ResolveType().DisplayName()} {c.Value}")));
-                                            cls = cls.Parent as Class;
-                                        } while (cls is not null);
-                                    }
-                                }
-                            }
-                            else if (prevToken.Value.CaseInsensitiveEquals(Keywords.STATIC))
-                            {
-                                if (currentTokenIdx > 3)
-                                {
-                                    ScriptToken classNameToken = tokensSpan[currentTokenIdx - 3];
-                                    if (classNameToken.Type is TokenType.NameLiteral && GetDefinitionFromToken(classNameToken) is Class cls)
-                                    {
-                                        do
-                                        {
-                                            completionData.AddRange(FunctionCompletion.GenerateCompletions(cls.Functions, currentClass, true));
-                                                    cls = cls.Parent as Class;
-                                        } while (cls is not null);
-                                    }
-                                }
-                            }
-                            break;
-                        }
+                        DisplayCompletions(tokensSpan, currentTokenIdx);
+                        break;
                     }
-                    if (completionData.Count > 0)
-                    {
-                        completionWindow = new CompletionWindow(textEditor.TextArea)
-                        {
-                            SizeToContent = SizeToContent.WidthAndHeight
-                        };
-                        IList<ICompletionData> data = completionWindow.CompletionList.CompletionData;
-                        foreach (ICompletionData completion in completionData)
-                        {
-                            data.Add(completion);
-                        }
-                        completionWindow.Show();
-                        completionWindow.Closed += delegate
-                        {
-                            completionWindow = null;
-                        };
-                    }
-                    break;
-                }
-                //case TokenType.Word when currentToken.Value.Length == 1 && completionWindow is null:
-                //{
+                    //case TokenType.Word when currentToken.Value.Length == 1 && completionWindow is null:
+                    //{
 
-                //    break;
-                //}
+                    //    break;
+                    //}
             }
 
-            ASTNode GetDefinitionFromToken(ScriptToken prevToken)
+        }
+
+        private void DisplayCompletions(ReadOnlySpan<ScriptToken> tokens, int currentTokenIdx)
+        {
+            var completionData = new List<ICompletionData>();
+            Class currentClass = NodeUtils.GetContainingClass(AST);
+            ScriptToken prevToken = tokens[currentTokenIdx - 1];
+            ASTNode definitionOfPrevSymbol = GetDefinitionFromToken(prevToken);
+            definitionOfPrevSymbol = definitionOfPrevSymbol switch
             {
-                return _definitionLinkGenerator.GetDefinitionFromOffset(prevToken.StartPos);
+                VariableDeclaration decl => decl.VarType,
+                _ => definitionOfPrevSymbol
+            };
+            switch (definitionOfPrevSymbol)
+            {
+                case ObjectType objType:
+                    {
+                        if (prevToken.Type is TokenType.NameLiteral)
+                        {
+                            //this is a class literal
+                            completionData.Add(new KeywordCompletion("static"));
+                            completionData.Add(new KeywordCompletion("const"));
+                            completionData.Add(new KeywordCompletion("default"));
+                            break;
+                        }
+                        bool varsAccesible = !prevToken.Value.CaseInsensitiveEquals(Keywords.SUPER) && !prevToken.Value.CaseInsensitiveEquals(Keywords.GLOBAL);
+                        bool functionsAccesible = !prevToken.Value.CaseInsensitiveEquals(Keywords.DEFAULT);
+                        do
+                        {
+                            if (varsAccesible)
+                            {
+                                completionData.AddRange(VariableCompletion.GenerateCompletions(objType.VariableDeclarations));
+                            }
+                            if (objType is Class classType && functionsAccesible)
+                            {
+                                bool allowIterators = false;
+                                for (int i = currentTokenIdx - 1; i >= 0; i--)
+                                {
+                                    if (tokens[i].Type is TokenType.SemiColon or TokenType.LeftBracket or TokenType.RightBracket)
+                                    {
+                                        break;
+                                    }
+                                    if (tokens[i].Value.CaseInsensitiveEquals("foreach"))
+                                    {
+                                        allowIterators = true;
+                                        break;
+                                    }
+                                }
+                                completionData.AddRange(FunctionCompletion.GenerateCompletions(classType.Functions, currentClass, iterators: allowIterators));
+                            }
+                            objType = objType.Parent as ObjectType;
+                        } while (objType is not null);
+                        break;
+                    }
+                case Enumeration enumType:
+                    completionData.AddRange(enumType.Values.Select(v => new CompletionData(v.Name, $"{v.IntVal}")));
+                    break;
+                case DynamicArrayType dynArrType:
+                    completionData.AddRange(ArrayFunctionCompletion.GenerateCompletions(Pcc.Game, dynArrType));
+                    break;
+                case null:
+                    {
+                        if (prevToken.Value.CaseInsensitiveEquals(Keywords.CONST))
+                        {
+                            if (currentTokenIdx > 3)
+                            {
+                                ScriptToken classNameToken = tokens[currentTokenIdx - 3];
+                                if (classNameToken.Type is TokenType.NameLiteral && GetDefinitionFromToken(classNameToken) is Class cls)
+                                {
+                                    do
+                                    {
+                                        completionData.AddRange(cls.TypeDeclarations.OfType<Const>().Select(c => new CompletionData(c.Name, $"{c.Literal?.ResolveType().DisplayName()} {c.Value}")));
+                                        cls = cls.Parent as Class;
+                                    } while (cls is not null);
+                                }
+                            }
+                        }
+                        else if (prevToken.Value.CaseInsensitiveEquals(Keywords.STATIC))
+                        {
+                            if (currentTokenIdx > 3)
+                            {
+                                ScriptToken classNameToken = tokens[currentTokenIdx - 3];
+                                if (classNameToken.Type is TokenType.NameLiteral && GetDefinitionFromToken(classNameToken) is Class cls)
+                                {
+                                    do
+                                    {
+                                        completionData.AddRange(FunctionCompletion.GenerateCompletions(cls.Functions, currentClass, staticsOnly: true));
+                                        cls = cls.Parent as Class;
+                                    } while (cls is not null);
+                                }
+                            }
+                        }
+                        break;
+                    }
             }
+            if (completionData.Count > 0)
+            {
+                completionWindow = new CompletionWindow(textEditor.TextArea)
+                {
+                    SizeToContent = SizeToContent.WidthAndHeight
+                };
+                IList<ICompletionData> data = completionWindow.CompletionList.CompletionData;
+                foreach (ICompletionData completion in completionData)
+                {
+                    data.Add(completion);
+                }
+                completionWindow.Show();
+                completionWindow.Closed += delegate { completionWindow = null; };
+            }
+        }
+
+        private ASTNode GetDefinitionFromToken(ScriptToken token)
+        {
+            return _definitionLinkGenerator.GetDefinitionFromOffset(token.StartPos);
         }
 
         private void CompileAST_OnClick(object sender, RoutedEventArgs e)
@@ -696,22 +757,20 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             if (scriptText != null)
             {
                 var log = new MessageLog();
-                (ASTNode ast, _) = UnrealScriptCompiler.CompileOutlineAST(scriptText, CurrentLoadedExport.ClassName, log, Pcc.Game, CurrentLoadedExport.IsDefaultObject);
+                (ASTNode ast, _) = UnrealScriptCompiler.CompileOutlineAST(scriptText, CurrentLoadedExport.ClassName, log, Pcc.Game);
 
                 if (ast != null && !log.HasErrors)
                 {
                     if (FullyInitialized)
                     {
+                        UnrealScriptOptionsPackage usop = new UnrealScriptOptionsPackage();
                         if (ast is DefaultPropertiesBlock propBlock)
                         {
-                            if (CurrentLoadedExport.Class is ExportEntry classExport)
-                            {
-                                ast = UnrealScriptCompiler.CompileDefaultPropertiesAST(classExport, propBlock, log, CurrentFileLib);
-                            }
+                            ast = UnrealScriptCompiler.CompileDefaultPropertiesAST(propBlock, log, CurrentFileLib, CurrentLoadedExport, usop);
                         }
                         else if (ast is Class cls)
                         {
-                            ast = UnrealScriptCompiler.CompileNewClassAST(Pcc, cls, log, CurrentFileLib, out bool vfTableChanged);
+                            ast = UnrealScriptCompiler.CompileNewClassAST(Pcc, cls, log, CurrentFileLib, out bool vfTableChanged, usop);
                             if (vfTableChanged)
                             {
                                 log.LogWarning("Virtual function table changed!");
@@ -721,11 +780,11 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                         {
                             ast = ast switch
                             {
-                                Function func => UnrealScriptCompiler.CompileNewFunctionBodyAST(parentExport, func, log, CurrentFileLib),
-                                State state => UnrealScriptCompiler.CompileNewStateBodyAST(parentExport, state, log, CurrentFileLib),
-                                Struct strct => UnrealScriptCompiler.CompileNewStructAST(parentExport, strct, log, CurrentFileLib),
-                                Enumeration enumeration => UnrealScriptCompiler.CompileNewEnumAST(parentExport, enumeration, log, CurrentFileLib),
-                                VariableDeclaration varDecl => UnrealScriptCompiler.CompileNewVarDeclAST(parentExport, varDecl, log, CurrentFileLib),
+                                Function func => UnrealScriptCompiler.CompileNewFunctionBodyAST(parentExport, func, log, CurrentFileLib, usop),
+                                State state => UnrealScriptCompiler.CompileNewStateBodyAST(parentExport, state, log, CurrentFileLib, usop),
+                                Struct strct => UnrealScriptCompiler.CompileNewStructAST(parentExport, strct, log, CurrentFileLib, usop),
+                                Enumeration enumeration => UnrealScriptCompiler.CompileNewEnumAST(parentExport, enumeration, log, CurrentFileLib, usop),
+                                VariableDeclaration varDecl => UnrealScriptCompiler.CompileNewVarDeclAST(parentExport, varDecl, log, CurrentFileLib, usop),
                                 _ => ast
                             };
                         }
@@ -741,8 +800,6 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             }
         }
 
-
-
         #region AvalonEditor
 
         private TextDocument _document;
@@ -755,6 +812,11 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
         private FoldingManager foldingManager;
         private readonly BraceFoldingStrategy foldingStrategy = new();
         private readonly DefinitionLinkGenerator _definitionLinkGenerator;
+
+        private void DocumentOnUpdateStarted(object sender, EventArgs e)
+        {
+            _definitionLinkGenerator.Reset();
+        }
 
         #endregion
 
@@ -779,7 +841,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
         }
         private void TextEditor_OnContextMenuClosing(object sender, ContextMenuEventArgs e) => contextMenuDefinitionNode = null;
 
-        private bool CanFindReferences() => contextMenuDefinitionNode is Function or VariableDeclaration {Outer: ObjectType} or VariableType && CurrentFileLib.IsInitialized;
+        private bool CanFindReferences() => contextMenuDefinitionNode is Function or VariableDeclaration { Outer: ObjectType } or VariableType && CurrentFileLib.IsInitialized;
 
         private void FindUsagesInFile()
         {
@@ -810,14 +872,15 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             {
                 try
                 {
+                    UnrealScriptOptionsPackage usop = new UnrealScriptOptionsPackage();
                     switch (definitonNode)
                     {
                         case Function func:
-                            return UnrealScriptLookup.FindUsagesInFile(func, CurrentFileLib);
+                            return UnrealScriptLookup.FindUsagesInFile(func, CurrentFileLib, usop);
                         case VariableDeclaration varDecl:
-                            return UnrealScriptLookup.FindUsagesInFile(varDecl, CurrentFileLib);
+                            return UnrealScriptLookup.FindUsagesInFile(varDecl, CurrentFileLib, usop);
                         case VariableType varType:
-                            return UnrealScriptLookup.FindUsagesInFile(varType, CurrentFileLib);
+                            return UnrealScriptLookup.FindUsagesInFile(varType, CurrentFileLib, usop);
                         case EnumValue enumValue:
                             break;
                     }
@@ -825,7 +888,7 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
                 }
                 catch (Exception e)
                 {
-                    return new List<EntryStringPair> { new EntryStringPair($"Error occured: {e.FlattenException()}") };
+                    return [new EntryStringPair($"Error occured: {e.FlattenException()}")];
                 }
             }).ContinueWithOnUIThread(prevTask =>
             {
@@ -855,5 +918,249 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls.ScriptEditor
             });
         }
 
+        private bool CanToggleComment() => Document is not null;
+
+        private void ToggleComment()
+        {
+            TextArea textArea = textEditor.TextArea;
+            Selection selection = textArea.Selection;
+            if (!selection.IsEmpty)
+            {
+                int startLineNum = selection.StartPosition.Line;
+                int endLineNum = selection.EndPosition.Line;
+                //if the selection was made by dragging up, these must be swapped
+                if (startLineNum > endLineNum)
+                {
+                    (startLineNum, endLineNum) = (endLineNum, startLineNum);
+                }
+                DocumentLine startLine = Document.GetLineByNumber(startLineNum);
+                DocumentLine endLine = Document.GetLineByNumber(endLineNum);
+                textArea.Selection = selection = Selection.Create(textArea, startLine.Offset, endLine.EndOffset);
+                string text = selection.GetText();
+                string[] lines = text.Split('\n');
+                int commentCollumn = -1;
+                bool hasNonCommentedLines = false;
+                foreach (string line in lines)
+                {
+                    int whitespaceCount = line.CountLeadingWhitespace();
+                    if (whitespaceCount < line.Length)
+                    {
+                        //cast to uint so that -1 is "greater" than all positive numbers
+                        commentCollumn = (int)Math.Min((uint)whitespaceCount, (uint)commentCollumn);
+                        if (line[whitespaceCount] != '/' || line.Length > whitespaceCount + 1 && line[whitespaceCount + 1] != '/')
+                        {
+                            hasNonCommentedLines = true;
+                        }
+                    }
+                }
+                if (commentCollumn is -1)
+                {
+                    //oops, all whitespace!
+                    return;
+                }
+                if (hasNonCommentedLines)
+                {
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        string lineText = lines[i];
+                        if (lineText.Length > commentCollumn && !string.IsNullOrWhiteSpace(lineText))
+                        {
+                            lines[i] = $"{lineText.AsSpan(0, commentCollumn)}//{lineText.AsSpan(commentCollumn)}";
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        string lineText = lines[i];
+                        if (lineText.IndexOf("//", StringComparison.Ordinal) is var commentStart and > 0)
+                        {
+                            lines[i] = $"{lineText.AsSpan(0, commentStart)}{lineText.AsSpan(commentStart + 2)}";
+                        }
+                    }
+                }
+                textArea.PerformTextInput(string.Join('\n', lines));
+            }
+            else
+            {
+                DocumentLine line = Document.GetLineByNumber(textArea.Caret.Line);
+                string lineText = Document.GetText(line);
+                ReadOnlySpan<char> indentation = lineText.AsSpan(0, lineText.CountLeadingWhitespace());
+                textArea.Selection = Selection.Create(textArea, line.Offset, line.EndOffset);
+                if (lineText.Length >= indentation.Length + 2 && lineText.AsSpan(indentation.Length, 2) is "//")
+                {
+                    textArea.PerformTextInput($"{indentation}{lineText.AsSpan(indentation.Length + 2)}");
+                }
+                else
+                {
+                    textArea.PerformTextInput($"{indentation}//{lineText.AsSpan(indentation.Length)}");
+                }
+            }
+        }
+
+        private readonly ToolTip _hoverToolTip = new();
+
+        private void TextEditor_OnMouseHover(object sender, MouseEventArgs e)
+        {
+            var position = textEditor.GetPositionFromPoint(e.GetPosition(textEditor));
+            if (textEditor.Document is not null && position is TextViewPosition pos)
+            {
+                TokenStream tokens = _definitionLinkGenerator.Tokens;
+                int currentTokenIdx = tokens.GetIndexOfTokenAtOffset(textEditor.Document.GetOffset(pos.Location));
+                ReadOnlySpan<ScriptToken> tokensSpan = tokens.TokensSpan;
+                if (currentTokenIdx < 0 || currentTokenIdx >= tokensSpan.Length)
+                {
+                    return;
+                }
+                ScriptToken currentToken = tokensSpan[currentTokenIdx];
+
+                if (currentToken.Type is TokenType.StringRefLiteral)
+                {
+                    //Value does not include the $ for some reason? 
+                    if (int.TryParse(currentToken.Value, out int strRef))
+                    {
+                        SetStringTooltip(TLKManagerWPF.GlobalFindStrRefbyID(strRef, Pcc) ?? "No Data");
+                        e.Handled = true;
+                    }
+                }
+                else if (GetDefinitionFromToken(currentToken) is ASTNode node)
+                {
+                    switch (node)
+                    {
+                        case Function func:
+                            SetInlinesTooltip(XamlCodeBuilder.GetFunctionSignature(func));
+                            e.Handled = true;
+                            break;
+                        case VariableDeclaration varDecl:
+                            SetInlinesTooltip(XamlCodeBuilder.GetVariableDeclarationSignature(varDecl));
+                            e.Handled = true;
+                            break;
+                    }
+                }
+            }
+
+            void SetInlinesTooltip(IEnumerable<Inline> inlines)
+            {
+                var textBlock = new TextBlock();
+                textBlock.Inlines.AddRange(inlines);
+                SetTooltip(textBlock);
+            }
+
+            void SetStringTooltip(string text)
+            {
+                SetInlinesTooltip([new Run(text) { Foreground = SyntaxInfo.ColorBrushes[EF.None] }]);
+            }
+
+            void SetTooltip(TextBlock content)
+            {
+                content.Background = ToolTipBackgroundBrush;
+                _hoverToolTip.Content = content;
+                _hoverToolTip.Background = ToolTipBackgroundBrush;
+                _hoverToolTip.PlacementTarget = this; // required for property inheritance
+                _hoverToolTip.IsOpen = true;
+            }
+        }
+
+        private static readonly SolidColorBrush ToolTipBackgroundBrush = new(Color.FromRgb(56, 56, 56));
+
+        private void TextEditor_OnMouseHoverStopped(object sender, MouseEventArgs e)
+        {
+            _hoverToolTip.IsOpen = false;
+        }
+
+        private void TextAreaOnTextEntering(object sender, TextCompositionEventArgs e)
+        {
+            TextArea textArea = textEditor.TextArea;
+            int caretOffset = textArea.Caret.Offset;
+            TokenStream tokens = _definitionLinkGenerator.Tokens;
+            int currentTokenIdx = tokens.GetIndexOfTokenAtOffset(caretOffset);
+            ScriptToken currentToken = currentTokenIdx >= 0 ? tokens.TokensSpan[currentTokenIdx] : null;
+
+            switch (e.Text)
+            {
+                case "\"":
+                    if (currentToken?.Type is TokenType.StringLiteral)
+                    {
+                        if (caretOffset + 1 == currentToken.EndPos && currentToken.Length != currentToken.Value.Length + 1)
+                        {
+                            //"overwrite" the existing " at the end of the string
+                            textArea.Caret.Offset = caretOffset + 1;
+                            e.Handled = true;
+                        }
+                    }
+                    else if (currentTokenIdx < 0)
+                    {
+                        int prevTokenIdx = ~currentTokenIdx - 1;
+                        var prevToken = tokens.TokensSpan[prevTokenIdx];
+                        if (prevToken.Type is TokenType.StringLiteral && caretOffset == prevToken.EndPos)
+                        {
+                            //end of an unterminated string literal. inserting a single " is what we want
+                            return;
+                        }
+                        //not in a token, so insert two " and put the caret between them
+                        textArea.PerformTextInput("\"\"");
+                        textArea.Caret.Offset = caretOffset + 1;
+                        e.Handled = true;
+                    }
+                    break;
+                case "'":
+                    if (currentToken?.Type is TokenType.NameLiteral)
+                    {
+                        if (caretOffset + 1 == currentToken.EndPos && currentToken.Length != currentToken.Value.Length + 1)
+                        {
+                            //"overwrite" the existing ' at the end of the name
+                            textArea.Caret.Offset = caretOffset + 1;
+                            e.Handled = true;
+                        }
+                    }
+                    else if (currentTokenIdx < 0)
+                    {
+                        int prevTokenIdx = ~currentTokenIdx - 1;
+                        var prevToken = tokens.TokensSpan[prevTokenIdx];
+                        if (prevToken.Type is TokenType.NameLiteral && caretOffset == prevToken.EndPos)
+                        {
+                            //end of an unterminated name literal. inserting a single ' is what we want
+                            return;
+                        }
+                        //not in a token, so insert two ' and put the caret between them
+                        textArea.PerformTextInput("''");
+                        textArea.Caret.Offset = caretOffset + 1;
+                        e.Handled = true;
+                    }
+                    break;
+                case "{":
+                    if (currentTokenIdx < 0)
+                    {
+                        textArea.PerformTextInput("{}");
+                        textArea.Caret.Offset = caretOffset + 1;
+                        e.Handled = true;
+                    }
+                    break;
+                case "\n":
+                    if (currentToken?.Type is TokenType.RightBracket)
+                    {
+                        if (currentTokenIdx > 0 && tokens.TokensSpan[currentTokenIdx - 1] is { Type: TokenType.LeftBracket } prevToken)
+                        {
+                            string inBetweenText = Document.GetText(prevToken.EndPos, currentToken.StartPos - prevToken.EndPos);
+                            if (!inBetweenText.Contains('\n'))
+                            {
+                                string lineText = Document.GetText(Document.GetLineByOffset(caretOffset));
+                                var indentation = lineText.AsSpan()[..lineText.CountLeadingWhitespace()];
+                                textArea.Selection = Selection.Create(textArea, prevToken.StartPos, currentToken.EndPos);
+                                textArea.PerformTextInput($"\n{indentation}{{\n{indentation}    \n{indentation}}}");
+                                textArea.Caret.Offset -= indentation.Length + 2;
+                                e.Handled = true;
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        private void ThemePicker_OnClick(object sender, RoutedEventArgs e)
+        {
+            new IdeThemePicker(Window.GetWindow(this)).Show();
+        }
     }
 }

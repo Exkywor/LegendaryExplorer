@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
-
 
 namespace LegendaryExplorerCore.Gammtek
 {
@@ -38,6 +38,14 @@ namespace LegendaryExplorerCore.Gammtek
         public static void ThrowArgumentException([InvokerParameterName] string paramName, string message)
         {
             throw new ArgumentException(message, paramName);
+        }
+
+        public static void ThrowIfNotInBounds(int index, int length, [CallerArgumentExpression(nameof(index))] string paramName = null)
+        {
+            if (unchecked((uint)index >= (uint)length))
+            {
+                ThrowArgumentOutOfRangeException(paramName);
+            }
         }
     }
 }

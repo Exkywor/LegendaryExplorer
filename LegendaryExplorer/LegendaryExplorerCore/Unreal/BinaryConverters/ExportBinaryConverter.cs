@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Memory;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Textures;
 using LegendaryExplorerCore.Unreal.Classes;
+using LegendaryExplorerCore.Unreal.ObjectInfo;
 using static LegendaryExplorerCore.Unreal.BinaryConverters.ObjectBinary;
 
 namespace LegendaryExplorerCore.Unreal.BinaryConverters
@@ -14,21 +18,98 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
     {
         public static ObjectBinary ConvertPostPropBinary(ExportEntry export, MEGame newGame, PropertyCollection newProps)
         {
-            if (export.propsEnd() == export.DataSize)
+            // 08/29/2024 - Don't use this check on textures, as games may have exports with zero properties (like zero face cubes or broken textures in ME1)
+            // The binary format still needs changed for target game. We probably should maintain a list of classes that have binary formats
+            // change that this could trigger on if there were no properties and no binary data in the source game.
+            if (export.propsEnd() == export.DataSize && !export.IsA("Texture"))
             {
                 return Array.Empty<byte>();
             }
 
-            if (export.IsTexture())
+            if (export.IsTexture() && export.Game != newGame) // 12/24/2023 - Do not try to convert textures if the game isn't changing. It might try to internalize things that don't need to be
             {
                 return ConvertTexture2D(export, newGame);
             }
 
-            if (From(export) is ObjectBinary objbin)
+            var from = From(export);
+            if (from is ObjectBinary objbin)
             {
                 if (objbin is AnimSequence animSeq)
                 {
                     animSeq.UpdateProps(newProps, newGame);
+                }
+
+                // IDK if this works as internal busses have changed identifiers.
+                // You likely would need to correct bus IDs internally for this to properly work.
+                // Todo: LE3 -> LE2
+                else if (objbin is WwiseEvent we && export.Game is MEGame.LE2 or MEGame.LE3 && newGame is /*MEGame.LE2 or*/ MEGame.LE3 && export.Game != newGame)
+                {
+                    // We can't convert ME2 -> ME3, only LE versions work
+
+                    // LE2: Properties
+                    // LE3: Binary
+
+                    if (export.Game == MEGame.LE2)
+                    {
+                        var refs = export.GetProperty<ArrayProperty<StructProperty>>(@"References");
+                        if (refs != null && refs.Count == 1)
+                        {
+                            var relationships = refs[0].GetProp<StructProperty>(@"Relationships");
+                            var streams = relationships.GetProp<ArrayProperty<ObjectProperty>>(@"Streams");
+                            relationships.Properties.Remove(streams); // Remove the property, does not exist in LE3.
+
+                            we.Links = new List<WwiseEvent.WwiseEventLink>();
+                            we.Links.Add(new WwiseEvent.WwiseEventLink() { WwiseStreams = streams.Properties.Select(x => x.Value).ToList() });
+                            newProps.Add(relationships);
+                        }
+                    }
+
+                    //if (export.Game == MEGame.LE3)
+                    //{
+                    //    // LE3
+                    //    newProps.Add(new StructProperty("WwiseRelationships", false,
+                    //        new ObjectProperty(bankExport, "Bank"))
+                    //    { Name = "Relationships" });
+                    //    p.Add(new IntProperty((int)eventInfo.Id, "Id"));
+
+                    //    p.Add(new FloatProperty(9, "Duration")); // TODO: FIGURE THIS OUT!!! THIS IS A PLACEHOLDER
+
+                    //    // Todo: Write the WwiseStreams
+                    //}
+                    //else
+                    //{
+                    //    // LE2
+
+                    //    var references = new ArrayProperty<StructProperty>("References");
+                    //    var platProps = new PropertyCollection();
+
+                    //    var platSpecificProps = new PropertyCollection();
+                    //    platSpecificProps.Add(new ArrayProperty<ObjectProperty>(streamExports.Select(x => new ObjectProperty(x.UIndex)), "Streams"));
+                    //    platSpecificProps.Add(new ObjectProperty(bankExport, "Bank"));
+                    //    platProps.Add(new StructProperty("WwiseRelationships", platSpecificProps, "Relationships"));
+                    //    platProps.Add(new IntProperty(1, "Platform"));
+                    //    var platRef = new StructProperty("WwisePlatformRelationships", platProps);
+                    //    references.Add(platRef);
+                    //    p.Add(references);
+                    //}
+
+                    //WwiseEvent we = new WwiseEvent();
+                    //we.WwiseEventID = eventInfo.Id;
+                    //we.Links = new List<WwiseEvent.WwiseEventLink>();
+
+                    //// LE3 puts this in binary instead of properties
+                    //if (package.Game == MEGame.LE3)
+                    //{
+                    //    we.Links.Add(new WwiseEvent.WwiseEventLink()
+                    //    { WwiseStreams = streamExports.Select(x => x.UIndex).ToList() });
+                    //}
+                    //else
+                    //{
+                    //    // LE2
+                    //    we.WwiseEventID = eventInfo.Id; // ID is stored here
+                    //}
+
+                    //}
                 }
                 return objbin;
             }
@@ -128,14 +209,36 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
 
         public static byte[] ConvertTexture2D(ExportEntry export, MEGame newGame, List<int> offsets = null, StorageTypes newStorageType = StorageTypes.empty)
         {
-            MemoryStream bin = export.GetReadOnlyBinaryStream();
+            MemoryStream bin = null;
+            if (newGame == MEGame.UDK)
+            {
+                var format = export.GetProperty<EnumProperty>("Format");
+                if (format is { Value.Name: "PF_BC7" })
+                {
+                    // UDK doesn't support BC7
+                    var unused = new MemoryStream(); // We don't want to modify source export
+                    var convertedImage = new Texture2D(export).ToImage(PixelFormat.DXT1);
+                    var t2d = new Texture2D(export) { TextureFormat = "PF_DXT1" };
+                    t2d.Replace(convertedImage, export.GetProperties(), isPackageStored: true, outDataOverride: unused);
+                    bin = new MemoryStream();
+                    t2d.SerializeNewData(bin); // This serializes binary data.
+                    bin.SeekBegin();
+                }
+            }
+
+            if (bin == null)
+            {
+                bin = export.GetReadOnlyBinaryStream();
+            }
+
+
             if (bin.Length == 0)
             {
                 return bin.ToArray();
             }
             using var os = MemoryManager.GetMemoryStream();
 
-            if (!export.Game.IsGame3())
+            if (!export.Game.IsGame3() || (export.FileRef.FilePath != null && Path.GetExtension(export.FileRef.FilePath) == ".upk"))
             {
                 bin.Skip(8);
                 bin.Skip(bin.ReadInt32()); // Skip the thumbnail
@@ -149,7 +252,7 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
             int mipCount = bin.ReadInt32();
             long mipCountPosition = os.Position;
             os.WriteInt32(mipCount);
-            List<Texture2DMipInfo> mips = Texture2D.GetTexture2DMipInfos(export, export.GetProperty<NameProperty>("TextureFileCacheName")?.Value);
+            List<Texture2DMipInfo> mips = null;
             int offsetIdx = 0;
             int trueMipCount = 0;
             for (int i = 0; i < mipCount; i++)
@@ -191,7 +294,10 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
                         if (export.Game != newGame)
                         {
                             storageType &= (StorageTypes)~StorageFlags.externalFile;
-                            texture = Texture2D.GetTextureData(mips[i], export.Game, export.Game != MEGame.UDK ? MEDirectories.GetDefaultGamePath(export.Game) : null,false); //copy in external textures
+
+                            // Only load mips if we need to.
+                            mips ??= Texture2D.GetTexture2DMipInfos(export, export.GetProperty<NameProperty>("TextureFileCacheName")?.Value);
+                            texture = Texture2D.GetTextureData(mips[i], export.Game, export.Game != MEGame.UDK ? MEDirectories.GetDefaultGamePath(export.Game) : null, false); //copy in external textures
                             if (storageType != StorageTypes.pccUnc)
                             {
                                 texture = TextureCompression.ConvertTextureCompression(texture, uncompressedSize, ref storageType, newGame, true); // Convert the storage type to work with the listed game
@@ -208,6 +314,15 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
 
                 int width = bin.ReadInt32();
                 int height = bin.ReadInt32();
+
+#if DEBUG
+                if (width < 0 || height < 0)
+                {
+                    // This is invalid data!
+                    Debugger.Break();
+                }
+#endif
+
                 if (newGame == MEGame.UDK && storageType == StorageTypes.empty)
                 {
                     continue;
@@ -220,7 +335,6 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
                 os.WriteFromBuffer(texture);
                 os.WriteInt32(width);
                 os.WriteInt32(height);
-
             }
 
             long postMipPosition = os.Position;
@@ -267,7 +381,7 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
                 int lightMapFlags = 0;
                 if (export.Game >= MEGame.ME3)
                 {
-                    lightMapFlags = bin.ReadInt32();
+                    lightMapFlags = bin.ReadInt32(); // 12/24/2023 Why is this reading??? This is throwing some exceptions reading EOF as it's meant for write not read - Mgamerz
                 }
                 if (newGame >= MEGame.ME3)
                 {
@@ -278,5 +392,4 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
             return os.ToArray();
         }
     }
-
 }

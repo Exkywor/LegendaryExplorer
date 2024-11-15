@@ -45,11 +45,21 @@ namespace LegendaryExplorerCore.Misc
             return section?.GetValue(key);
         }
 
+        /// <summary>
+        /// Returns the first section with the given case-insensitive name.
+        /// </summary>
+        /// <param name="sectionname"></param>
+        /// <returns></returns>
         public Section GetSection(string sectionname)
         {
             return Sections.FirstOrDefault(x => x.Header.Equals(sectionname, StringComparison.InvariantCultureIgnoreCase));
         }
 
+        /// <summary>
+        /// Gets the first section with the given case-sensitive name, or returns a newly added blank one if it does not exist.
+        /// </summary>
+        /// <param name="sectionname"></param>
+        /// <returns></returns>
         public Section GetOrAddSection(string sectionname)
         {
             var s = GetSection(sectionname);
@@ -105,12 +115,16 @@ namespace LegendaryExplorerCore.Misc
             return di;
         }
 
-
         /// <summary>
         /// Converts this DuplicatingIni object into an ini file as a string.
         /// </summary>
         /// <returns></returns>
         public override string ToString()
+        {
+            return ToString(true);
+        }
+
+        public string ToString(bool sectionsSpacedByNewline)
         {
             StringBuilder sb = new StringBuilder();
             bool isFirst = true;
@@ -124,7 +138,7 @@ namespace LegendaryExplorerCore.Misc
                 {
                     isFirst = false;
                 }
-                else
+                else if (sectionsSpacedByNewline)
                 {
                     sb.Append("\n");
                 }
@@ -238,6 +252,27 @@ namespace LegendaryExplorerCore.Misc
                 {
                     Entries.Clear();
                 }
+            }
+
+            /// <summary>
+            /// Tries to get the value of a key-value pair with the specified key. Only the first one encountered is returned.
+            /// </summary>
+            /// <param name="key"></param>
+            /// <param name="value"></param>
+            /// <param name="caseInsensitive"></param>
+            /// <returns></returns>
+            public bool TryGetValue(string key, out string value, bool caseInsensitive = false)
+            {
+                value = null;
+                var found = Entries.FirstOrDefault(x => x.Key.Equals(key,
+                    caseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+                if (found != null)
+                {
+                    value = found.Value;
+                    return true;
+                }
+
+                return false;
             }
         }
 

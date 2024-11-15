@@ -67,7 +67,7 @@ namespace LegendaryExplorerCore.Sound.ISACT
         // Todo: Eventually split to own classes and replace existing ISBank class
 
         /// <summary>
-        /// Input data must start with the integer that matches the data to follow size
+        /// Input data must start after the integer that matches the data to follow size
         /// </summary>
         /// <param name="binRawData"></param>
         /// <returns></returns>
@@ -266,6 +266,9 @@ namespace LegendaryExplorerCore.Sound.ISACT
                 case "sdtf":
                     chunks.Add(new SoundEventSoundTracksFour(chunkLen, inStream, parent));
                     break;
+                case "sndt":
+                    chunks.Add(new SoundEventSoundTracks(chunkLen, inStream, parent));
+                    break;
                 default:
                     chunks.Add(new BankChunk(chunkName, chunkLen, inStream, parent));
                     break;
@@ -355,7 +358,6 @@ namespace LegendaryExplorerCore.Sound.ISACT
         public ISACTSyncStart SyncStart { get; set; }
         public int Multiple { get; set; }
 
-
         public SyncBankChunk(Stream inStream)
         {
             ChunkName = "sync";
@@ -409,11 +411,16 @@ namespace LegendaryExplorerCore.Sound.ISACT
     public class ISACTListBankChunk : BankChunk
     {
         /// <summary>
+        /// The name of this chunk
+        /// </summary>
+        public const string FixedChunkTitle = "LIST";
+
+        /// <summary>
         /// Map of the children for easy access
         /// </summary>
         private Dictionary<string, BankChunk> BankSubChunkMap = new();
 
-        public string ObjectType; // What this LIST object is
+        public string ObjectType; // What this LIST object is, - samp, etc
 
         // Quick accessors
         /// <summary>
@@ -424,7 +431,34 @@ namespace LegendaryExplorerCore.Sound.ISACT
         /// <summary>
         /// Sample information such as length
         /// </summary>
-        public SampleInfoBankChunk SampleInfo => BankSubChunkMap["sinf"] as SampleInfoBankChunk;
+        public SampleInfoBankChunk SampleInfo
+        {
+            get
+            {
+                if (BankSubChunkMap.TryGetValue("sinf", out var sinf) && sinf is SampleInfoBankChunk sinfC)
+                {
+                    return sinfC;
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the sample offset into the external ISB. Returns null if not found
+        /// </summary>
+        public uint? SampleOffset
+        {
+            get
+            {
+                if (BankSubChunkMap.TryGetValue(SampleOffsetBankChunk.FixedChunkTitle, out var soff) && soff is SampleOffsetBankChunk soffC)
+                {
+                    return soffC.SampleOffset;
+                }
+
+                return null;
+            }
+        }
 
         /// <summary>
         /// The title of the object
@@ -464,11 +498,11 @@ namespace LegendaryExplorerCore.Sound.ISACT
             Parent = parent;
             ChunkDataStartOffset = inStream.Position;
 
-            ChunkName = "LIST";
+            ChunkName = FixedChunkTitle;
             var startPos = inStream.Position;
             var endPos = chunkLen + startPos - 4; // The length of LIST for some reason is +4.
 
-            ObjectType = inStream.ReadStringASCII(4);
+            ObjectType = inStream.ReadStringASCII(4); // LIST
 
             while (inStream.Position < endPos)
             {
@@ -506,12 +540,11 @@ namespace LegendaryExplorerCore.Sound.ISACT
 
             if ((len & 1L) != 0L)
                 outStream.WriteByte(0); // Even boundary
-
         }
 
         public override string ToChunkDisplay()
         {
-            return $"{ChunkName} Object ({SubChunks.Count} subitems)";
+            return $"{ChunkName} {ObjectType} Object ({SubChunks.Count} subitems)";
         }
 
         /// <summary>
@@ -538,7 +571,7 @@ namespace LegendaryExplorerCore.Sound.ISACT
             // writer.Endian = FileEndianness;
             writer.WriteStringLatin1("RIFF");
             writer.Write(0); //Placeholder for length
-            writer.WriteStringLatin1("isbf"); 
+            writer.WriteStringLatin1("isbf");
             writer.WriteStringLatin1("LIST");
             var listsizepos = writer.BaseStream.Position;
             writer.Write(0); //list size placeholder
@@ -595,7 +628,6 @@ public class BankChunk
     /// </summary>
     public List<BankChunk> SubChunks = new List<BankChunk>(0);
 
-
     /// <summary>
     /// The offset in which this bank's data starts - + 8 after header & size. For name only this should not be used.
     /// </summary>
@@ -620,7 +652,6 @@ public class BankChunk
             inStream.ReadByte();
         }
     }
-
 
     public virtual void Write(Stream outStream)
     {
@@ -805,7 +836,6 @@ public class SampleInfoBankChunk : BankChunk
     /// </summary>
     public static readonly string FixedChunkTitle = "sinf";
 
-
     public int BufferOffset;
     public int TimeLength;
     public int SamplesPerSecond;
@@ -827,7 +857,6 @@ public class SampleInfoBankChunk : BankChunk
         BitsPerSample = inStream.ReadUInt16();
         Padding = inStream.ReadUInt16(); // Align 2 since struct size is 20 (align 4)
     }
-
 
     public override void Write(Stream outStream)
     {
@@ -853,6 +882,8 @@ public class SampleInfoBankChunk : BankChunk
 /// </summary>
 public class SampleOffsetBankChunk : BankChunk
 {
+    public const string FixedChunkTitle = @"soff";
+
     public uint SampleOffset { get; set; }
 
     public SampleOffsetBankChunk(Stream inStream, BankChunk parent) : this()
@@ -978,7 +1009,6 @@ public class IntBankChunk : BankChunk
                 HumanName = "Sample 3D Info (Buffer Index)";
                 break;
 
-
         }
     }
 
@@ -1021,7 +1051,6 @@ public class FloatBankChunk : BankChunk
             case "gbst":
                 HumanName = "Gain Boost";
                 break;
-
 
         }
     }
@@ -1248,13 +1277,13 @@ public class SoundEventInfoBankChunk : BankChunk
     }
 }
 
-class IndexPage
+public class IndexPage
 {
     public uint EntryCount { get; set; }
-    public IndexEntry[] IndexEntry;
+    public IndexEntry[] IndexEntries;
 }
 
-class IndexEntry
+public class IndexEntry
 {
     public string Title { get; set; }
     /// <summary>
@@ -1263,7 +1292,6 @@ class IndexEntry
     public byte[] padding;
     public string ObjectType { get; set; }
     public uint ObjectIndex { get; set; }
-
 }
 
 public class ContentIndexBankChunk : BankChunk
@@ -1272,7 +1300,7 @@ public class ContentIndexBankChunk : BankChunk
     /// The defined name of this chunk.
     /// </summary>
     public static readonly string FixedChunkTitle = "ctdx";
-    private List<IndexPage> IndexPages;
+    public List<IndexPage> IndexPages;
     public ContentIndexBankChunk(int dataSize, Stream inStream, BankChunk parent)
     {
         Parent = parent;
@@ -1285,7 +1313,7 @@ public class ContentIndexBankChunk : BankChunk
             IndexPages ??= new List<IndexPage>();
             IndexPage Page = new IndexPage();
             var pageEntryCount = inStream.ReadInt32();
-            Page.IndexEntry = new IndexEntry[pageEntryCount];
+            Page.IndexEntries = new IndexEntry[pageEntryCount];
             for (int i = 0; i < pageEntryCount; i++)
             {
                 var entry = new IndexEntry();
@@ -1294,7 +1322,7 @@ public class ContentIndexBankChunk : BankChunk
                 entry.padding = inStream.ReadToBuffer(endPos - inStream.Position); // For reserialization
                 entry.ObjectType = inStream.ReadStringASCII(4); // This is an ascii string.
                 entry.ObjectIndex = inStream.ReadUInt32();
-                Page.IndexEntry[i] = entry;
+                Page.IndexEntries[i] = entry;
             }
             IndexPages.Add(Page);
 
@@ -1315,8 +1343,8 @@ public class ContentIndexBankChunk : BankChunk
 
         foreach (var p in IndexPages)
         {
-            outStream.WriteInt32(p.IndexEntry.Length);
-            foreach (var entry in p.IndexEntry)
+            outStream.WriteInt32(p.IndexEntries.Length);
+            foreach (var entry in p.IndexEntries)
             {
                 var endPos = outStream.Position + 0x100;
                 outStream.WriteStringUnicodeNull(entry.Title);
@@ -1351,8 +1379,8 @@ public class ContentIndexBankChunk : BankChunk
         var str = $"{ChunkName}: Content Index ({IndexPages?.Count ?? 0} index pages)";
         foreach (var ip in IndexPages)
         {
-            str += $"\n\tIndex Page ({ip.IndexEntry.Length} indexes)";
-            foreach (var ie in ip.IndexEntry)
+            str += $"\n\tIndex Page ({ip.IndexEntries.Length} indexes)";
+            foreach (var ie in ip.IndexEntries)
             {
                 str += $"\n\t\tIndex Entry {ie.Title}, type {ie.ObjectType}, index {ie.ObjectIndex}";
             }
@@ -1444,7 +1472,6 @@ public class SoundEventSoundTracksFour : BankChunk
 
             st.Flags = inStream.ReadUInt32();
             SoundTracks.Add(st);
-
         }
     }
 
@@ -1500,7 +1527,7 @@ public class SoundEventSoundTracksFour : BankChunk
 
     public override string ToChunkDisplay()
     {
-        var str = $"{ChunkName}: SoundTracks Info ({SoundTracks?.Count ?? 0} tracks)";
+        var str = $"{ChunkName}: SoundTracks Four Info ({SoundTracks?.Count ?? 0} tracks)";
         int i = 0;
         foreach (var st in SoundTracks)
         {
@@ -1508,6 +1535,140 @@ public class SoundEventSoundTracksFour : BankChunk
             str += $"\nTrack {i}:";
             str += $"\n\tBuffer Index: {st.BufferIndex}\tPath Index: {st.PathIndex}";
             str += $"\n\tOrder: {st.Order}\tChance: {st.Chance}";
+            str += "\n...";
+        }
+
+        return str;
+    }
+}
+
+public class SoundEventSoundTracks : BankChunk
+{
+    public List<ISACTSoundTrack> SoundTracks;
+    /// <summary>
+    /// The defined name of this chunk.
+    /// </summary>
+    public static readonly string FixedChunkTitle = "sndt";
+    public SoundEventSoundTracks(int dataSize, Stream inStream, BankChunk parent)
+    {
+        Parent = parent;
+        ChunkName = FixedChunkTitle;
+        ChunkDataStartOffset = inStream.Position;
+        SoundTracks = new List<ISACTSoundTrack>();
+        int numEntriesInArray = 4; // BioWare seems to have capped this to 4 slots instead of ISACT's max of 32
+        var numTracksToRead = dataSize / 728; // Struct size of a track is 768 in this chunk
+        for (int i = 0; i < numTracksToRead; i++)
+        {
+            var startPos = inStream.Position;
+            ISACTSoundTrack st = new ISACTSoundTrack();
+            st.BufferIndex = inStream.ReadUInt32();
+            st.PathIndex = inStream.ReadUInt32();
+            st.Order = inStream.ReadUInt32();
+            st.Chance = inStream.ReadUInt32();
+            st.Position = new Vector3(inStream.ReadFloat(), inStream.ReadFloat(), inStream.ReadFloat());
+            st.Orientation = new ISACTOrientation() { Azimuth = inStream.ReadInt32(), Height = inStream.ReadInt32(), Roll = inStream.ReadInt32() };
+            st.Velocity = new Vector3(inStream.ReadFloat(), inStream.ReadFloat(), inStream.ReadFloat());
+            st.MinGain = inStream.ReadFloat();
+            st.MaxGain = inStream.ReadFloat();
+            st.MinPitch = inStream.ReadFloat();
+            st.MaxPitch = inStream.ReadFloat();
+            st.MinDirect = inStream.ReadFloat();
+            st.MaxDirect = inStream.ReadFloat();
+            st.MinDirectHF = inStream.ReadFloat();
+            st.MaxDirectHF = inStream.ReadFloat();
+
+            st.SendEnable = new int[numEntriesInArray];
+            st.MinSend = new float[numEntriesInArray];
+            st.MaxSend = new float[numEntriesInArray];
+            st.MinSendHF = new float[numEntriesInArray];
+            st.MaxSendHF = new float[numEntriesInArray];
+
+            for (int j = 0; j < numEntriesInArray; j++) { st.SendEnable[j] = inStream.ReadInt32(); }
+            inStream.Skip(28 * sizeof(int)); // long in cpp - Remaining bytes are garbage
+            for (int j = 0; j < numEntriesInArray; j++) { st.MinSend[j] = inStream.ReadFloat(); }
+            inStream.Skip(28 * sizeof(float)); // Remaining bytes are garbage
+            for (int j = 0; j < numEntriesInArray; j++) { st.MaxSend[j] = inStream.ReadFloat(); }
+            inStream.Skip(28 * sizeof(float)); // Remaining bytes are garbage
+            for (int j = 0; j < numEntriesInArray; j++) { st.MinSendHF[j] = inStream.ReadFloat(); }
+            inStream.Skip(28 * sizeof(float)); // Remaining bytes are garbage
+            for (int j = 0; j < numEntriesInArray; j++) { st.MaxSendHF[j] = inStream.ReadFloat(); }
+            inStream.Skip(28 * sizeof(float)); // Remaining bytes are garbage
+
+            st.Flags = inStream.ReadUInt32();
+
+            var endPos = inStream.Position;
+            var diff = endPos - startPos;
+            if (diff != 728)
+            {
+
+            }
+            SoundTracks.Add(st);
+        }
+    }
+
+    public SoundEventSoundTracks()
+    {
+    }
+
+    public override void Write(Stream outStream)
+    {
+        outStream.WriteStringASCII(ChunkName);
+        var sizePos = outStream.Position;
+        outStream.WriteInt32(0); // placeholder
+
+        foreach (var st in SoundTracks)
+        {
+            outStream.WriteUInt32(st.BufferIndex);
+            outStream.WriteUInt32(st.PathIndex);
+            outStream.WriteUInt32(st.Order);
+            outStream.WriteUInt32(st.Chance);
+            outStream.WriteFloat(st.Position.X); // Vector
+            outStream.WriteFloat(st.Position.Y);
+            outStream.WriteFloat(st.Position.Z);
+            outStream.WriteInt32(st.Orientation.Azimuth); // ISACTOrientation
+            outStream.WriteInt32(st.Orientation.Height);
+            outStream.WriteInt32(st.Orientation.Roll);
+            outStream.WriteFloat(st.Velocity.X); // Vector
+            outStream.WriteFloat(st.Velocity.Y);
+            outStream.WriteFloat(st.Velocity.Z);
+            outStream.WriteFloat(st.MinGain);
+            outStream.WriteFloat(st.MaxGain);
+            outStream.WriteFloat(st.MinPitch);
+            outStream.WriteFloat(st.MaxPitch);
+            outStream.WriteFloat(st.MinDirect);
+            outStream.WriteFloat(st.MaxDirect);
+            outStream.WriteFloat(st.MinDirectHF);
+            outStream.WriteFloat(st.MaxDirectHF);
+
+            for (int j = 0; j < st.SendEnable.Length; j++) { outStream.WriteInt32(st.SendEnable[j]); }
+            outStream.WriteZeros(28 * sizeof(float));
+            for (int j = 0; j < st.MinSend.Length; j++) { outStream.WriteFloat(st.MinSend[j]); }
+            outStream.WriteZeros(28 * sizeof(float));
+            for (int j = 0; j < st.MaxSend.Length; j++) { outStream.WriteFloat(st.MaxSend[j]); }
+            outStream.WriteZeros(28 * sizeof(float));
+            for (int j = 0; j < st.MinSendHF.Length; j++) { outStream.WriteFloat(st.MinSendHF[j]); }
+            outStream.WriteZeros(28 * sizeof(float));
+            for (int j = 0; j < st.MaxSendHF.Length; j++) { outStream.WriteFloat(st.MaxSendHF[j]); }
+            outStream.WriteZeros(28 * sizeof(float));
+            outStream.WriteUInt32(st.Flags);
+        }
+
+        // Write out the length.
+        var finishPos = outStream.Position;
+        outStream.Position = sizePos;
+        outStream.WriteInt32((int)(finishPos - sizePos - 4)); // -4 to remove the size itself.
+        outStream.Position = finishPos;
+    }
+
+    public override string ToChunkDisplay()
+    {
+        var str = $"{ChunkName}: SoundTracks Info ({SoundTracks?.Count ?? 0} tracks)";
+        int i = 0;
+        foreach (var st in SoundTracks)
+        {
+            i++;
+            str += $"\nTrack {i}:";
+            str += $"\n\tBuffer Index: {st.BufferIndex}";
             str += "\n...";
         }
 

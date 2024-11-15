@@ -2,28 +2,31 @@
 using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.GameFilesystem;
+using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Matinee;
-using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
+using LegendaryExplorerCore.SharpDX;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
-using LegendaryExplorerCore.Unreal.ObjectInfo;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Windows;
+using static LegendaryExplorer.Misc.ExperimentsTools.PackageAutomations;
+using static LegendaryExplorer.Misc.ExperimentsTools.SequenceAutomations;
+using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
 
 namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 {
     /// <summary>
     /// Class for 'Others' package experiments who aren't main devs
     /// </summary>
-    class PackageEditorExperimentsO
+    static class PackageEditorExperimentsO
     {
         public static void DumpPackageToT3D(IMEPackage package)
         {
@@ -47,7 +50,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                                 break;
                         }
-
                     }
                 }
             }
@@ -108,7 +110,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             Writer.Close();
         }
 
-
         //UDK version, need to figure out how to apply rotation properly
         public static void ExportT3D_UDK(StaticMesh STM, string Filename, Matrix4x4 m, Vector3 IncScale3D)
         {
@@ -159,8 +160,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             }
             Writer.Close();
         }
-
-
 
         //an attempt to recreate the assembling process in MaxScript similar to unreal t3d
         //Rotation is buggy, doesn't properly for now
@@ -243,7 +242,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         break;
 
                     case "Camera":
-                        var camActor = promptForActor("Name of camera actor:", "Not a valid camera actor name.");
+                        var camActor = PromptForStr("Name of camera actor:", "Not a valid camera actor name.");
                         if (!string.IsNullOrEmpty(camActor))
                         {
                             MatineeHelper.AddPreset(preset, interp, game, camActor);
@@ -251,7 +250,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         break;
 
                     case "Actor":
-                        var actActor = promptForActor("Name of actor:", "Not a valid actor name.");
+                        var actActor = PromptForStr("Name of actor:", "Not a valid actor name.");
                         if (!string.IsNullOrEmpty(actActor))
                         {
                             MatineeHelper.AddPreset(preset, interp, game, actActor);
@@ -287,7 +286,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 {
                     case "Gesture":
                     case "Gesture2":
-                        var actor = promptForActor("Name of gesture actor:", "Not a valid gesture actor name.");
+                        var actor = PromptForStr("Name of gesture actor:", "Not a valid gesture actor name.");
                         if (!string.IsNullOrEmpty(actor))
                         {
                             MatineeHelper.AddPreset(preset, interp, game, actor);
@@ -296,20 +295,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 }
             }
             return;
-        }
-
-        private static string promptForActor(string msg, string err)
-        {
-            if (PromptDialog.Prompt(null, msg) is string actor)
-            {
-                if (string.IsNullOrEmpty(actor))
-                {
-                    MessageBox.Show(err, "Warning", MessageBoxButton.OK);
-                    return null;
-                }
-                return actor;
-            }
-            return null;
         }
 
         /// <summary>
@@ -372,7 +357,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
                 foreach (string s in paramsAndValsString.Split(";"))
                 { // Check that all strings are <parameter>:<values>
-                    if (!s.Contains(":"))
+                    if (!s.Contains(':'))
                     {
                         ShowError("Wrong formatting for parameter and values");
                         return;
@@ -431,30 +416,34 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                                 // Filter the parameter from the properties list
                                 List<StructProperty> filtered = oldList.Where(property =>
                                 {
-                                    NameProperty nameProperty = (NameProperty)property.Properties.Where(prop => prop.Name.Equals("ParameterName")).First();
+                                    NameProperty nameProperty = (NameProperty)property.Properties.First(prop => prop.Name.Equals("ParameterName"));
                                     string name = nameProperty.Value;
-                                    if (string.IsNullOrEmpty(name)) { return false; };
+                                    if (string.IsNullOrEmpty(name)) { return false; }
                                     return !name.Equals(pAv.Key, StringComparison.OrdinalIgnoreCase);
                                 }).ToList();
 
-                                PropertyCollection props = new();
+                                PropertyCollection props = [];
 
                                 // Generate and add the ExpressionGUID
-                                PropertyCollection expressionGUIDprops = new();
-                                expressionGUIDprops.Add(new IntProperty(0, "A"));
-                                expressionGUIDprops.Add(new IntProperty(0, "B"));
-                                expressionGUIDprops.Add(new IntProperty(0, "C"));
-                                expressionGUIDprops.Add(new IntProperty(0, "D"));
+                                PropertyCollection expressionGUIDprops =
+                                [
+                                    new IntProperty(0, "A"),
+                                    new IntProperty(0, "B"),
+                                    new IntProperty(0, "C"),
+                                    new IntProperty(0, "D"),
+                                ];
 
                                 props.Add(new StructProperty("Guid", expressionGUIDprops, "ExpressionGUID", true));
 
                                 if (parameterType.Equals("Vector"))
                                 {
-                                    PropertyCollection color = new();
-                                    color.Add(new FloatProperty(pAv.Value[0], "R"));
-                                    color.Add(new FloatProperty(pAv.Value[1], "G"));
-                                    color.Add(new FloatProperty(pAv.Value[2], "B"));
-                                    color.Add(new FloatProperty(pAv.Value[3], "A"));
+                                    PropertyCollection color =
+                                    [
+                                        new FloatProperty(pAv.Value[0], "R"),
+                                        new FloatProperty(pAv.Value[1], "G"),
+                                        new FloatProperty(pAv.Value[2], "B"),
+                                        new FloatProperty(pAv.Value[3], "A"),
+                                    ];
 
                                     props.Add(new StructProperty("LinearColor", color, "ParameterValue", true));
                                     props.Add(new NameProperty(pAv.Key, "ParameterName"));
@@ -539,7 +528,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 if (string.IsNullOrEmpty(stateString)) { return; }
                 bool state = stateString.Equals("True");
 
-
                 foreach (string file in Directory.EnumerateFiles(dlcPath, "*", SearchOption.AllDirectories).Where(f => Path.GetExtension(f).Equals(".pcc")))
                 {
                     using IMEPackage pcc = MEPackageHandler.OpenMEPackage(file);
@@ -573,7 +561,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             string baldMorphName = game.IsGame3() ? "BioChar_CitHub.Faces.HMM_Deco_1" :
                 game.IsGame2() ? "BIOG_Hench_FAC.HMM.hench_wilson" : "BIOA_UNC_FAC.HMM.Plot.FRE32_BioticLeader";
 
-            MorphMaleHair(pew,"bald", baldPccPath, baldMorphName);
+            MorphMaleHair(pew, "bald", baldPccPath, baldMorphName);
         }
 
         /// <summary>
@@ -592,7 +580,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             string rollinMorphName = game.IsGame3() ? "BioChar_CitHub.Faces.cit_news_announcer" :
                 game.IsGame2() ? "BIOA_STA_FAC.HMM.Plot.rp107_keeler" : "BIOA_STA_FAC.HMM.Plot.rp107_keeler";
 
-            MorphMaleHair(pew,"rollins", rollinPccPath, rollinMorphName);
+            MorphMaleHair(pew, "rollins", rollinPccPath, rollinMorphName);
         }
 
         /// <summary>
@@ -725,7 +713,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     targetMorphFace.LODs[l][i].Y = modelMorphFace.LODs[l][i].Y;
                     targetMorphFace.LODs[l][i].Z = modelMorphFace.LODs[l][i].Z;
                 }
-
             }
 
             targetMorph.WriteBinary(targetMorphFace);
@@ -873,7 +860,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             {
                 MessageBox.Show($"Removed references to the mesh in the following objects: {string.Join(", ", removedReferences.ToArray())}",
                     "Success", MessageBoxButton.OK);
-
             }
             else
             {
@@ -985,7 +971,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 {
                     ShowError($"ID {id} is invalid");
                     return;
-
                 }
                 ExportEntry targetExport;
                 if (!pew.Pcc.TryGetUExport(targetID, out targetExport))
@@ -999,7 +984,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     {
                         ShowError($"Target export {id}'s class is not MaterialInstanceConstant or BioMaterialInstanceConstant");
                         return;
-
                     }
                 }
                 else
@@ -1008,12 +992,10 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     {
                         ShowError($"Target export {id}'s class is not BioMaterialOverride");
                         return;
-
                     }
                 }
                 targetExports.Add(targetExport);
             }
-
 
             ArrayProperty<StructProperty> TextureValues = new($"{(isBMO ? "TextureParameterValues" : "m_aTextureOverrides")}");
             ArrayProperty<StructProperty> VectorValues = new($"{(isBMO ? "VectorParameterValues" : "m_aColorOverrides")}");
@@ -1105,19 +1087,29 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 return;
             }
 
-            int newConvResRefID = promptForInt("New ConvResRefID:", "Not a valid ref id. It must be positive integer", -1, "New ConvResRefID");
+            int newConvResRefID = PromptForInt("New ConvResRefID:", "Not a valid ref id. It must be positive integer", -1, "New ConvResRefID");
             if (newConvResRefID == -1) { return; }
 
-            int convNodeIDBase = promptForInt("New ConvNodeID base range:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
+            int convNodeIDBase = PromptForInt("New ConvNodeID base range:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
             if (convNodeIDBase == -1) { return; }
 
-            bool setNewWwiseBankID = false;
+            bool updateAllAudioIDs = false;
+            bool updateOnlyWwiseBankID = false;
             if (!pew.Pcc.Game.IsGame1())
             {
-                setNewWwiseBankID = MessageBoxResult.Yes == MessageBox.Show(
-                "Change the WwiseBank ID?\nIn general it's safe and better to do so, but there may be edge cases" +
-                "where doing so may overwrite parts of the WwiseBank binary that are not the ID.",
-                "Set new bank ID", MessageBoxButton.YesNo);
+                updateAllAudioIDs = PromptForBool("Update all audio IDs?\n" +
+                    "This will give the give the conversation fully unique IDs," +
+                    "hashing the names for the WwiseBank and Stream IDs, and using random generation for the Event IDs," +
+                    "then doing a blind replacement in the binary of the bank. There is a very small chance it may replace something" +
+                    "it shouldn't, so do this at your own risk.", "Update all audio IDs");
+
+                if (!updateAllAudioIDs)
+                {
+                    updateOnlyWwiseBankID = PromptForBool("Update the ID of the WwiseBank?\n" +
+                        "In general it's safe and better to do so, but there may be edge cases" +
+                        "where doing so may overwrite parts of the WwiseBank binary that are not its ID.",
+                        "Update WwiseBank ID");
+                }
             }
 
             bool bringTrash = MessageBoxResult.No == MessageBox.Show(
@@ -1132,13 +1124,27 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             ConversationExtended conversation = new(bioConversation);
             conversation.LoadConversation(TLKManagerWPF.GlobalFindStrRefbyID, true);
 
-            // Rename the conversation, its package, the WwiseBank, the FXAs, VOs and WwiseEvents
-            RenameConversation(pew.Pcc, bioConversation, conversation, newName, setNewWwiseBankID);
+            // Check that the conversation has a normal package structure. Otherwise it can lead to unexpected edge cases when trying to gather
+            // the different sound elements.
+            string structureCheckResult = CheckConversationStructure(pew.Pcc, bioConversation, conversation);
+            if (!string.IsNullOrEmpty(structureCheckResult))
+            {
+                ShowError(structureCheckResult);
+                return;
+            }
+
+            // Rename the conversation, its package, the FXAs, and the related audio elements
+            string conversationResult = RenameConversation(pew.Pcc, bioConversation, conversation, newName, updateAllAudioIDs, updateOnlyWwiseBankID);
+            if (!string.IsNullOrEmpty(conversationResult))
+            {
+                ShowError(conversationResult);
+                return;
+            }
 
             // Change the conversations ResRefID an the ConvNodes IDs
             ChangeConvoIDandConvNodeIDs(bioConversation, (ExportEntry)conversation.Sequence, newConvResRefID, convNodeIDBase);
 
-            // Clean the sequence of unneeded objects and keep only Conversation INterpGroups and VOElements InterpTracks
+            // Clean the sequence of unneeded objects and keep only Conversation InterpGroups and VOElements InterpTracks
             // We'll trash unnecessary InterpTracks, InterpGroups and no longer used objects. It's necessary so users of the experiment
             // can clone the package of a conversation instead of the BioConversation directly.
             List<string> disconnectedConvNodes = CleanSequence(pew.Pcc, (ExportEntry)conversation.Sequence, true, bringTrash, true);
@@ -1201,10 +1207,10 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         /// This experiment DOES NOT update the varLinks.
         /// </summary>
         /// <param name="pcc">Pcc to operate on.</param>
-        /// <param name="sequence">If called, the sequence to clean.</param>
-        /// <param name="trashItems">If called, whether to trash unused groups and tracks.</param>
-        /// <param name="bringTrash">If called, whether to keep all objects that point to conversation classes, or only essential ones.</param>
-        /// <param name="cleanGroups">If called, whether to clean InterpGroups and InterpTracks.</param>
+        /// <param name="sequence">Sequence to clean.</param>
+        /// <param name="trashItems">Whether to trash unused groups and tracks.</param>
+        /// <param name="bringTrash">Whether to keep all objects that point to conversation classes, or only essential ones.</param>
+        /// <param name="cleanGroups">Whether to clean InterpGroups and InterpTracks.</param>
         /// <returns>List of ConvNodes that may no longer connect to Interps.</returns>
         public static List<string> CleanSequence(IMEPackage pcc, ExportEntry sequence, bool trashItems, bool bringTrash, bool cleanGroups)
         {
@@ -1252,7 +1258,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                     // Check if the object links to a valid class.
                     // We do this regardless of bringTrash in order to know whether a valid convNode may be
                     // an orphan.
-                    List<List<SeqTools.OutboundLink>> outboundLinks = SeqTools.GetOutboundLinksOfNode(seqObj);
+                    List<List<OutputLink>> outboundLinks = KismetHelper.GetOutputLinksOfNode(seqObj);
                     // Link is valid if it has outbound links, and at least 1 one is linked to 1 valid class
                     bool linksToValid = (outboundLinks.Count > 0) && outboundLinks
                         .Any(outboundLink => outboundLink
@@ -1308,11 +1314,11 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 foreach (ExportEntry seqObj in filteredObjs)
                 {
                     // Keep only outbound links to valid classes
-                    List<List<SeqTools.OutboundLink>> outboundLinks = SeqTools.GetOutboundLinksOfNode(seqObj);
+                    List<List<OutputLink>> outboundLinks = KismetHelper.GetOutputLinksOfNode(seqObj);
                     if (outboundLinks.Count > 0)
                     {
-                        List<List<SeqTools.OutboundLink>> filteredOutboundLinks = new();
-                        foreach (List<SeqTools.OutboundLink> outboundLink in outboundLinks)
+                        List<List<OutputLink>> filteredOutboundLinks = new();
+                        foreach (List<OutputLink> outboundLink in outboundLinks)
                         {
                             // Add to filteredOutboundLinks the elements of this outbound link that connect to a valid class
                             filteredOutboundLinks.Add(outboundLink
@@ -1320,7 +1326,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                                     link == null || validClasses.Contains(link.LinkedOp.ClassName, StringComparer.OrdinalIgnoreCase)
                                 ).ToList());
                         }
-                        SeqTools.WriteOutboundLinksToNode(seqObj, filteredOutboundLinks);
+                        KismetHelper.WriteOutputLinksToNode(seqObj, filteredOutboundLinks);
                     }
                 }
             }
@@ -1361,7 +1367,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             MessageBox.Show("Sequence cleaned of non-Conversation InterpGroups and  non-VOElements InterpTracks.", "Success", MessageBoxButton.OK);
             return;
-
         }
 
         /// <summary>
@@ -1369,21 +1374,20 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         /// This experiment DOES NOT update the varLinks.
         /// </summary>
         /// <param name="pcc">Pcc to operate on.</param>
-        /// <param name="sequence">If called, the sequence to clean.</param>
-        /// <param name="trashItems">If not called, whether to trash unused groups and tracks.</param>
+        /// <param name="sequence">Sequence to clean.</param>
         public static List<IEntry> CleanSequenceInterpDatas(IMEPackage pcc, ExportEntry sequence)
         {
             List<IEntry> itemsToTrash = new();
 
-            List<IEntry> interpDatas = new(SeqTools.GetAllSequenceElements(sequence)
+            List<IEntry> interpDatas = new(KismetHelper.GetAllSequenceElements(sequence)
                 .Where(el => el.ClassName == "InterpData"));
 
             // Keep only InterpGroups named "Conversation" and only the BioEvtSysTrackVOElements InterpTracks
-            foreach (ExportEntry interpData in interpDatas)
+            foreach (ExportEntry interpData in interpDatas.Cast<ExportEntry>())
             {
                 ArrayProperty<ObjectProperty> interpGroupsRefs = interpData.GetProperty<ArrayProperty<ObjectProperty>>("InterpGroups");
                 if (interpGroupsRefs == null) { continue; }
-                List<ObjectProperty> filteredGroupsRefs = new();
+                List<ObjectProperty> filteredGroupsRefs = [];
 
                 // Save "Conversation" InterpGroup, trash the rest
                 foreach (ObjectProperty groupRef in interpGroupsRefs)
@@ -1441,6 +1445,10 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             return itemsToTrash;
         }
 
+        /// <summary>
+        /// Wrapper for ChangeConvoIDandConvNodeIDs, so it can used as a full experiment on its own.
+        /// </summary>
+        /// <param name="pew">Current PE instance.</param>
         public static void ChangeConvoIDandConvNodeIDsExperiment(PackageEditorWindow pew)
         {
             if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
@@ -1457,10 +1465,10 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 return;
             }
 
-            int newConvResRefID = promptForInt("New ConvResRefID:", "Not a valid ref id. It must be positive integer", -1, "New ConvResRefID");
+            int newConvResRefID = PromptForInt("New ConvResRefID:", "Not a valid ref id. It must be positive integer", -1, "New ConvResRefID");
             if (newConvResRefID == -1) { return; }
 
-            int convNodeIDBase = promptForInt("New ConvNodeID base range:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
+            int convNodeIDBase = PromptForInt("New ConvNodeID base range:", "Not a valid base. It must be positive integer", -1, "New NodeID range");
             if (convNodeIDBase == -1) { return; }
 
             ExportEntry bioConversation = (ExportEntry)pew.SelectedItem.Entry;
@@ -1480,10 +1488,10 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         /// <summary>
         /// Changes the conversation's ResRefID and its ConvNodes' ID.
         /// </summary>
-        /// <param name="bioConversation">If called, the conversation to edit.</param>
-        /// <param name="sequence">If called, the conversation's sequence.</param>
-        /// <param name="newConvResRefID">If called, the newConvResRefID to set.</param>
-        /// <param name="convNodeIDBase">If called, the convNodeIDBase to use.</param>
+        /// <param name="bioConversation">Conversation to edit.</param>
+        /// <param name="sequence">Conversation's sequence.</param>
+        /// <param name="newConvResRefID">newConvResRefID to set.</param>
+        /// <param name="convNodeIDBase">convNodeIDBase to use.</param>
         public static void ChangeConvoIDandConvNodeIDs(ExportEntry bioConversation, ExportEntry sequence, int newConvResRefID, int convNodeIDBase)
         {
             PropertyCollection conversationProps = bioConversation.GetProperties();
@@ -1494,11 +1502,11 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             // Update the convNodes nodeId and convResRefId
             int count = 0;
-            List<IEntry> convNodes = new(SeqTools.GetAllSequenceElements(sequence)
+            List<IEntry> convNodes = new(KismetHelper.GetAllSequenceElements(sequence)
                 .Where(el => el.ClassName == "BioSeqEvt_ConvNode"));
 
             Dictionary<int, int> remappedIDs = new(); // Save references of old id for update of entry and reply lists
-            foreach (ExportEntry convNode in convNodes)
+            foreach (ExportEntry convNode in convNodes.Cast<ExportEntry>())
             {
                 PropertyCollection nodeProps = convNode.GetProperties();
 
@@ -1518,39 +1526,45 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             // Update the nExportIDs of the Entry list
             ArrayProperty<StructProperty> entryNodes = conversationProps.GetProp<ArrayProperty<StructProperty>>("m_EntryList");
-            foreach (StructProperty entryNode in entryNodes)
+            if (entryNodes != null)
             {
-                IntProperty oldNodeID = entryNode.GetProp<IntProperty>("nExportID");
-                if (oldNodeID == null) { continue; }
-
-                if (!remappedIDs.ContainsKey(oldNodeID.Value))
+                foreach (StructProperty entryNode in entryNodes)
                 {
-                    remappedIDs.Add(oldNodeID.Value, convNodeIDBase + count);
-                    count++;
-                }
+                    IntProperty oldNodeID = entryNode.GetProp<IntProperty>("nExportID");
+                    if (oldNodeID == null) { continue; }
 
-                PropertyCollection properties = entryNode.Properties;
-                IntProperty nExportID = new(remappedIDs[oldNodeID.Value], "nExportID");
-                properties.AddOrReplaceProp(nExportID);
-                entryNode.Properties = properties;
+                    if (!remappedIDs.ContainsKey(oldNodeID.Value))
+                    {
+                        remappedIDs.Add(oldNodeID.Value, convNodeIDBase + count);
+                        count++;
+                    }
+
+                    PropertyCollection properties = entryNode.Properties;
+                    IntProperty nExportID = new(remappedIDs[oldNodeID.Value], "nExportID");
+                    properties.AddOrReplaceProp(nExportID);
+                    entryNode.Properties = properties;
+                }
             }
 
             // Update the nExportIDs of the Reply list
             ArrayProperty<StructProperty> replyNodes = conversationProps.GetProp<ArrayProperty<StructProperty>>("m_ReplyList");
-            foreach (StructProperty replyNode in replyNodes)
+            if (replyNodes != null)
             {
-                IntProperty oldNodeID = replyNode.GetProp<IntProperty>("nExportID");
-                if (oldNodeID == null) { continue; }
-                if (!remappedIDs.ContainsKey(oldNodeID.Value))
+                foreach (StructProperty replyNode in replyNodes)
                 {
-                    remappedIDs.Add(oldNodeID.Value, convNodeIDBase + count);
-                    count++;
-                }
+                    IntProperty oldNodeID = replyNode.GetProp<IntProperty>("nExportID");
+                    if (oldNodeID == null) { continue; }
+                    if (!remappedIDs.ContainsKey(oldNodeID.Value))
+                    {
+                        remappedIDs.Add(oldNodeID.Value, convNodeIDBase + count);
+                        count++;
+                    }
 
-                PropertyCollection properties = replyNode.Properties;
-                IntProperty nExportID = new(remappedIDs[oldNodeID.Value], "nExportID");
-                properties.AddOrReplaceProp(nExportID);
-                replyNode.Properties = properties;
+                    PropertyCollection properties = replyNode.Properties;
+                    IntProperty nExportID = new(remappedIDs[oldNodeID.Value], "nExportID");
+                    properties.AddOrReplaceProp(nExportID);
+                    replyNode.Properties = properties;
+                }
             }
 
             bioConversation.WriteProperties(conversationProps);
@@ -1576,21 +1590,31 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 return;
             }
 
-            string newName = PromptDialog.Prompt(null, "New WwiseBank name:", "New name");
+            string newName = PromptDialog.Prompt(null, "New conversation name:", "New name");
             // Check that the new name is not empty, no longe than 255, and doesn't contain white-spaces or symbols aside from _ or -
             if (string.IsNullOrEmpty(newName) || newName.Length > 240 || newName.Any(c => char.IsWhiteSpace(c) || (!(c is '_' or '-') && !char.IsLetterOrDigit(c))))
             {
-                ShowError("Invalid name. It must not be empty, be longer than 240 characters, or contain whitespaces or symbols aside from '-' and '_'");
+                ShowError("Invalid new name. It must not be empty, be longer than 240 characters, or contain whitespaces or symbols aside from '-' and '_'");
                 return;
             }
 
-            bool updateID = true;
+            bool updateAllAudioIDs = false;
+            bool updateOnlyWwiseBankID = false;
             if (!pew.Pcc.Game.IsGame1())
             {
-                updateID = MessageBoxResult.Yes == MessageBox.Show(
-                    "Change the WwiseBank ID?\nIn general it's safe and better to do so, but there may be edge cases" +
-                    "where doing so may overwrite parts of the WwiseBank binary that are not the ID.",
-                    "Set new bank ID", MessageBoxButton.YesNo);
+                updateAllAudioIDs = PromptForBool("Update all audio IDs?\n" +
+                    "This will give the give the conversation fully unique IDs," +
+                    "hashing the names for the WwiseBank and Stream IDs, and using random generation for the Event IDs," +
+                    "then doing a blind replacement in the binary of the bank. There is a very small chance it may replace something" +
+                    "it shouldn't, so do this at your own risk.", "Update all audio IDs");
+
+                if (!updateAllAudioIDs)
+                {
+                    updateOnlyWwiseBankID = PromptForBool("Update the ID of the WwiseBank?\n" +
+                        "In general it's safe and better to do so, but there may be edge cases" +
+                        "where doing so may overwrite parts of the WwiseBank binary that are not its ID.",
+                        "Update WwiseBank ID");
+                }
             }
 
             ExportEntry bioConversation = (ExportEntry)pew.SelectedItem.Entry;
@@ -1600,7 +1624,21 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             ConversationExtended conversation = new(bioConversation);
             conversation.LoadConversation(TLKManagerWPF.GlobalFindStrRefbyID, true);
 
-            RenameConversation(pew.Pcc, bioConversation, conversation, newName, updateID);
+            // Check that the conversation has a normal package structure. Otherwise it can lead to unexpected edge cases when trying to gather
+            // the different sound elements.
+            string structureCheckResult = CheckConversationStructure(pew.Pcc, bioConversation, conversation);
+            if (!string.IsNullOrEmpty(structureCheckResult))
+            {
+                ShowError(structureCheckResult);
+                return;
+            }
+
+            string conversationResult = RenameConversation(pew.Pcc, bioConversation, conversation, newName, updateAllAudioIDs, updateOnlyWwiseBankID);
+            if (!string.IsNullOrEmpty(conversationResult))
+            {
+                ShowError(conversationResult);
+                return;
+            }
 
             MessageBox.Show("Conversation renamed successfully.", "Success", MessageBoxButton.OK);
         }
@@ -1609,25 +1647,69 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         /// Rename a conversation, changing the WwiseBank name and FXAs and related elements too.
         /// </summary>
         /// <param name="pcc">Pcc to operate on.</param>
-        /// <param name="bioConversation">If called, the bioConversation entry to edit.</param>
-        /// <param name="conversation">If called, the loaded conversation edit.</param>
-        /// <param name="newName">If called, the new name.</param>
-        /// <param name="updateID">If called, Whether to update the ID.</param>
-        public static void RenameConversation(IMEPackage pcc, ExportEntry bioConversation, ConversationExtended conversation, string newName, bool updateID)
+        /// <param name="bioConversation">BioConversation entry to edit.</param>
+        /// <param name="conversation">Loaded conversation to edit.</param>
+        /// <param name="newName">New name.</param>
+        /// <param name="updateAllAudioIDs">Whether to update the IDs of Bank, Events, and Streams.</param>
+        /// <param name="updateOnlyWwiseBankID">Whether to only update the ID of the Bank.</param>
+        /// <returns>Empty string if no errors, otherwise an error message to display to the user.</returns>
+        public static string RenameConversation(IMEPackage pcc, ExportEntry bioConversation, ConversationExtended conversation, string newName, bool updateAllAudioIDs, bool updateOnlyWwiseBankID)
+        {
+            string oldBioConversationName = bioConversation.ObjectName;
+            string oldName = GetOldName(pcc, bioConversation, conversation);
+
+            if (string.IsNullOrEmpty(oldName))
+            {
+                string nameSource = pcc.Game.IsGame1() ? "TlkSet" : "WwiseBank";
+                return $"A common name could not be found between the conversation name and the {nameSource} name.\n" +
+                    $"Make sure that the elements related to the conversation follow the conventional naming scheme for the game.";
+            }
+
+            RenamePackages(pcc, bioConversation, conversation, oldName, newName);
+
+            if (pcc.Game.IsGame1())
+            {
+                ObjectProperty m_oTlkFileSet = bioConversation.GetProperty<ObjectProperty>("m_oTlkFileSet");
+                ExportEntry tlkFileSet = null;
+                if (m_oTlkFileSet != null && m_oTlkFileSet.Value != 0 && pcc.TryGetUExport(m_oTlkFileSet.Value, out tlkFileSet))
+                {
+                    string name = tlkFileSet.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    tlkFileSet.ObjectName = new NameReference(name, tlkFileSet.ObjectName.Number);
+                }
+
+                RenameISACTAudio(pcc, bioConversation, tlkFileSet, oldName, newName, conversation);
+            }
+            else
+            {
+                RenameWwiseAudio(pcc, conversation.WwiseBank, bioConversation, oldName, newName, updateAllAudioIDs, updateOnlyWwiseBankID, conversation);
+            }
+
+            // Rename bioConversation after the audio, since it needs the old name
+            string newBioConversationName = oldBioConversationName.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+            bioConversation.ObjectName = newBioConversationName;
+
+            return "";
+        }
+
+        /// <summary>
+        /// Get the old name found in all pieces of the conversation by getting the union of the bioconversation and the wwise bank names,
+        /// or tlk file set in ME1.
+        /// Assumes that both begin the same, since that's the behavior in all vanilla occurences, and helps keep the logic simple.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="bioConversation">BioConversation to get the name from.</param>
+        /// <param name="conversation">Loaded Conversation, to avoid copy/pasting some its code.</param>
+        /// <returns>Old name found in the bioConversation.</returns>
+        private static string GetOldName(IMEPackage pcc, ExportEntry bioConversation, ConversationExtended conversation)
         {
             string oldBioConversationName = bioConversation.ObjectName;
             string oldName;
 
-            // Get the old name found in all pieces of the conversation by getting the union of the bioconversation
-            // and the wwise bank names, or tlk file set in ME1.
-            // Assumes that both begin the same, since that's the behavior in all vanilla occurences, and helps
-            // keep the logic simple.
             if (pcc.Game.IsGame1())
             {
                 ObjectProperty m_oTlkFileSet = bioConversation.GetProperty<ObjectProperty>("m_oTlkFileSet");
-                if (m_oTlkFileSet != null && m_oTlkFileSet.Value != 0)
+                if (m_oTlkFileSet != null && pcc.TryGetUExport(m_oTlkFileSet.Value, out ExportEntry tlkFileSet))
                 {
-                    ExportEntry tlkFileSet = pcc.GetUExport(m_oTlkFileSet.Value);
                     // All Tlk file sets begin with TlkSet_, followed by the name they have in common with the package
                     oldName = GetCommonPrefix(tlkFileSet.ObjectName.Name[7..], oldBioConversationName);
                 }
@@ -1640,34 +1722,42 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             }
             else
             {
-                string oldWwiseBankName = conversation.WwiseBank.ObjectName;
-                oldName = GetCommonPrefix(oldWwiseBankName, oldBioConversationName);
-                string newWwiseBankName = oldWwiseBankName.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
-
-                // Must happen before renaming the wwiseBank since it reads the old bank's name
-                RenameWwiseBank(conversation.WwiseBank, newWwiseBankName, updateID);
-                conversation.WwiseBank.ObjectName = newWwiseBankName;
+                oldName = GetCommonPrefix(conversation.WwiseBank.ObjectName, bioConversation.ObjectName);
             }
 
-            string newBioConversationName = oldBioConversationName.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
-            bioConversation.ObjectName = newBioConversationName;
+            return oldName;
+        }
 
+        /// <summary>
+        /// Rename the packages associated with the bioConversation.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="bioConversation">BioConveration to get the packages from.</param>
+        /// <param name="conversation">Loaded Conversation, to avoid copy/pasting some its code.</param>
+        /// <param name="oldName">Old name to replace in packages.</param>
+        /// <param name="newName">Name to replace old name with.</param>
+        private static void RenamePackages(IMEPackage pcc, ExportEntry bioConversation, ConversationExtended conversation,
+            string oldName, string newName)
+        {
             // Replace package's name
             if (bioConversation.idxLink != 0)
             {
                 ExportEntry link = pcc.GetUExport(bioConversation.idxLink);
                 if (link.ClassName == "Package")
                 {
-                    link.ObjectName = link.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    string name = link.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    link.ObjectName = new NameReference(name, link.ObjectName.Number);
                 }
             }
+
             // Replace name of the sound, sequence, and FXA package, which is separate in ME1
             if (pcc.Game.IsGame1())
             {
                 ExportEntry link = pcc.GetUExport(conversation.Sequence.idxLink);
                 if (link.ClassName == "Package")
                 {
-                    link.ObjectName = link.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    string name = link.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    link.ObjectName = new NameReference(name, link.ObjectName.Number);
                 }
             }
             // Replace name of the sounds package, which is separate in ME2
@@ -1676,175 +1766,517 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 ExportEntry link = pcc.GetUExport(conversation.WwiseBank.idxLink);
                 if (link.ClassName == "Package")
                 {
-                    link.ObjectName = link.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    string name = link.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    link.ObjectName = new NameReference(name, link.ObjectName.Number);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Wrapper for RenameAudio so it can used as a full experiment on its own.
+        /// </summary>
+        /// <param name="pew">Current PE instance.</param>
+        public static void RenameAudioExperiment(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+
+            if (pew.SelectedItem.Entry.ClassName is not "BioConversation")
+            {
+                ShowError("Selected export is not a BioConversation");
+                return;
+            }
+
+            bool updateAllAudioIDs = false;
+            bool updateOnlyWwiseBankID = false;
+            if (!pew.Pcc.Game.IsGame1())
+            {
+                updateAllAudioIDs = PromptForBool("Update all audio IDs?\n" +
+                    "This will give the give the conversation fully unique IDs," +
+                    "hashing the names for the WwiseBank and Stream IDs, and using random generation for the Event IDs," +
+                    "then doing a blind replacement in the binary of the bank. There is a very small chance it may replace something" +
+                    "it shouldn't, so do this at your own risk.", "Update all audio IDs");
+
+                if (!updateAllAudioIDs)
+                {
+                    updateOnlyWwiseBankID = PromptForBool("Update the ID of the WwiseBank?\n" +
+                        "In general it's safe and better to do so, but there may be edge cases" +
+                        "where doing so may overwrite parts of the WwiseBank binary that are not its ID.",
+                        "Update WwiseBank ID");
                 }
             }
 
-            // Must be called after everything else has been renamed due to the need ot update FXA paths.
-            RenameFXAsAndRelated(pcc, bioConversation, oldName, newName);
-        }
+            string newName = PromptDialog.Prompt(null, "New common name:", "New name");
+            // Check that the new name is not empty, no longe than 255, and doesn't contain white-spaces or symbols aside from _ or -
+            if (string.IsNullOrEmpty(newName) || newName.Length > 240 || newName.Any(c => char.IsWhiteSpace(c) || (!(c is '_' or '-') && !char.IsLetterOrDigit(c))))
+            {
+                ShowError("Invalid new name. It must not be empty, be longer than 240 characters, or contain whitespaces or symbols aside from '-' and '_'");
+                return;
+            }
 
-        /// <summary>
-        /// Wrapper for RenameWwiseBank so it can used as a full experiment on its own.
-        /// </summary>
-        /// <param name="pew">Current PE instance.</param>
-        public static void RenameWwiseBankExperiment(PackageEditorWindow pew)
-        {
-            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+            ExportEntry bioConversation = (ExportEntry)pew.SelectedItem.Entry;
+
+            // Load the conversation. We use ConversationExtended since it aggregates most of the elements we'll need to
+            // operate on. Is it overkill? Yes. Does it get the job done more cleanly and safely? yes.
+            ConversationExtended conversation = new(bioConversation);
+            conversation.LoadConversation(TLKManagerWPF.GlobalFindStrRefbyID, true);
+
+            // Check that the conversation has a normal package structure. Otherwise it can lead to unexpected edge cases when trying to gather
+            // the different sound elements.
+            string structureCheckResult = CheckConversationStructure(pew.Pcc, bioConversation, conversation);
+            if (!string.IsNullOrEmpty(structureCheckResult))
+            {
+                ShowError(structureCheckResult);
+                return;
+            }
+
+            string oldName = GetOldName(pew.Pcc, bioConversation, conversation);
 
             if (pew.Pcc.Game.IsGame1())
             {
-                ShowError("Not available for ME1/LE1");
-                return;
+                ObjectProperty m_oTlkFileSet = bioConversation.GetProperty<ObjectProperty>("m_oTlkFileSet");
+                ExportEntry tlkFileSet = null;
+                if (m_oTlkFileSet != null)
+                {
+                    pew.Pcc.TryGetUExport(m_oTlkFileSet.Value, out tlkFileSet);
+                }
+                RenameISACTAudio(pew.Pcc, bioConversation, tlkFileSet, oldName, newName, conversation);
             }
-
-            if (pew.SelectedItem.Entry.ClassName is not "WwiseBank")
+            else
             {
-                ShowError("Selected export is not a WwiseBank");
-                return;
+                RenameWwiseAudio(pew.Pcc, conversation.WwiseBank, bioConversation, oldName, newName, updateAllAudioIDs, updateOnlyWwiseBankID, conversation);
             }
 
-            ExportEntry wwiseBankEntry = (ExportEntry)pew.SelectedItem.Entry;
-
-            string newWwiseBankName = PromptDialog.Prompt(null, "New WwiseBank name:", "New name");
-            // Check that the new name is not empty, no longe than 255, and doesn't contain white-spaces or symbols aside from _ or -
-            if (string.IsNullOrEmpty(newWwiseBankName) || newWwiseBankName.Length > 240 || newWwiseBankName.Any(c => char.IsWhiteSpace(c) || (!(c is '_' or '-') && !char.IsLetterOrDigit(c))))
-            {
-                ShowError("Invalid name. It must not be empty, be longer than 240 characters, or contain whitespaces or symbols aside from '-' and '_'");
-                return;
-            }
-
-            RenameWwiseBank(wwiseBankEntry, newWwiseBankName, true);
-
-            MessageBox.Show($"WwiseBank's name and ID updated successfully.", "Success", MessageBoxButton.OK);
+            MessageBox.Show($"Audio renamed successfully.", "Success", MessageBoxButton.OK);
         }
 
         /// <summary>
-        /// Changes a WwiseBank's name, and update its ID accordingly.
+        /// Change the WwiseBank, WwiseEvents, and WwiseStreams' names, and update their IDs accordingly.
         /// </summary>
-        /// <param name="wwiseBankEntry">If called, the WwiseBank entry to edit.</param>
-        /// <param name="newWwiseBankName">If called, the new wwise bank name.</param>
-        /// <param name="updateID">Whether to update the ID. Useful when you want to be extra careful when calling it from
-        /// other experiments.</param>
-        public static void RenameWwiseBank(ExportEntry wwiseBankEntry, string newWwiseBankName, bool updateID)
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="wwiseBankEntry">WwiseBank entry to edit.</param>
+        /// <param name="bioConversation">Selected BioConversation.</param>
+        /// <param name="oldName">Old name to replace.</param>
+        /// <param name="newName">New name for the elements.</param>
+        /// <param name="updateAllAudioIDs">Whether to update the IDs of the Bank, Events, and Streams.</param>
+        /// <param name="updateOnlyWwiseBankID">Whether to only update the ID of the Bank.</param>
+        /// <param name="conversation">Loaded Conversation, to avoid copy/pasting some its code.</param>
+        public static void RenameWwiseAudio(IMEPackage pcc, ExportEntry wwiseBankEntry, ExportEntry bioConversation,
+            string oldName, string newName, bool updateAllAudioIDs, bool updateOnlyWwiseBankID, ConversationExtended conversation)
         {
-            if (updateID) { UpdateWwiseBankID(wwiseBankEntry, newWwiseBankName); }
+            string oldWwiseBankName = wwiseBankEntry.ObjectName;
+            string newWwiseBankName = oldWwiseBankName.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+
+            List<ExportEntry> wwiseEvents = GetAudioExports(pcc, bioConversation, AudioClass.WwiseEvent, conversation);
+            List<ExportEntry> wwiseStreams = GetAudioExports(pcc, bioConversation, AudioClass.WwiseStream, conversation);
+
+            // RenameWwiseEvents(pcc, wwiseEvents, newName);
+            RenameWwiseStreams(pcc, wwiseStreams, oldName, newName);
+
+            if (updateAllAudioIDs)
+            {
+                Random random = new();
+
+                Dictionary<uint, uint> idPairs = new();
+                idPairs.AddRange(UpdateIDs_EXPERIMENTAL(wwiseEvents, random));
+                idPairs.AddRange(UpdateIDs_EXPERIMENTAL(wwiseStreams));
+
+                UpdateAudioIDs_EXPERIMENTAL(wwiseBankEntry, newWwiseBankName, idPairs, random);
+            }
+            else
+            {
+                if (updateOnlyWwiseBankID)
+                {
+                    // Dictionary<uint, uint> wwiseEventsIDs = UpdateIDs(wwiseEvents);
+                    // Dictionary<uint, uint> wwiseStreamsIDs = UpdateIDs(wwiseStreams);
+
+                    UpdateAudioIDs_LEGACY(wwiseBankEntry, newWwiseBankName, null, null);
+                }
+            }
+
             wwiseBankEntry.ObjectName = newWwiseBankName;
+
+            RenameFXAs(pcc, bioConversation, oldName, newName);
         }
 
         /// <summary>
-        /// Wrapper for UpdateWwiseBankID so it can used as a full experiment on its own.
+        /// Rename the SoundCues, and SoundNodeWaves' names.
         /// </summary>
-        /// <param name="pew">Current PE instance.</param>
-        public static void UpdateWwiseBankIDExperiment(PackageEditorWindow pew)
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="bioConversation">Selected BioConversation.</param>
+        /// <param name="tlkFileSet">TLK FileSet export.</param>
+        /// <param name="oldName">Old name to replace.</param>
+        /// <param name="newName">New name for the elements.</param>
+        /// <param name="conversation">Loaded Conversation, to avoid copy/pasting some its code.</param>
+        public static void RenameISACTAudio(IMEPackage pcc, ExportEntry bioConversation, ExportEntry tlkFileSet,
+            string oldName, string newName, ConversationExtended conversation)
         {
-            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+            List<ExportEntry> nodeWaves = GetAudioExports(pcc, bioConversation, AudioClass.SoundNodeWave, conversation);
 
-            if (pew.Pcc.Game.IsGame1())
-            {
-                ShowError("Not available for ME1/LE1");
-                return;
-            }
+            RenameSoundNodeWaves(pcc, nodeWaves, oldName, newName);
 
-            if (pew.SelectedItem.Entry.ClassName is not "WwiseBank")
-            {
-                ShowError("Selected export is not a WwiseBank");
-                return;
-            }
-
-            ExportEntry wwiseBankEntry = (ExportEntry)pew.SelectedItem.Entry;
-
-            string newWwiseBankName = PromptDialog.Prompt(null, "New WwiseBank name:", "New name");
-            // Check that the new name is not empty, no longe than 255, and doesn't contain white-spaces or symbols aside from _ or -
-            if (string.IsNullOrEmpty(newWwiseBankName) || newWwiseBankName.Length > 240 || newWwiseBankName.Any(c => char.IsWhiteSpace(c) || (!(c is '_' or '-') && !char.IsLetterOrDigit(c))))
-            {
-                ShowError("Invalid name. It must not be empty, be longer than 240 characters, or contain whitespaces or symbols aside from '-' and '_'");
-                return;
-            }
-
-            UpdateWwiseBankID(wwiseBankEntry, newWwiseBankName);
-            MessageBox.Show("WwiseBank's ID updated successfully.", "Success", MessageBoxButton.OK);
+            RenameFXAs(pcc, bioConversation, oldName, newName);
         }
 
         /// <summary>
         /// Update a WwiseBank's ID by hashing a new name and changing it in the binary data where appropriate.
         /// </summary>
-        /// <param name="wwiseBankEntry">If called, the WwiseBank entry to edit.</param>
-        /// <param name="newWwiseBankName">If called, the new wwise bank name.</param>
-        public static void UpdateWwiseBankID(ExportEntry wwiseBankEntry, string newWwiseBankName)
+        /// <param name="wwiseBankEntry">The WwiseBank entry to edit.</param>
+        /// <param name="newWwiseBankName">The new wwise bank name. Needed for ME3 ReferencedBanks.</param>
+        /// <param name="idPairs">Dictionary<oldID, newID> Found IDs to update.</param>
+        /// <param name="random">Random object to generate IDs.</param>
+        public static void UpdateAudioIDs_EXPERIMENTAL(ExportEntry wwiseBankEntry, string newWwiseBankName,
+            Dictionary<uint, uint> idPairs, Random random)
         {
             string oldBankName = wwiseBankEntry.ObjectName;
-            PropertyCollection bankProps = wwiseBankEntry.GetProperties();
-            IntProperty bankIDProp = bankProps.GetProp<IntProperty>("Id");
 
-            // Get/Generate IDs and little endian hashes
-            uint oldBankID = unchecked((uint)bankIDProp.Value);
-            uint newBankID = GetBankId(newWwiseBankName);
+            (uint oldBankID, uint newBankID) = UpdateID_EXPERIMENTAL(wwiseBankEntry, null, newWwiseBankName);
 
-            // Update the ID property
-            bankIDProp.Value = unchecked((int)newBankID);
-            bankProps.AddOrReplaceProp(bankIDProp);
-
-            WwiseBank wwiseBank = wwiseBankEntry.GetBinaryData<WwiseBank>();
+            WwiseBankParsed wwiseBank = wwiseBankEntry.GetBinaryData<WwiseBankParsed>();
             // Update the bank id
             wwiseBank.ID = newBankID;
 
-            // Update referenced banks kvp that reference the old name
+            idPairs.Add(oldBankID, newBankID);
+
+            // Update referenced banks kvp that reference the old bank name
             IEnumerable<KeyValuePair<uint, string>> updatedBanks = wwiseBank.ReferencedBanks
                 .Select(referencedBank =>
                 {
-                    if (referencedBank.Value.Equals(oldBankName, StringComparison.OrdinalIgnoreCase)) { return new(newBankID, newWwiseBankName); }
-                    else { return referencedBank; }
+                    if (referencedBank.Value.Equals(oldBankName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new KeyValuePair<uint, string>(newBankID, newWwiseBankName);
+                    }
+                    return referencedBank;
                 });
-            wwiseBank.ReferencedBanks = new OrderedMultiValueDictionary<uint, string>(updatedBanks);
+            wwiseBank.ReferencedBanks = new(updatedBanks);
 
-            // Update references to the old hash at the end of HIRC objects when they are found.
-            // This is mostly safe, since we know the reference appears at the end of the unparsed data,
-            // and we only replace it there.
-            byte[] oldID = BitConverter.GetBytes(oldBankID);
-            byte[] newID = BitConverter.GetBytes(newBankID);
-            foreach (WwiseBank.HIRCObject hirc in wwiseBank.HIRCObjects.Values())
+            // Gather all the IDs we don't know about yet
+            foreach (WwiseBankParsed.HIRCObject hirc in wwiseBank.HIRCObjects.Values)
             {
+                if (hirc.ID != 0 && !idPairs.ContainsKey(hirc.ID))
+                {
+                    idPairs.Add(hirc.ID, GenerateRandomID(random));
+                }
+            }
+
+            // Update references to old wwiseEvents' hashes, which are the ID of Event HIRCs.
+            // Update references to old wwiseStreams' hashes, which are in the unknown bytes of Sound HIRCs.
+            // Update references to old bank hash, which I'm certain is at the end of Event Action HIRCs,
+            // but we check in all of them just in case.
+            // byte[] bankIDArr = BitConverter.GetBytes(oldBankID);
+            // byte[] newBankIDArr = BitConverter.GetBytes(newBankID);
+
+            //foreach (WwiseBank.HIRCObject hirc in wwiseBank.HIRCObjects.Values)
+            //{
+            //if (hirc.Type == HIRCType.Event) // References a WwiseEvent
+            //{
+            //    if (wwiseEventIDs.TryGetValue(hirc.ID, out uint newEventID))
+            //    {
+            //        hirc.ID = newEventID;
+            //    }
+            //}
+            //else if (hirc.Type == HIRCType.SoundSXFSoundVoice) // References a WwiseStream
+            //{
+            //    // 4 bytes ID is located at the start after 14 bytes
+            //    Span<byte> streamIDSpan = hirc.unparsed.AsSpan(5..9);
+            //    uint streamIDUInt = BitConverter.ToUInt32(streamIDSpan);
+
+            //    if (wwiseStreamIDs.TryGetValue(streamIDUInt, out uint newStreamIDUInt))
+            //    {
+            //        byte[] newStreamIDArr = BitConverter.GetBytes(newStreamIDUInt);
+            //        newStreamIDArr.CopyTo(streamIDSpan);
+            //    }
+            //}
+
+            // Check for bank ID in all HIRCs, even though I'm almost certain it only appears
+            // in Event Actions
+            //    if (hirc.unparsed != null && hirc.unparsed.Length >= 4) // Only replace if not null and at least width of hash
+            //    {
+            //        Span<byte> bankIDSpan = hirc.unparsed.AsSpan(^4..);
+            //        if (bankIDSpan.SequenceEqual(bankIDArr))
+            //        {
+            //            newBankIDArr.CopyTo(bankIDSpan);
+            //        }
+            //    }
+            //}
+
+            string bankBinaryAsString = Convert.ToHexString(wwiseBankEntry.GetBinaryData());
+
+            // Blindly replace all the IDs found in the WwiseBank
+            foreach (KeyValuePair<uint, uint> id in idPairs)
+            {
+                bankBinaryAsString = bankBinaryAsString.Replace(
+                    BigToLittleEndian(string.Format("{0:X2}", id.Key).PadLeft(8, '0')),
+                    BigToLittleEndian(string.Format("{0:X2}", id.Value).PadLeft(8, '0')),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            wwiseBankEntry.WriteBinary(Convert.FromHexString(bankBinaryAsString));
+
+        }
+
+        /// <summary>
+        /// Update a WwiseBank's ID by hashing a new name and changing it in the binary data where appropriate.
+        /// </summary>
+        /// <param name="wwiseBankEntry">The WwiseBank entry to edit.</param>
+        /// <param name="newWwiseBankName">The new wwise bank name. Needed for ME3 ReferencedBanks.</param>
+        /// <param name="wwiseEventIDs">Dictionary<oldID, newID> The event IDs to update</param>
+        /// <param name="wwiseStreamIDs">Dictionary<oldID, newID> The stream IDs to update</param>
+        public static void UpdateAudioIDs_LEGACY(ExportEntry wwiseBankEntry, string newWwiseBankName,
+            Dictionary<uint, uint> wwiseEventIDs, Dictionary<uint, uint> wwiseStreamIDs)
+        {
+            string oldBankName = wwiseBankEntry.ObjectName;
+
+            (uint oldBankID, uint newBankID) = UpdateID_LEGACY(wwiseBankEntry, newWwiseBankName);
+
+            var wwiseBank = wwiseBankEntry.GetBinaryData<WwiseBankParsed>();
+            // Update the bank id
+            wwiseBank.ID = newBankID;
+
+            // Update referenced banks kvp that reference the old bank name
+            IEnumerable<KeyValuePair<uint, string>> updatedBanks = wwiseBank.ReferencedBanks
+                .Select(referencedBank =>
+                {
+                    if (referencedBank.Value.Equals(oldBankName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new KeyValuePair<uint, string>(newBankID, newWwiseBankName);
+                    }
+                    return referencedBank;
+                });
+            wwiseBank.ReferencedBanks = new(updatedBanks);
+
+            // DISABLED: Update references to old wwiseEvents' hashes, which are the ID of Event HIRCs.
+            // DISABLED: Update references to old wwiseStreams' hashes, which are in the unknown bytes of Sound HIRCs.
+            // Update references to old bank hash, which I'm certain is at the end of Event Action HIRCs,
+            // but we check in all of them just in case.
+            byte[] bankIDArr = BitConverter.GetBytes(oldBankID);
+            byte[] newBankIDArr = BitConverter.GetBytes(newBankID);
+            foreach (WwiseBankParsed.HIRCObject hirc in wwiseBank.HIRCObjects.Values)
+            {
+                //if (hirc.Type == HIRCType.Event) // References a WwiseEvent
+                //{
+                //    if (wwiseEventIDs.TryGetValue(hirc.ID, out uint newEventID))
+                //    {
+                //        hirc.ID = newEventID;
+                //    }
+                //}
+                //else if (hirc.Type == HIRCType.SoundSXFSoundVoice) // References a WwiseStream
+                //{
+                //    // 4 bytes ID is located at the start after 14 bytes
+                //    Span<byte> streamIDSpan = hirc.unparsed.AsSpan(5..9);
+                //    uint streamIDUInt = BitConverter.ToUInt32(streamIDSpan);
+                //    if (wwiseStreamIDs.TryGetValue(streamIDUInt, out uint newStreamIDUInt))
+                //    {
+                //        byte[] newStreamIDArr = BitConverter.GetBytes(newStreamIDUInt);
+                //        newStreamIDArr.CopyTo(streamIDSpan);
+                //    }
+                //}
+
+                // Check for bank ID in all HIRCs, even though I'm almost certain it only appears
+                // in Event Actions
                 if (hirc.unparsed != null && hirc.unparsed.Length >= 4) // Only replace if not null and at least width of hash
                 {
-
-                    Span<byte> last4Bytes = hirc.unparsed.AsSpan(^4..);
-                    if (last4Bytes.SequenceEqual(oldID))
+                    Span<byte> bankIDSpan = hirc.unparsed.AsSpan(^4..);
+                    if (bankIDSpan.SequenceEqual(bankIDArr))
                     {
-                        newID.CopyTo(last4Bytes);
+                        newBankIDArr.CopyTo(bankIDSpan);
                     }
                 }
             }
 
-            wwiseBankEntry.WritePropertiesAndBinary(bankProps, wwiseBank);
+            wwiseBankEntry.WriteBinary(wwiseBank);
         }
 
         /// <summary>
-        /// Rename a bioConversation's FXAs, WwiseStreams, and VOElements names.
+        /// Rename a list of WwiseEvents by addig a prefix.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="wwiseEvents">WwiseEvents to rename.</param>
+        /// <param name="prefix">Prefix to add to the names.</param>
+        private static void RenameWwiseEvents(IMEPackage pcc, List<ExportEntry> wwiseEvents, string prefix)
+        {
+            foreach (ExportEntry wwiseEvent in wwiseEvents)
+            {
+                if (!pcc.Game.IsGame1())
+                {
+                    wwiseEvent.ObjectName = new NameReference($"I{wwiseEvent.ObjectName.Name}", wwiseEvent.ObjectName.Number);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Rename a list of WwiseStreams.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="wwiseStreams">WwiseStreams to rename.</param>
+        /// <param name="oldName">Old name to replace.</param>
+        /// <param name="newName">New name to replace with.</param>
+        private static void RenameWwiseStreams(IMEPackage pcc, List<ExportEntry> wwiseStreams, string oldName, string newName)
+        {
+            foreach (ExportEntry wwiseStream in wwiseStreams)
+            {
+                if (!pcc.Game.IsGame1())
+                {
+                    string name = wwiseStream.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                    wwiseStream.ObjectName = new NameReference(name, wwiseStream.ObjectName.Number);
+
+                    if (pcc.Game.IsGame2())
+                    {
+                        NameProperty bankName = wwiseStream.GetProperty<NameProperty>("BankName");
+                        if (bankName == null) { continue; }
+                        bankName.Value = bankName.Value.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                        wwiseStream.WriteProperty(bankName);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Rename a list of SoundNodeWaves.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="nodeWaves">SoundNodeWaves to rename.</param>
+        /// <param name="oldName">Old name to replace.</param>
+        /// <param name="newName">New name to replace with.</param>
+        private static void RenameSoundNodeWaves(IMEPackage pcc, List<ExportEntry> nodeWaves, string oldName, string newName)
+        {
+            foreach (ExportEntry nodeWave in nodeWaves)
+            {
+                string name = nodeWave.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
+                nodeWave.ObjectName = new NameReference(name, nodeWave.ObjectName.Number);
+            }
+        }
+
+        /// <summary>
+        /// Update the IDs of a list of ExportEntries with hashes of their names.
+        /// </summary>
+        /// <param name="entries">WwiseStreams to update.</param>
+        /// <param name="random">If not null, the random object to generate ids, instead of the name.</param>
+        /// <returns>KVP of old and new IDs. Used to update references.</returns>
+        private static Dictionary<uint, uint> UpdateIDs_EXPERIMENTAL(List<ExportEntry> entries, Random random = null)
+        {
+            Dictionary<uint, uint> oldAndNewIDs = new();
+
+            foreach (ExportEntry entry in entries)
+            {
+                (uint oldID, uint newID) = UpdateID_EXPERIMENTAL(entry, random);
+
+                if (newID == 0) { continue; }
+
+                oldAndNewIDs.Add(oldID, newID);
+            }
+
+            return oldAndNewIDs;
+        }
+
+        /// <summary>
+        /// Update the ID of an ExportEntry with a hash of the provided name.
+        /// </summary>
+        /// <param name="entry">Entry to update.</param>
+        /// <param name="random">Random object used for generating random IDs, otherwise use the object's name.</param>
+        /// <param name="name">Name to use for the name generation, if not random. If not random and empty, use the object's name.</param>
+        /// <returns>KVP of old and new ID. Used to update references.</returns>
+        private static (uint, uint) UpdateID_EXPERIMENTAL(ExportEntry entry, Random random = null, string name = "")
+        {
+            IntProperty IDProp = entry.GetProperty<IntProperty>("Id");
+            if (IDProp == null) { return (0, 0); }
+
+            // Get/Generate IDs and little endian hashes
+            uint oldID = unchecked((uint)IDProp.Value);
+            uint newID = random != null
+                ? GenerateRandomID(random)
+                : CalculateFNV132Hash(string.IsNullOrEmpty(name) ? entry.ObjectName.Name : name);
+
+            // Update the ID property
+            IDProp.Value = unchecked((int)newID);
+            entry.WriteProperty(IDProp);
+
+            return (oldID, newID);
+        }
+
+        /// <summary>
+        /// Update the IDs of a list of ExportEntries with hashes of their names.
+        /// </summary>
+        /// <param name="entries">WwiseStreams to update.</param>
+        /// <returns>KVP of old and new IDs. Used to update references.</returns>
+        private static Dictionary<uint, uint> UpdateIDs_LEGACY(List<ExportEntry> entries)
+        {
+            Dictionary<uint, uint> oldAndNewIDs = new();
+            foreach (ExportEntry entry in entries)
+            {
+                (uint oldID, uint newID) = UpdateID_LEGACY(entry);
+
+                if (newID == 0) { continue; }
+                oldAndNewIDs.Add(oldID, newID);
+            }
+
+            return oldAndNewIDs;
+        }
+
+        /// <summary>
+        /// Update the ID of an ExportEntry with a hash of its name.
+        /// </summary>
+        /// <param name="entry">Entry to update.</param>
+        /// <returns>KVP of old and new ID. Used to update references.</returns>
+        private static (uint, uint) UpdateID_LEGACY(ExportEntry entry)
+        {
+            string name = entry.ObjectName.Name;
+            return UpdateID_LEGACY(entry, name);
+        }
+
+        /// <summary>
+        /// Update the ID of an ExportEntry with a hash of the provided name.
+        /// </summary>
+        /// <param name="entry">Entry to update.</param>
+        /// <param name="name">Name to use for hash.</param>
+        /// <returns>KVP of old and new ID. Used to update references.</returns>
+        private static (uint, uint) UpdateID_LEGACY(ExportEntry entry, string name)
+        {
+            IntProperty IDProp = entry.GetProperty<IntProperty>("Id");
+
+            if (IDProp == null) { return (0, 0); }
+
+            // Get/Generate IDs and little endian hashes
+            uint oldID = unchecked((uint)IDProp.Value);
+            uint newID = CalculateFNV132Hash(name);
+
+            // Update the ID property
+            IDProp.Value = unchecked((int)newID);
+            entry.WriteProperty(IDProp);
+
+            return (oldID, newID);
+        }
+
+        /// <summary>
+        /// Rename a bioConversation's FXAs.
         /// Not useful as a standalone experiment, since other semi-unrelated elements need to be renamed too.
         /// </summary>
         /// <param name="pcc">Pcc to operate on.</param>
         /// <param name="bioConversation">Conversation the elements belong to.</param>
         /// <param name="oldName">Old name to replace in the elements.</param>
         /// <param name="newName">New name to replace in the elements.</param>
-        private static void RenameFXAsAndRelated(IMEPackage pcc, ExportEntry bioConversation, string oldName, string newName)
+        private static void RenameFXAs(IMEPackage pcc, ExportEntry bioConversation, string oldName, string newName)
         {
             if (pcc == null || (pcc.Game is MEGame.ME1)) { return; }
 
-            List<ObjectProperty> fxas = new();
-            ArrayProperty<ObjectProperty> maleFXAs = bioConversation.GetProperty<ArrayProperty<ObjectProperty>>("m_aMaleFaceSets");
-            if (maleFXAs != null) { fxas.AddRange(maleFXAs); }
-            ArrayProperty<ObjectProperty> femaleFXAs = bioConversation.GetProperty<ArrayProperty<ObjectProperty>>("m_aFemaleFaceSets");
-            if (femaleFXAs != null) { fxas.AddRange(femaleFXAs); }
-            ObjectProperty nonSpkrFxa = bioConversation.GetProperty<ObjectProperty>("m_pNonSpeakerFaceFXSet");
-            if (nonSpkrFxa != null) { fxas.Add(nonSpkrFxa); }
+            List<ExportEntry> fxas = GetFXAs(pcc, bioConversation);
+            RenameFXAs(pcc, bioConversation, fxas, oldName, newName);
+        }
 
-            foreach (ObjectProperty fxa in fxas)
+        /// <summary>
+        /// Rename a bioConversation's FXAs.
+        /// Not useful as a standalone experiment, since other semi-unrelated elements need to be renamed too.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="bioConversation">Conversation the elements belong to.</param>
+        /// <param name="fxas">List of FXAs to rename.</param>
+        /// <param name="oldName">Old name to replace in the elements.</param>
+        /// <param name="newName">New name to replace in the elements.</param>
+        private static void RenameFXAs(IMEPackage pcc, ExportEntry bioConversation, List<ExportEntry> fxas, string oldName, string newName)
+        {
+            if (pcc == null || (pcc.Game is MEGame.ME1)) { return; }
+
+            foreach (ExportEntry fxaExport in fxas)
             {
-                if (fxa.Value == 0) { continue; }
-
-                ExportEntry fxaExport = pcc.GetUExport(fxa.Value);
-
                 string oldFxaFullName = fxaExport.ObjectName; // May contain _M, _F, or _NonSpkr
                 string oldFxaName = oldFxaFullName; // Full name minus _M/_F, or including _NonSpkr
 
@@ -1869,12 +2301,18 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                 List<string> names = faceFXAnimSet.Names.Select(name => name == oldFxaName ? newFxaName : name).ToList();
                 faceFXAnimSet.Names = names;
 
-                // Set the paths with the new names and update the names of WwiseStreams
                 ArrayProperty<ObjectProperty> eventRefs = fxaExport.GetProperty<ArrayProperty<ObjectProperty>>("ReferencedSoundCues");
+                // Set the paths with the new names and update the names of WwiseStreams
                 if (eventRefs != null)
                 {
                     foreach (FaceFXLine line in faceFXAnimSet.Lines)
                     {
+                        // Update the ID for ME1
+                        if (pcc.Game.IsGame1())
+                        {
+                            line.ID = line.ID.Replace(oldName, newName);
+                        }
+
                         ExportEntry soundEvent;
                         if (pcc.Game is MEGame.ME2)
                         {
@@ -1883,7 +2321,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         }
                         else
                         {
-                            if (eventRefs[line.Index].Value == 0) { continue; }
+                            if (line.Index < 0 || eventRefs[line.Index].Value <= 0) { continue; }
                             soundEvent = pcc.GetUExport(eventRefs[line.Index].Value);
                         }
 
@@ -1891,57 +2329,6 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
                         if (soundEvent == null) { continue; }
 
                         line.Path = soundEvent.FullPath;
-
-                        if (!pcc.Game.IsGame1())
-                        {
-                            if (pcc.Game is MEGame.LE2)
-                            {
-                                ArrayProperty<StructProperty> references = soundEvent.GetProperty<ArrayProperty<StructProperty>>("References");
-                                if ((references == null) || (references.Count == 0)) { continue; }
-                                StructProperty relationships = references[0].GetProp<StructProperty>("Relationships");
-                                if (relationships == null) { continue; }
-                                ArrayProperty<ObjectProperty> streams = relationships.GetProp<ArrayProperty<ObjectProperty>>("Streams");
-                                if ((streams == null) || (streams.Count == 0)) { continue; }
-
-                                foreach (ObjectProperty streamRef in streams)
-                                {
-                                    ExportEntry stream = pcc.GetUExport(streamRef.Value);
-                                    if (stream == null) { continue; }
-
-                                    stream.ObjectName = stream.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
-                                    NameProperty bankName = stream.GetProperty<NameProperty>("BankName");
-                                    if (bankName == null) { continue; }
-                                    bankName.Value = bankName.Value.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
-                                    stream.WriteProperty(bankName);
-                                }
-                            }
-                            else
-                            {
-                                // Update the WwiseStreams
-                                WwiseEvent wwiseEventBin = soundEvent.GetBinaryData<WwiseEvent>();
-                                foreach (WwiseEvent.WwiseEventLink link in wwiseEventBin.Links)
-                                {
-                                    foreach (int stream in link.WwiseStreams)
-                                    {
-                                        if (stream == 0) { continue; }
-
-                                        ExportEntry wwiseStream = pcc.GetUExport(stream);
-
-                                        wwiseStream.ObjectName = wwiseStream.ObjectName.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
-
-                                        // This is similar to the step for LE2, but the general way of getting to it is more similar
-                                        // to the LE3/ME3 way
-                                        if (pcc.Game is MEGame.ME2)
-                                        {
-                                            NameProperty bankName = wwiseStream.GetProperty<NameProperty>("BankName");
-                                            if (bankName == null) { continue; }
-                                            bankName.Value = bankName.Value.Name.Replace(oldName, newName, StringComparison.OrdinalIgnoreCase);
-                                            wwiseStream.WriteProperty(bankName);
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -1949,125 +2336,1091 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             }
         }
 
+        /// <summary>
+        /// Get a list containing all FXAs in a BioConversation.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="bioConversation">Conversation to get FXAs from.</param>
+        /// <returns>List containing found FXAs.</returns>
+        private static List<ExportEntry> GetFXAs(IMEPackage pcc, ExportEntry bioConversation)
+        {
+            List<ExportEntry> fxas = new();
+            List<ObjectProperty> fxaRefs = new();
+
+            ArrayProperty<ObjectProperty> maleFXAs = bioConversation.GetProperty<ArrayProperty<ObjectProperty>>("m_aMaleFaceSets");
+            if (maleFXAs != null) { fxaRefs.AddRange(maleFXAs); }
+            ArrayProperty<ObjectProperty> femaleFXAs = bioConversation.GetProperty<ArrayProperty<ObjectProperty>>("m_aFemaleFaceSets");
+            if (femaleFXAs != null) { fxaRefs.AddRange(femaleFXAs); }
+            ObjectProperty nonSpkrFxa = bioConversation.GetProperty<ObjectProperty>("m_pNonSpeakerFaceFXSet");
+            if (nonSpkrFxa != null) { fxaRefs.Add(nonSpkrFxa); }
+
+            foreach (ObjectProperty fxa in fxaRefs)
+            {
+                if (fxa.Value == 0) { continue; }
+
+                ExportEntry fxaExport = pcc.GetUExport(fxa.Value);
+                if (fxaExport == null) { continue; }
+
+                fxas.Add(fxaExport);
+            }
+
+            return fxas;
+        }
+
+        /// <summary>
+        /// Get a list of SoundCues, SoundNodeWaves, WwiseStreams, or WwiseEvents related to the given BioConversation.
+        /// Assumes that found IEntries are ExportEntries.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="bioConversation">BioConversation the exports are referenced by.</param>
+        /// <param name="targetClass">Class of exports to get.</param>
+        /// <param name="conversation">Loaded Conversation, to avoid copy/pasting some its code.</param>
+        /// <returns>List of ExportEntries of the given class.</returns>
+        private static List<ExportEntry> GetAudioExports(IMEPackage pcc, ExportEntry bioConversation, AudioClass targetClass, ConversationExtended conversation = null)
+        {
+            if (pcc == null || bioConversation.ClassName != "BioConversation") { return null; }
+
+            if (conversation == null)
+            {
+                conversation = new(bioConversation);
+                conversation.LoadConversation(TLKManagerWPF.GlobalFindStrRefbyID, true);
+            }
+
+            ExportEntry package;
+
+            // Try to get the parent package that contains the audio elements, which varies between games.
+            if (pcc.Game.IsGame1())
+            {
+                if (!pcc.TryGetUExport(conversation.Sequence.idxLink, out package)) { return null; }
+            }
+            else if (pcc.Game.IsGame2())
+            {
+                if (!pcc.TryGetUExport(conversation.WwiseBank.idxLink, out package)) { return null; }
+            }
+            else
+            {
+                if (!pcc.TryGetUExport(bioConversation.idxLink, out package)) { return null; }
+            }
+
+            if (package != null && package.ClassName != "Package") { return new(); }
+
+            // Avoid trying to get exports that belong to a different game
+            if (pcc.Game.IsGame1())
+            {
+                if (targetClass is not (AudioClass.SoundCue or AudioClass.SoundNodeWave)) { return null; }
+            }
+            else
+            {
+                if (targetClass is (AudioClass.SoundCue or AudioClass.SoundNodeWave)) { return null; }
+            }
+
+            switch (targetClass)
+            {
+                case AudioClass.SoundCue:
+                    return package.GetAllDescendants().Where(e => e.ClassName == "SoundCue")
+                        .Select(e => (ExportEntry)e).ToList();
+                case AudioClass.SoundNodeWave:
+                    return package.GetAllDescendants().Where(e => e.ClassName == "SoundNodeWave")
+                        .Select(e => (ExportEntry)e).ToList();
+                case AudioClass.WwiseStream:
+                    return package.GetAllDescendants().Where(e => e.ClassName == "WwiseStream")
+                        .Select(e => (ExportEntry)e).ToList();
+                case AudioClass.WwiseEvent:
+                    return package.GetAllDescendants().Where(e => e.ClassName == "WwiseEvent")
+                        .Select(e => (ExportEntry)e).ToList();
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Check that the bioConversation follows the games' normal conversation structure.
+        /// It does not display error messages to the user, as that's handled by the experiment callers.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="bioConversation">BioConversation to check.</param>
+        /// <param name="conversation">Loaded Conversation, to avoid copy/pasting some its code.</param>
+        /// <returns>Error message resulting of the check, if one is found; empty string otherwise.</returns>
+        private static string CheckConversationStructure(IMEPackage pcc, ExportEntry bioConversation, ConversationExtended conversation = null)
+        {
+            if (bioConversation.ClassName != "BioConversation")
+            {
+                return "Selected export is not a BioConversation";
+            }
+
+            if (conversation == null)
+            {
+                conversation = new(bioConversation);
+                conversation.LoadConversation(TLKManagerWPF.GlobalFindStrRefbyID, true);
+            }
+
+            if (bioConversation.idxLink == 0 || !pcc.TryGetUExport(bioConversation.idxLink, out ExportEntry dLink) || dLink.ClassName != "Package")
+            {
+                return "BioConversation not children of a Package export. Make sure to keep the normal structure of the game's conversations.";
+            }
+
+            // ME1 and ME2 have the audio elements in a separate package.
+            if (pcc.Game.IsGame1() && (!pcc.TryGetUExport(conversation.Sequence.idxLink, out ExportEntry sLink) || sLink.ClassName != "Package"))
+            {
+                return "BioConversation's audio package not children of a Package export. Make sure to keep the normal structure of ME1's conversations.";
+            }
+            else if (pcc.Game.IsGame2() && (!pcc.TryGetUExport(conversation.WwiseBank.idxLink, out ExportEntry wLink) || wLink.ClassName != "Package"))
+            {
+                return "BioConversation's audio package not children of a Package export. Make sure to keep the normal structure of ME2's conversations.";
+            }
+
+            return "";
+        }
+
+        /// <summary>
+        /// Wrapper for UpdateAmbPerfClass so it can used as a full experiment on its own.
+        /// </summary>
+        /// <param name="pew">Current PE window.</param>
+        public static void UpdateAmbPerfClassExperiment(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+
+            if (pew.SelectedItem.Entry.ClassName is not "SFXAmbPerfGameData")
+            {
+                ShowError("Selected export is not an SFXAmbPerfGameData");
+                return;
+            }
+
+            int propResourceID = PromptForInt("PropResource export number:", "Not a valid export number. It must be positive integer", -1, "PropResouce export number");
+            if (propResourceID == -1) { return; }
+            if (!pew.Pcc.TryGetUExport(propResourceID, out ExportEntry propResource))
+            {
+                ShowError("Could not find the export number.");
+                return;
+            }
+            if (propResource.ClassName != "Class")
+            {
+                ShowError("Provided export is not a class.");
+                return;
+            }
+
+            UpdateAmbPerfClass(pew.Pcc, (ExportEntry)pew.SelectedItem.Entry, propResource);
+
+            MessageBox.Show("Properties of SFXAmbPerfGameData updated successfully.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Batch update WepPropClass, PropName, and PropResource props of an AmbPerfs in a selected Package.
+        /// </summary>
+        /// <param name="pew">Current PE window.</param>
+        public static void BatchUpdateAmbPerfClassExperiment(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+
+            if (pew.SelectedItem.Entry.ClassName is not "Package")
+            {
+                ShowError("Selected export is not an Package");
+                return;
+            }
+
+            int propResourceID = PromptForInt("PropResource export number:", "Not a valid export number. It must be positive integer", -1, "PropResouce export number");
+            if (propResourceID == -1) { return; }
+            if (!pew.Pcc.TryGetUExport(propResourceID, out ExportEntry propResource))
+            {
+                ShowError("Could not find the export number.");
+                return;
+            }
+            if (propResource.ClassName != "Class")
+            {
+                ShowError("Provided export is not a class.");
+                return;
+            }
+
+            string propClass = propResource.InstancedFullPath;
+            string propName = propResource.ObjectName.Name.Replace("SFXWeapon_", "", StringComparison.OrdinalIgnoreCase);
+
+            pew.SelectedItem.Entry.GetAllDescendants().ForEach(entry =>
+            {
+                if (entry.ClassName == "SFXAmbPerfGameData")
+                {
+                    UpdateAmbPerfClass(pew.Pcc, (ExportEntry)entry, propResource, propClass, propName);
+                }
+            });
+
+            MessageBox.Show("Properties of children SFXAmbPerfGameDatas updated successfully.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Update WepPropClass, PropName, and PropResource props of an AmbPerf.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="ambPerfGameData">Export to update.</param>
+        /// <param name="propResource">Weapon class export entry, from which all the needed information is derived.</param>
+        /// <param name="propClass">Prop class instantiated named. Passed when used in a batch.</param>
+        /// <param name="propName">Prop class name minus the SFXWeapon_ part. Passed when used in a batch.</param>
+        public static void UpdateAmbPerfClass(IMEPackage pcc, ExportEntry ambPerfGameData, ExportEntry propResource, string propClass = "", string propName = "")
+        {
+            if (string.IsNullOrEmpty(propClass))
+            {
+                propClass = propResource.InstancedFullPath;
+            }
+
+            if (string.IsNullOrEmpty(propName))
+            {
+                propName = propResource.ObjectName.Name.Replace("SFXWeapon_", "", StringComparison.OrdinalIgnoreCase);
+            }
+
+            PropertyCollection props = ambPerfGameData.GetProperties();
+
+            props.AddOrReplaceProp(new StrProperty(propClass, "m_sWepPropClass"));
+            props.AddOrReplaceProp(new NameProperty(propName, "m_nmPropName"));
+            props.AddOrReplaceProp(new ObjectProperty(propResource, "m_pPropResource"));
+
+            ambPerfGameData.WriteProperties(props);
+        }
+
+        /// <summary>
+        /// Replaces the colors in the DirectionalSamples of the 1D Lightmap of a StaticMeshComponent
+        /// </summary>
+        /// <param name="pew">Current PE window.</param>
+        public static void Replace1DLightMapColors(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+
+            IMEPackage pcc = pew.Pcc;
+            if (pew.SelectedItem.Entry.ClassName is not "StaticMeshComponent")
+            {
+                ShowError("Selected export is not an StaticMeshComponent");
+                return;
+            }
+
+            ExportEntry component = pew.SelectedItem.Entry as ExportEntry;
+
+            if (ObjectBinary.From(component) is not StaticMeshComponent sc)
+            {
+                ShowError("Wrong binary data.");
+                return;
+            }
+
+            Dictionary<int, string> colorMap = GetColorMap(sc.LODData);
+
+            string colors = string.Join("; ", colorMap.Select(pair => $"{pair.Key}: {pair.Value}"));
+
+            MessageBoxResult response = MessageBox.Show($"Found {colorMap.Count} colors.\n\nDo you want to copy them to the clipboard?\nThey'll appear in the form of <color id>: <hexadecimal>.", "", MessageBoxButton.YesNo);
+            if (response == MessageBoxResult.Yes) { Clipboard.SetText(colors); }
+
+            string newColorsString = PromptDialog.Prompt(null,
+                "Paste a ; separated list of color IDs and the new hexadecimal color values to patch, in the following form:\n" +
+                "<color id 1>: <hexadecimal 1>; <color id 2>: <hexadecimal 2>; ...\n\n");
+
+            if (string.IsNullOrEmpty(newColorsString))
+            {
+                ShowError("Invalid colors list.");
+                return;
+            }
+
+            Dictionary<int, (int, int, int)> newColorMap = new();
+
+            foreach (string s in newColorsString.Split(";"))
+            {
+                if (!s.Contains(':'))
+                {
+                    ShowError("Wrong formatting for color ids and hex.");
+                    return;
+                }
+
+                // Validate values
+                string[] temp = s.Trim().Split(":");
+                if (!int.TryParse(temp[0], out int id))
+                {
+                    ShowError($"The {s}'s id is not an int.");
+                    return;
+                }
+
+                newColorMap.Add(id, HexToRGB(temp[1].Trim()));
+            }
+
+            ApplyColorMap(newColorMap, sc.LODData);
+
+            component.WriteBinary(sc);
+
+            MessageBox.Show("The colors were sucessfully replaced", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Replaces the colors in the DirectionalSamples of the 1D Lightmap of the StaticMeshComponent of the given export IDs.
+        /// /// </summary>
+        /// <param name="pew">Current PE window</param>
+        public static void Replace1DLightMapColorsOfExports(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            IMEPackage pcc = pew.Pcc;
+
+            // Get IDs of exports to edit
+            string exportsString = PromptDialog.Prompt(null, "Write a comma separated list of export IDs of the StaticMeshComponents to edit");
+            if (string.IsNullOrEmpty(exportsString))
+            {
+                ShowError("Invalid list");
+                return;
+            }
+
+            List<ExportEntry> components = new();
+
+            foreach (string exportStr in exportsString.Split(','))
+            {
+                if (!int.TryParse(exportStr, out int id))
+                {
+                    ShowError($"{exportStr} is not a valid ID");
+                    return;
+                }
+
+                if (!pcc.TryGetUExport(id, out ExportEntry export))
+                {
+                    ShowError($"{exportStr} is not a valid export");
+                    return;
+                }
+
+                if (export.ClassName != "StaticMeshComponent")
+                {
+                    ShowError($"{exportStr} is not a StaticMeshComponent");
+                    return;
+                }
+
+                components.Add(export);
+            }
+
+            string colors = "";
+            int mapCount = 0;
+
+            foreach (ExportEntry component in components)
+            {
+                if (ObjectBinary.From(component) is not StaticMeshComponent sc) { continue; }
+
+                Dictionary<int, string> colorMap = GetColorMap(sc.LODData);
+                if (colorMap.Count == 0) { continue; } // Takes care of components with no 1D LightMaps
+
+                colors += $"IDX{component.UIndex} - {string.Join("; ", colorMap.Select(pair => $"{pair.Key}: {pair.Value}"))}@\n";
+
+                mapCount++;
+            }
+
+            if (string.IsNullOrEmpty(colors))
+            {
+                ShowError("No 1D LightMaps were found in the file.");
+                return;
+            }
+
+            MessageBoxResult response = MessageBox.Show($"Found {mapCount} 1D LightMaps.\n\nDo you want to copy the colors to the clipboard?\n\nThey'll appear in the following form:\nIDX<lightMap index> - <color id>: <hexadecimal>; ...", "", MessageBoxButton.YesNo);
+            if (response == MessageBoxResult.Yes) { Clipboard.SetText(colors); }
+
+            string newColorsString = PromptDialog.Prompt(null,
+                "Paste a list of light map IDs and a ; separated list of their color IDs and the new hexadecimal color values to patch, in the following form:\n" +
+                "IDX<map export index 1> - <color id 1>: <hexadecimal 1>; <color id 2>: <hexadecimal 2>; ...\n" +
+                "IDX<map export index n> - <color id n>: <hexadecimal n>; <color id n>: <hexadecimal n>; ...\n\n");
+
+            if (string.IsNullOrEmpty(newColorsString))
+            {
+                ShowError("Invalid colors list.");
+                return;
+            }
+
+            foreach (string line in newColorsString.Split('@'))
+            {
+                if (string.IsNullOrEmpty(line)) { continue; }
+
+                string[] parts = line.Split("-");
+                if (!int.TryParse(parts[0].Trim()[3..], out int idx)) { continue; }
+                string newColors = parts[1].Trim();
+
+                if (!pcc.TryGetUExport(idx, out ExportEntry component)) { continue; }
+                if (ObjectBinary.From(component) is not StaticMeshComponent sc) { continue; }
+
+                Dictionary<int, (int, int, int)> newColorMap = new();
+
+                foreach (string s in newColors.Split(";"))
+                {
+                    if (!s.Contains(':')) { continue; }
+
+                    // Validate values
+                    string[] temp = s.Trim().Split(":");
+                    if (!int.TryParse(temp[0], out int id)) { continue; }
+
+                    newColorMap.Add(id, HexToRGB(temp[1].Trim()));
+                }
+
+                ApplyColorMap(newColorMap, sc.LODData);
+
+                component.WriteBinary(sc);
+            }
+
+            MessageBox.Show("The colors were sucessfully replaced", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Replaces the colors in the DirectionalSamples of the 1D Lightmap of all StaticMeshComponent
+        /// </summary>
+        /// <param name="pew">Current PE window</param>
+        public static void BatchReplace1DLightMapColors(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            IMEPackage pcc = pew.Pcc;
+
+            List<ExportEntry> components = pcc.Exports.Where(exp => exp.ClassName == "StaticMeshComponent").ToList();
+
+            if (components.Count == 0)
+            {
+                ShowError("No StaticMeshComponents found in the file.");
+                return;
+            }
+
+            string colors = "";
+            int mapCount = 0;
+
+            foreach (ExportEntry component in components)
+            {
+                if (ObjectBinary.From(component) is not StaticMeshComponent sc) { continue; }
+
+                Dictionary<int, string> colorMap = GetColorMap(sc.LODData);
+                if (colorMap.Count == 0) { continue; } // Takes care of components with no 1D LightMaps
+
+                colors += $"IDX{component.UIndex} - {string.Join("; ", colorMap.Select(pair => $"{pair.Key}: {pair.Value}"))}@\n";
+
+                mapCount++;
+            }
+
+            if (string.IsNullOrEmpty(colors))
+            {
+                ShowError("No 1D LightMaps were found in the file.");
+                return;
+            }
+
+            MessageBoxResult response = MessageBox.Show($"Found {mapCount} 1D LightMaps.\n\nDo you want to copy the colors to the clipboard?\n\nThey'll appear in the following form:\nIDX<lightMap index> - <color id>: <hexadecimal>; ...", "", MessageBoxButton.YesNo);
+            if (response == MessageBoxResult.Yes) { Clipboard.SetText(colors); }
+
+            string newColorsString = PromptDialog.Prompt(null,
+                "Paste a list of light map IDs and a ; separated list of their color IDs and the new hexadecimal color values to patch, in the following form:\n" +
+                "IDX<map export index 1> - <color id 1>: <hexadecimal 1>; <color id 2>: <hexadecimal 2>; ...\n" +
+                "IDX<map export index n> - <color id n>: <hexadecimal n>; <color id n>: <hexadecimal n>; ...\n\n");
+
+            if (string.IsNullOrEmpty(newColorsString))
+            {
+                ShowError("Invalid colors list.");
+                return;
+            }
+
+            foreach (string line in newColorsString.Split('@'))
+            {
+                if (string.IsNullOrEmpty(line)) { continue; }
+
+                string[] parts = line.Split("-");
+                if (!int.TryParse(parts[0].Trim()[3..], out int idx)) { continue; }
+                string newColors = parts[1].Trim();
+
+                if (!pcc.TryGetUExport(idx, out ExportEntry component)) { continue; }
+                if (ObjectBinary.From(component) is not StaticMeshComponent sc) { continue; }
+
+                Dictionary<int, (int, int, int)> newColorMap = new();
+
+                foreach (string s in newColors.Split(";"))
+                {
+                    if (!s.Contains(':')) { continue; }
+
+                    // Validate values
+                    string[] temp = s.Trim().Split(":");
+                    if (!int.TryParse(temp[0], out int id)) { continue; }
+
+                    newColorMap.Add(id, HexToRGB(temp[1].Trim()));
+                }
+
+                ApplyColorMap(newColorMap, sc.LODData);
+
+                component.WriteBinary(sc);
+            }
+
+            MessageBox.Show("The colors were sucessfully replaced", "Success", MessageBoxButton.OK);
+        }
+
+        public static void SetForcedExportFlag(ExportEntry exp, bool set)
+        {
+
+            List<IEntry> entries = exp.GetAllDescendants();
+            entries.Add(exp);
+
+            foreach (IEntry entry in entries)
+            {
+                if (entry is not ExportEntry export) { continue; }
+
+                if (export.ClassName == "ObjectReferencer") { continue; }
+
+                if (set)
+                {
+                    // Set
+                    export.ExportFlags |= UnrealFlags.EExportFlags.ForcedExport;
+                }
+                else
+                {
+                    // Strip
+                    export.ExportFlags &= ~UnrealFlags.EExportFlags.ForcedExport;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds the ForcedExport flag to all descendant exports of the selected export, including itself
+        /// </summary>
+        /// <param name="pew">Current PE window</param>
+        public static void MakeExportsNonForced(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            IMEPackage pcc = pew.Pcc;
+
+            if (pew.SelectedItem == null) { return; }
+
+            if (pew.SelectedItem.Entry is not ExportEntry)
+            {
+                ShowError("The selected entry is not an export");
+                return;
+            }
+
+            SetForcedExportFlag(pew.SelectedItem.Entry as ExportEntry, false);
+            MessageBox.Show("Removed ForcedExport flag in all exports", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Adds the ForcedExport flag to all descendant exports of the selected export, including itself
+        /// </summary>
+        /// <param name="pew">Current PE window</param>
+        public static void MakeExportsForced(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            IMEPackage pcc = pew.Pcc;
+
+            if (pew.SelectedItem == null) { return; }
+
+            if (pew.SelectedItem.Entry is not ExportEntry)
+            {
+                ShowError("The selected entry is not an export");
+                return;
+            }
+
+            SetForcedExportFlag(pew.SelectedItem.Entry as ExportEntry, true);
+            MessageBox.Show("Set the ForcedExport flag in all exports", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Gathers all the colors in the DirectionalSamples of a the 1D LightMap in the LODData.
+        /// </summary>
+        /// <param name="LODData">LODs to get the samples from.</param>
+        /// <returns>A dictionary of packged RGBA integer keys and its corresponding hex color.</returns>
+        private static Dictionary<int, string> GetColorMap(StaticMeshComponentLODInfo[] LODData)
+        {
+            Dictionary<int, string> colorMap = new();
+
+            foreach (StaticMeshComponentLODInfo lod in LODData)
+            {
+                if (lod.LightMap.LightMapType == ELightMapType.LMT_1D && lod.LightMap is LightMap_1D lm1)
+                {
+                    foreach (QuantizedDirectionalLightSample qds in lm1.DirectionalSamples)
+                    {
+                        List<string> sample = new();
+                        colorMap[qds.Coefficient1.ToRgba()] = RGBToHex(qds.Coefficient1);
+                        colorMap[qds.Coefficient2.ToRgba()] = RGBToHex(qds.Coefficient2);
+                        colorMap[qds.Coefficient3.ToRgba()] = RGBToHex(qds.Coefficient3);
+                    }
+                }
+            }
+
+            return colorMap;
+        }
+
+        /// <summary>
+        /// Applies a color map of packed rgba int keys and (r, g, b) colors to the directional samples in the 1D maps.
+        /// </summary>
+        /// <param name="newColorMap">New colors to apply.</param>
+        /// <param name="LODData">LOD to apply the colors to.</param>
+        private static void ApplyColorMap(Dictionary<int, (int, int, int)> newColorMap, StaticMeshComponentLODInfo[] LODData)
+        {
+            foreach (StaticMeshComponentLODInfo lod in LODData)
+            {
+                if (lod.LightMap.LightMapType == ELightMapType.LMT_1D && lod.LightMap is LightMap_1D lm1)
+                {
+                    foreach (QuantizedDirectionalLightSample qds in lm1.DirectionalSamples)
+                    {
+                        List<string> sample = new();
+                        qds.Coefficient1 = EditColor(qds.Coefficient1, newColorMap);
+                        qds.Coefficient2 = EditColor(qds.Coefficient2, newColorMap);
+                        qds.Coefficient3 = EditColor(qds.Coefficient3, newColorMap);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Converts the RGB values in a Color to hexadecimal.
+        /// </summary>
+        /// <param name="coefficient">Color to edit.</param>
+        /// <returns>The hexadecimal string.</returns>
+        private static string RGBToHex(Color coefficient)
+        {
+            byte red = Convert.ToByte(coefficient.R);
+            byte green = Convert.ToByte(coefficient.G);
+            byte blue = Convert.ToByte(coefficient.B);
+
+            return $"#{red:X2}{green:X2}{blue:X2}";
+        }
+
+        /// <summary>
+        /// Converts a hexadecimal color into R,G,B values.
+        /// </summary>
+        /// <param name="hexColor">Hexadecimal color.</param>
+        /// <returns>R,G,B tuple.</returns>
+        private static (int, int, int) HexToRGB(string hexColor)
+        {
+            if (hexColor.Length == 7 && hexColor[0] == '#')
+            {
+                byte red = Convert.ToByte(hexColor.Substring(1, 2), 16);
+                byte green = Convert.ToByte(hexColor.Substring(3, 2), 16);
+                byte blue = Convert.ToByte(hexColor.Substring(5, 2), 16);
+
+
+                return (red, green, blue);
+            }
+            else
+            {
+                return (0, 0, 0);
+            }
+        }
+
+        /// <summary>
+        /// Edit the R,G,B values of a Color with the ones provided in the colorMap.
+        /// </summary>
+        /// <param name="color">Color to edit.</param>
+        /// <param name="colorMap">Map containing the new color.</param>
+        /// <returns>Edited color.</returns>
+        private static Color EditColor(Color color, Dictionary<int, (int, int, int)> colorMap)
+        {
+            if (colorMap.TryGetValue(color.ToRgba(), out (int, int, int) rgb))
+            {
+                color.R = (byte)rgb.Item1;
+                color.G = (byte)rgb.Item2;
+                color.B = (byte)rgb.Item3;
+            }
+            return color;
+        }
+
+        /// <summary>
+        /// Collect all StaticMeshComponents, referenced by StatichMeshActors, and add them into a new StaticMeshCollectionActor
+        /// </summary>
+        /// <param name="pew">Current PE window</param>
+        public static void CollectSMCsintoSMCA(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            IMEPackage pcc = pew.Pcc;
+
+            bool trashActors = MessageBoxResult.Yes == MessageBox.Show(
+                "Trash actors that referenced the StaticMeshComponents?\n" +
+                "References to the actors in the PersistentLevel will be removed, but other references may remain.",
+                "Trash actors", MessageBoxButton.YesNo);
+
+            List<ExportEntry> actors = pcc.Exports.Where(exp => exp.ClassName == "StaticMeshActor").ToList();
+
+            if (actors.Count == 0)
+            {
+                ShowError("No StaticMeshActors found in the file.");
+                return;
+            }
+
+            Dictionary<ExportEntry, (Vector3, Rotator, Vector3)> SMCsAndPos = [];
+            List<IEntry> actorsToTrash = [];
+
+            // Collect components referenced by actors and the location, rotation, and draw scale values
+            foreach (ExportEntry actor in actors)
+            {
+                PropertyCollection actorProps = actor.GetProperties();
+
+                ObjectProperty smcRef = actorProps.GetProp<ObjectProperty>("StaticMeshComponent");
+
+                if (smcRef == null || !pcc.TryGetUExport(smcRef.Value, out ExportEntry smc))
+                {
+                    continue;
+                }
+
+                Vector3 loc = GetTransformationData(actor, "Location");
+                Vector3 rot = GetTransformationData(actor, "Rotation");
+                Vector3 draw = GetTransformationData(actor, "DrawScale3D");
+
+                SMCsAndPos.Add(smc, (loc, new Rotator((int)rot.X, (int)rot.Y, (int)rot.Z), draw));
+
+                actor.RemoveProperty("StaticMeshComponent");
+                actorsToTrash.Add(actor);
+            }
+
+            // Prepare the props for the new StaticMeshCollectionActor
+            PropertyCollection collectionProps = [
+                new ArrayProperty<ObjectProperty>(
+                    SMCsAndPos.Select(kvp => new ObjectProperty(kvp.Key)), "StaticMeshComponents"),
+                new NameProperty("StaticMeshCollectionActor", "Tag")
+            ];
+
+            ExportEntry persistentLevel = pcc.FindExport("TheWorld.PersistentLevel");
+
+            // Create the actor
+            ExportEntry smca = CreateExport(pcc, pcc.GetNextIndexedName("StaticMeshCollectionActor"), "StaticMeshCollectionActor",
+                persistentLevel, collectionProps);
+
+            // Prepare the binary for the new StaticMeshCollectionActor
+            StaticMeshCollectionActor collectionBinary = new()
+            {
+                Export = smca,
+                Components = SMCsAndPos.Select(kvp => kvp.Key.UIndex).ToList(),
+                LocalToWorldTransforms = SMCsAndPos.Select(kvp =>
+                {
+                    (Vector3 loc, Rotator rot, Vector3 draw) = kvp.Value;
+                    return ActorUtils.ComposeLocalToWorld(loc, rot, draw);
+                }).ToList()
+            };
+            smca.WriteBinary(collectionBinary);
+
+            // Add the new collection actor reference to the PersistentLevel
+            Level plBinary = ObjectBinary.From<Level>(persistentLevel);
+            plBinary.Actors.Add(smca.UIndex);
+            if (trashActors)
+            {
+                foreach (IEntry actor in actorsToTrash)
+                {
+                    plBinary.Actors.TryRemove((uidx => uidx == actor.UIndex), out _);
+                }
+            }
+            persistentLevel.WriteBinary(plBinary);
+
+            // Relink the components to the new collection actor
+            foreach (KeyValuePair<ExportEntry, (Vector3, Rotator, Vector3)> kvp in SMCsAndPos)
+            {
+                kvp.Key.idxLink = smca.UIndex;
+            }
+
+            if (trashActors)
+            {
+                EntryPruner.TrashEntries(pcc, actorsToTrash);
+            }
+
+            MessageBox.Show($"Created {smca.InstancedFullPath} with {SMCsAndPos.Count} StaticMeshComponents", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Get the transformation data that matches the given propName.
+        /// </summary>
+        /// <param name="actor">Actor to find the data on.</param>
+        /// <param name="propName">Name of the prop to get the data of.</param>
+        /// <returns>Vector3 containing the three transformation values of the prop.</returns>
+        private static Vector3 GetTransformationData(ExportEntry actor, string propName)
+        {
+            StructProperty prop = actor.GetProperty<StructProperty>(propName);
+            PackageCache cache = new PackageCache();
+            // Try to get the data from the archetype.
+            // Useful in case of prefabs.
+            if (prop == null)
+            {
+                IEntry archetype = actor.Archetype;
+
+                if (archetype == null) { return new Vector3(); } // Exit if no prop in actor or archeytpe
+
+                if (archetype is ImportEntry entry)
+                {
+                    archetype = EntryImporter.ResolveImport(entry, cache);
+                }
+
+                prop = ((ExportEntry)archetype).GetProperty<StructProperty>(propName);
+            }
+
+            switch (propName)
+            {
+                case "Location":
+                case "DrawScale3D":
+                    return prop != null
+                        ? new Vector3(prop.GetProp<FloatProperty>("X"), prop.GetProp<FloatProperty>("Y"), prop.GetProp<FloatProperty>("Z"))
+                        : new Vector3(0, 0, 0);
+                case "Rotation":
+                    return prop != null
+                        ? new Vector3(prop.GetProp<FloatProperty>("Pitch"), prop.GetProp<FloatProperty>("Yaw"), prop.GetProp<FloatProperty>("Roll"))
+                        : new Vector3(0, 0, 0);
+                default:
+                    return new Vector3(0, 0, 0);
+            }
+        }
+
+        /// <summary>
+        /// Creates instances of all the prefab archetypes of a Prefab into the file's persistent level.
+        /// </summary>
+        /// <param name="pew">Current PE window.</param>
+        public static void AddPrefabToLevel(PackageEditorWindow pew)
+        {
+            PackageCache cache = new PackageCache();
+            if (pew.Pcc == null || pew.SelectedItem?.Entry == null) { return; }
+
+            if (pew.SelectedItem.Entry.ClassName is not "Prefab" || !(pew.SelectedItem.Entry is ExportEntry prefab))
+            {
+                ShowError("Selected export is not Prefab");
+                return;
+            }
+
+            ArrayProperty<ObjectProperty> prefabArchetypes = prefab.GetProperty<ArrayProperty<ObjectProperty>>("PrefabArchetypes");
+            if (prefabArchetypes == null)
+            {
+                ShowError("The Prefab contains no PrefabArchetypes property");
+                return;
+            }
+
+            if (!(pew.Pcc.FindExport("TheWorld.PersistentLevel") is ExportEntry { ClassName: "Level" } levelExport))
+            {
+                ShowError("No PersistentLevel found in the file.");
+                return;
+            }
+
+            Level level = ObjectBinary.From<Level>(levelExport);
+
+            foreach (ObjectProperty archRef in prefabArchetypes)
+            {
+                // Either cast the archetype or resolve it, so we clone an ExportEntry
+                IEntry entry = pew.Pcc.GetEntry(archRef.Value);
+                ExportEntry archetype = ResolveEntryToExport(entry, cache);
+
+                ExportEntry newExport;
+
+                // General creation
+                switch (archetype.ClassName)
+                {
+                    case "BioDoor":
+                        continue; // Skip BioDoors, as adding the causes crashes
+                    case "PointLight":
+                    case "SpotLight":
+                    case "StaticMeshActor":
+                        newExport = CreateExport(pew.Pcc, archetype.ObjectName, archetype.ClassName, levelExport, archetype.GetProperties(),
+                            null, null, null, archetype); // Create the export
+                        AddStack(newExport); // Add preProps binary
+                        break;
+                    default:
+                        newExport = ClonePrefabArchetype(entry, archetype, levelExport);
+                        break;
+                }
+
+                // Specific operations on the different classes. We could have a single switch case, but given that they need the export to already
+                // be created, and the specificities, it's cleaner to have two separate steps.
+                switch (archetype.ClassName)
+                {
+                    case "PointLight":
+                    case "SpotLight":
+                        AddLightingChannelsToComponent(pew.Pcc, archetype);
+                        break;
+                    case "StaticMeshActor":
+                        AddComponentsToActor(pew.Pcc, archetype, newExport); // Copy relevant components
+                        break;
+                    case "BioSunActor":
+                        FixPackageOfSunSprites(pew.Pcc, archetype.GetProperties());
+                        break;
+                    default:
+                        break;
+                }
+
+                level.Actors.Add(newExport.UIndex);
+            }
+
+            levelExport.WriteBinary(level);
+
+            MessageBox.Show("Added instances of all the archetypes in the Prefab to the PersistentLevel.", "Success", MessageBoxButton.OK);
+        }
+
+        /// <summary>
+        /// Add the StaticMeshComponent and CollisionComponent of the source into the target, adding their proper binary in the process.
+        /// </summary>
+        /// <param name="pcc">Package to operate on.</param>
+        /// <param name="source">Source export to clone the components from.</param>
+        /// <param name="target">Target export to clone the components into.</param>
+        private static void AddComponentsToActor(IMEPackage pcc, ExportEntry source, ExportEntry target)
+        {
+            PropertyCollection sourceProps = source.GetProperties();
+            PropertyCollection targetProps = target.GetProperties();
+
+            switch (target.ClassName)
+            {
+                case "StaticMeshActor":
+                    CopyComponentToProps(pcc, "StaticMeshComponent", target, sourceProps, targetProps);
+                    CopyComponentToProps(pcc, "CollisionComponent", target, sourceProps, targetProps);
+                    break;
+                default:
+                    break;
+            }
+
+            target.WriteProperties(targetProps);
+        }
+
+        /// <summary>
+        /// Copy a source component into a new object, and add the new property to the target collection.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="componentName">Name of the component to copy.</param>
+        /// <param name="parent">Parent export to link the component to.</param>
+        /// <param name="sourceProps">Props possibly containing the component to copy.</param>
+        /// <param name="targetProps">Props to copy the component into.</param>
+        /// <returns></returns>
+        private static void CopyComponentToProps(IMEPackage pcc, string componentName, ExportEntry parent, PropertyCollection sourceProps, PropertyCollection targetProps)
+        {
+            PackageCache cache = new PackageCache();
+            ObjectProperty componentRef = sourceProps.GetProp<ObjectProperty>(componentName);
+
+            if (componentRef != null)
+            {
+                ExportEntry sourceComponent = ResolveEntryToExport(pcc.GetEntry(componentRef.Value), cache);
+                PropertyCollection sourceComponentProps = sourceComponent.GetProperties();
+                ExportEntry newComponent = CreateExport(pcc, sourceComponent.ObjectName, sourceComponent.ClassName, parent, sourceComponentProps,
+                    sourceComponent.GetBinaryData(), new byte[8]);
+
+                targetProps.AddOrReplaceProp(new ObjectProperty(newComponent.UIndex, componentName));
+            }
+        }
+
+        /// <summary>
+        /// Clone an archetype from a prefab into the PersistentLevel.
+        /// </summary>
+        /// <param name="archetypeEntry">Archetype entry, may be an import or an export.</param>
+        /// <param name="archetype">Resolved export of the archetype, in case it was an import.</param>
+        /// <param name="persistentLevel">PersistentLevel to add the clone to.</param>
+        /// <returns></returns>
+        private static ExportEntry ClonePrefabArchetype(IEntry archetypeEntry, ExportEntry archetype, ExportEntry persistentLevel)
+        {
+            ExportEntry newExport = EntryCloner.CloneEntry(archetype);
+            newExport.Archetype = archetypeEntry;
+            newExport.idxLink = persistentLevel.UIndex;
+
+            // Set the proper flags
+            newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.ArchetypeObject;
+            newExport.ObjectFlags &= ~UnrealFlags.EObjectFlags.Public;
+            newExport.ObjectFlags |= UnrealFlags.EObjectFlags.Transactional;
+
+            ObjectBinary binary = ObjectBinary.From(newExport);
+            if (binary == null) { newExport.WriteBinary(ObjectBinary.Create(newExport.ClassName, newExport.FileRef.Game, newExport.GetProperties())); }
+
+            return newExport;
+        }
+
+        /// <summary>
+        /// Add lighting channels to the LightComponents, in case they don't have them, as otherwise they won't appear.
+        /// You'd think that you'd be better copying the component and adding it in the PersistentLevel,
+        /// but that seems to do nothing, they need to be added to the archetype in the Prefab.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="parent">Parent export of the LightComponent.</param>
+        private static void AddLightingChannelsToComponent(IMEPackage pcc, ExportEntry parent)
+        {
+            PackageCache cache = new PackageCache();
+            ObjectProperty componentRef = parent.GetProperties().GetProp<ObjectProperty>("LightComponent");
+
+            if (componentRef != null)
+            {
+                ExportEntry lightComponent = ResolveEntryToExport(pcc.GetEntry(componentRef.Value), cache);
+
+                StructProperty lightingChannels = lightComponent.GetProperty<StructProperty>("LightingChannels")
+                    ?? new StructProperty("LightingChannelContainer", new PropertyCollection(), "LightingChannels");
+
+                lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Static"));
+                lightingChannels.Properties.AddOrReplaceProp(new BoolProperty(true, "Dynamic"));
+
+                lightComponent.WriteProperty(lightingChannels);
+            }
+        }
+
+        /// <summary>
+        /// Find the SunSprite components that are ImportEntries, if any, then change their package file to SFXGame, if it's BIOC_Base.
+        /// </summary>
+        /// <param name="pcc">Pcc to operate on.</param>
+        /// <param name="props">Props containing the components references.</param>
+        private static void FixPackageOfSunSprites(IMEPackage pcc, PropertyCollection props)
+        {
+            foreach (Property prop in props)
+            {
+                if (prop.PropType != PropertyType.ObjectProperty && !prop.Name.Name.Contains("Sprite")) { continue; }
+                // if (prop.PropType != PropertyType.ObjectProperty || (!prop.Name.Name.Contains("HaloSprite") && !prop.Name.Name.Contains("FlareSprite"))) { continue; }
+
+                IEntry flareEntry = pcc.GetEntry(((ObjectProperty)prop).Value);
+
+                ImportEntry flareImport;
+
+                // Try to find if the component or its archetype are an import,
+                // so we can operate on them
+                if (flareEntry is ExportEntry export)
+                {
+                    IEntry flareArchetype = export.Archetype;
+
+                    if (flareArchetype is ImportEntry import) { flareImport = import; }
+                    else { continue; } // Neither the component nor its archetype were an import, so we skip it
+                }
+                else
+                {
+                    flareImport = (ImportEntry)flareEntry;
+                }
+
+                if (flareImport.PackageFile.CaseInsensitiveEquals("BIOC_Base"))
+                {
+                    flareImport.PackageFile = "SFXGame";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds a level streaming kismet to either TheWorld or PersistentLevel.
+        /// </summary>
+        /// <param name="pew">Current PE window</param>
+        public static void AddStreamingKismetExperiment(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            string filename = PromptForStr("Name of file to set in the streaming kismet:", "Not a valid file name.");
+            if (string.IsNullOrEmpty(filename))
+            {
+                ShowError("Not a valid file name.");
+                return;
+            }
+            bool inPersistentLevel = PromptForBool("Yes adds the object to the PersistentLevel. No adds the object to TheWorld", "To PersistentLevel?");
+
+            AddStreamingKismet(pew.Pcc, filename, inPersistentLevel);
+
+            ShowSuccess($"{filename} streaming kismet added to {(inPersistentLevel ? "the PersistentLevel" : "TheWorld")}");
+        }
+
+        /// <summary>
+        /// Set the loading and streaming of the given file name in all the BioTriggerStreams where the conditional file is present.
+        /// </summary>
+        /// <param name="pew">Current PE window</param>
+        public static void StreamFileExperiment(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            string filename = PromptForStr("Name of file to stream:", "Not a valid file name.");
+            if (string.IsNullOrEmpty(filename))
+            {
+                ShowError("Not a valid file name.");
+                return;
+            }
+            string conditionalFile = PromptForStr("Name of conditional file:", "Not a valid file name.");
+            if (string.IsNullOrEmpty(conditionalFile))
+            {
+                ShowError("Not a valid file name.");
+                return;
+            }
+
+            StreamFile(pew.Pcc, filename, conditionalFile);
+
+            ShowSuccess($"Added loading and streaming for {filename} wherever {conditionalFile} is present");
+        }
+
         // HELPER FUNCTIONS
         #region Helper functions
         /// <summary>
-        /// Checks if a dest position is within a given distance of the origin.
+        /// Indicates a class that is related to the audio elements of a BioConversation.
         /// </summary>
-        /// <param name="origin">Origin position.</param>
-        /// <param name="dest">Dest position to check.</param>
-        /// <param name="dist">Max distance from origin.</param>
-        /// <returns>True if the dest is within dist</returns>
-        private static bool InDist(float origin, float dest, float dist)
+        private enum AudioClass
         {
-            return Math.Abs((dest - origin)) <= dist;
-        }
-
-        /// <summary>
-        /// Generate a default ExpressionGUID
-        /// </summary>
-        /// <returns>ExpressionGUID StructProperty</returns>
-        private static StructProperty GenerateExpressionGUID()
-        {
-            PropertyCollection props = new PropertyCollection();
-            props.Add(new IntProperty(0, "A"));
-            props.Add(new IntProperty(0, "B"));
-            props.Add(new IntProperty(0, "C"));
-            props.Add(new IntProperty(0, "D"));
-
-            return new StructProperty("Guid", props, "ExpressionGUID", true);
-        }
-
-        private static void ShowError(string errMsg)
-        {
-            MessageBox.Show(errMsg, "Warning", MessageBoxButton.OK);
-        }
-
-        /// <summary>
-        /// Prompts the user for an int, verifying that the int is valid.
-        /// </summary>
-        /// <param name="msg">Message to display for the prompt.</param>
-        /// <param name="err">Error message to display.</param>
-        /// <param name="biggerThan">Number the input must be bigger than. If not provided -2,147,483,648 will be used.</param>
-        /// <param name="title">Title for the prompt.</param>
-        /// <returns>The input int.</returns>
-        private static int promptForInt(string msg, string err, int biggerThan = -2147483648, string title = "")
-        {
-            if (PromptDialog.Prompt(null, msg, title) is string stringPrompt)
-            {
-                int intPrompt;
-                if (string.IsNullOrEmpty(stringPrompt) || !int.TryParse(stringPrompt, out intPrompt) || !(intPrompt > biggerThan))
-                {
-                    MessageBox.Show(err, "Warning", MessageBoxButton.OK);
-                    return -1;
-                }
-                return intPrompt;
-            }
-            return -1;
-        }
-
-        /// <summary>
-        /// Gets the common prefix of two strings. Assumes both only difer at the end.
-        /// </summary>
-        /// <param name="s1">First string.</param>
-        /// <param name="s2">Second string.</param>
-        /// <returns>Union of input strings.</returns>
-        private static string GetCommonPrefix(string s1, string s2)
-        {
-            if (s1.Length == 0 || s2.Length == 0 || char.ToLower(s1[0]) != char.ToLower(s2[0]))
-            {
-                return "";
-            }
-
-            for (int i = 1; i < s1.Length && i < s2.Length; i++)
-            {
-                if (char.ToLower(s1[i]) != char.ToLower(s2[i]))
-                {
-                    return s1[..i];
-                }
-            }
-
-            return s1.Length < s2.Length ? s1 : s2;
-        }
-
-        /// <summary>
-        /// Generates a FNV132 hash of the given name.
-        /// IMPORTANT: This may not be compeletely bug-free or may be missing a couple of details, but so far it works.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns>The decimal representation of the hash.</returns>
-        private static uint GetBankId(string name)
-        {
-            byte[] bytedName = Encoding.ASCII.GetBytes(name.ToLower()); // Wwise automatically lowecases the input
-
-            // FNV132 hashing algorithm
-            uint hash = 2166136261;
-            foreach (byte namebyte in bytedName)
-            {
-                hash = ((hash * 16777619) ^ namebyte) & 0xFFFFFFFF;
-            }
-            return hash;
-        }
-
-        /// <summary>
-        /// Create a var link with custom properties.
-        /// </summary>
-        /// <param name="pcc">Pcc to operate on.</param>
-        /// <param name="name">LinkDesc.</param>
-        /// <returns>The varLink StructProperty.</returns>
-        private static StructProperty CreateVarLink(IMEPackage pcc, string name)
-        {
-            PropertyCollection props = GlobalUnrealObjectInfo.getDefaultStructValue(pcc.Game, "SeqVarLink", true);
-
-            int minVars = name == "Anchor" ? 1 : 0;
-            int maxVars = name == "Anchor" ? 1 : 255;
-
-            props.AddOrReplaceProp(new StrProperty(name, "LinkDesc"));
-            int index = pcc.FindImport("Engine.SeqVar_Object").UIndex;
-            props.AddOrReplaceProp(new ObjectProperty(index, "ExpectedType"));
-            props.AddOrReplaceProp(new IntProperty(minVars, "MinVars"));
-            props.AddOrReplaceProp(new IntProperty(maxVars, "MaxVars"));
-            return new StructProperty("SeqVarLink", props);
+            WwiseStream, WwiseEvent, SoundCue, SoundNodeWave
         }
         #endregion
     }
