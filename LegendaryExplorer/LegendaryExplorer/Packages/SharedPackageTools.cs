@@ -60,9 +60,9 @@ namespace LegendaryExplorer.Packages
                         }
                         var diff = PackageDiff.Create(wpfBase.Pcc, package);
                         var list = new List<EntryStringPair>();
-                        list.AddRange(diff.ChangedEntries.Select(ed => new EntryStringPair(ed.A, $"Changed #{ed.A.UIndex} {ed.A.InstancedFullPath}")));
-                        list.AddRange(diff.AOnlyEntries.Select(entry => new EntryStringPair(entry, $"Export only exists in this file #{entry.UIndex} {entry.InstancedFullPath}")));
-                        list.AddRange(diff.BOnlyEntries.Select(entry => new EntryStringPair(entry, $"Export only exists in other file #{entry.UIndex} {entry.InstancedFullPath}")));
+                        list.AddRange(diff.ChangedEntries.Select(ed => new EntryStringPair(ed.A, $"{(ed.A.UIndex > 0 ? "Export" : "Import")} Changed #{ed.A.UIndex} {ed.A.InstancedFullPath}")));
+                        list.AddRange(diff.AOnlyEntries.Select(entry => new EntryStringPair(entry, $"{(entry.UIndex > 0 ? "Export" : "Import")} only exists in this file #{entry.UIndex} {entry.InstancedFullPath}")));
+                        list.AddRange(diff.BOnlyEntries.Select(entry => new EntryStringPair(entry, $"{(entry.UIndex > 0 ? "Export" : "Import")} only exists in other file #{entry.UIndex} {entry.InstancedFullPath}")));
                         list.AddRange(diff.AOnlyNames.Select(name => new EntryStringPair($"Name only exists in this file: {name}")));
                         list.AddRange(diff.BOnlyNames.Select(name => new EntryStringPair($"Name only exists in other file: {name}")));
                         return list;

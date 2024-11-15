@@ -671,8 +671,9 @@ namespace LegendaryExplorerCore.Unreal
         /// Checks to see if the two collections have the same properties (defined by <see cref="Property.Equivalent"/>). Order does not matter
         /// </summary>
         /// <param name="other">The <see cref="PropertyCollection"/> to compare to.</param>
+        /// <param name="objectComparer">A function to compare two uIndexes. If not provided, an integer comparison will be used.</param>
         /// <returns>True if the <see cref="PropertyCollection"/>s are equivalent, false if not</returns>
-        public bool Equivalent(PropertyCollection other)
+        public bool Equivalent(PropertyCollection other, Func<int, int, bool> objectComparer = null)
         {
             if (other?.Count != Count)
             {
@@ -680,7 +681,7 @@ namespace LegendaryExplorerCore.Unreal
             }
             foreach (Property otherProp in other)
             {
-                if (GetProp<Property>(otherProp.Name, otherProp.StaticArrayIndex) is not Property prop || !prop.Equivalent(otherProp))
+                if (GetProp<Property>(otherProp.Name, otherProp.StaticArrayIndex) is not Property prop || !prop.Equivalent(otherProp, objectComparer))
                 {
                     return false;
                 }
@@ -693,8 +694,9 @@ namespace LegendaryExplorerCore.Unreal
         /// </summary>
         /// <param name="other"></param>
         /// <param name="structDiff"> If true, will diff within non-atomic structs. If false, will treat all structs as atomic</param>
+        /// <param name="objectComparer">A function to compare two uIndexes. If not provided, an integer comparison will be used.</param>
         /// <returns></returns>
-        public PropertyCollection Diff(PropertyCollection other, bool structDiff = false)
+        public PropertyCollection Diff(PropertyCollection other, bool structDiff = false, Func<int, int, bool> objectComparer = null)
         {
             var diff = new PropertyCollection();
             foreach (Property thisProp in this)
@@ -703,11 +705,11 @@ namespace LegendaryExplorerCore.Unreal
                 {
                     diff.Add(thisProp.DeepClone());
                 }
-                else if (!thisProp.Equivalent(otherProp))
+                else if (!thisProp.Equivalent(otherProp, objectComparer))
                 {
                     if (structDiff && thisProp is StructProperty { IsImmutable: false } thisStruct && otherProp is StructProperty otherStruct)
                     {
-                        diff.Add(new StructProperty(thisStruct.StructType, thisStruct.Properties.Diff(otherStruct.Properties), thisStruct.Name, thisStruct.IsImmutable));
+                        diff.Add(new StructProperty(thisStruct.StructType, thisStruct.Properties.Diff(otherStruct.Properties, true, objectComparer), thisStruct.Name, thisStruct.IsImmutable));
                     }
                     else
                     {
@@ -791,8 +793,9 @@ namespace LegendaryExplorerCore.Unreal
         /// Checks if this represents the same property (Name and StaticArrayIndex), and has the same value.
         /// </summary>
         /// <param name="other"></param>
+        /// <param name="objectComparer">A function to compare two uIndexes. If not provided, an integer comparison will be used. Unused for properties that don't contain uIndexes.</param>
         /// <returns></returns>
-        public virtual bool Equivalent(Property other) => other.Name == Name && other.StaticArrayIndex == StaticArrayIndex;
+        public virtual bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other.Name == Name && other.StaticArrayIndex == StaticArrayIndex;
     }
 
     /// <summary>
@@ -826,7 +829,7 @@ namespace LegendaryExplorerCore.Unreal
         public override NoneProperty DeepClone() => (NoneProperty)MemberwiseClone();
 
         /// <inheritdoc />
-        public override bool Equivalent(Property other) => other is NoneProperty;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is NoneProperty;
     }
 
     /// <summary>
@@ -932,8 +935,8 @@ namespace LegendaryExplorerCore.Unreal
         }
 
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is StructProperty structProperty && base.Equivalent(structProperty) && structProperty.StructType.CaseInsensitiveEquals(StructType)
-                                                           && Properties.Equivalent(structProperty.Properties);
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is StructProperty structProperty && base.Equivalent(structProperty, objectComparer) && structProperty.StructType.CaseInsensitiveEquals(StructType)
+                                                                                                       && Properties.Equivalent(structProperty.Properties, objectComparer);
 
         /// <summary>
         /// Generates a StructProperty (with the specified name) from the specified Guid
@@ -1003,7 +1006,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override IntProperty DeepClone() => (IntProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is IntProperty intProperty && base.Equivalent(intProperty) && intProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is IntProperty intProperty && base.Equivalent(intProperty, objectComparer) && intProperty.Value == Value;
 
         int IComparable.CompareTo(object obj)
         {
@@ -1092,7 +1095,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override FloatProperty DeepClone() => (FloatProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is FloatProperty floatProperty && base.Equivalent(floatProperty) && floatProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is FloatProperty floatProperty && base.Equivalent(floatProperty, objectComparer) && floatProperty.Value == Value;
 
         int IComparable.CompareTo(object obj)
         {
@@ -1220,7 +1223,9 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override ObjectProperty DeepClone() => (ObjectProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is ObjectProperty objectProperty && base.Equivalent(objectProperty) && objectProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => 
+            other is ObjectProperty objectProperty && base.Equivalent(objectProperty, objectComparer) 
+            && (objectComparer?.Invoke(Value, objectProperty.Value) ?? objectProperty.Value == Value);
 
         int IComparable.CompareTo(object obj)
         {
@@ -1342,7 +1347,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override NameProperty DeepClone() => (NameProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is NameProperty nameProperty && base.Equivalent(nameProperty) && nameProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is NameProperty nameProperty && base.Equivalent(nameProperty, objectComparer) && nameProperty.Value == Value;
 
         ///<inheritdoc/>
         public override bool Equals(object obj)
@@ -1449,7 +1454,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override BoolProperty DeepClone() => (BoolProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is BoolProperty boolProperty && base.Equivalent(boolProperty) && boolProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is BoolProperty boolProperty && base.Equivalent(boolProperty, objectComparer) && boolProperty.Value == Value;
 
         public static implicit operator BoolProperty(bool n)
         {
@@ -1512,7 +1517,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override ByteProperty DeepClone() => (ByteProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is ByteProperty byteProperty && base.Equivalent(byteProperty) && byteProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is ByteProperty byteProperty && base.Equivalent(byteProperty, objectComparer) && byteProperty.Value == Value;
 #pragma warning disable
         public event PropertyChangedEventHandler PropertyChanged;
 #pragma warning restore
@@ -1561,7 +1566,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override BioMask4Property DeepClone() => (BioMask4Property)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is BioMask4Property bioMask4Property && base.Equivalent(bioMask4Property) && bioMask4Property.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is BioMask4Property bioMask4Property && base.Equivalent(bioMask4Property, objectComparer) && bioMask4Property.Value == Value;
 #pragma warning disable
         public event PropertyChangedEventHandler PropertyChanged;
 #pragma warning restore
@@ -1659,7 +1664,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override EnumProperty DeepClone() => (EnumProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is EnumProperty enumProperty && base.Equivalent(enumProperty) && enumProperty.EnumType == EnumType && enumProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is EnumProperty enumProperty && base.Equivalent(enumProperty, objectComparer) && enumProperty.EnumType == EnumType && enumProperty.Value == Value;
 #pragma warning disable
         public event PropertyChangedEventHandler PropertyChanged;
 #pragma warning restore
@@ -1785,7 +1790,7 @@ namespace LegendaryExplorerCore.Unreal
         }
 
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is ImmutableByteArrayProperty arrayProperty && base.Equivalent(arrayProperty) && Bytes.AsSpan().SequenceEqual(arrayProperty.Bytes);
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is ImmutableByteArrayProperty arrayProperty && base.Equivalent(arrayProperty, objectComparer) && Bytes.AsSpan().SequenceEqual(arrayProperty.Bytes);
 
         /// <summary>
         /// Do not use with <see cref="ImmutableByteArrayProperty"/>! Returns an empty list
@@ -1906,13 +1911,13 @@ namespace LegendaryExplorerCore.Unreal
         }
 
         ///<inheritdoc/>
-        public override bool Equivalent(Property other)
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null)
         {
-            if (other is ArrayProperty<T> arrayProperty && base.Equivalent(arrayProperty) && arrayProperty.Count == Count)
+            if (other is ArrayProperty<T> arrayProperty && base.Equivalent(arrayProperty, objectComparer) && arrayProperty.Count == Count)
             {
                 for (int i = 0; i < Count; i++)
                 {
-                    if (!Values[i].Equivalent(arrayProperty[i]))
+                    if (!Values[i].Equivalent(arrayProperty[i], objectComparer))
                     {
                         return false;
                     }
@@ -2089,7 +2094,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override StrProperty DeepClone() => (StrProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is StrProperty strProperty && base.Equivalent(strProperty) && strProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is StrProperty strProperty && base.Equivalent(strProperty, objectComparer) && strProperty.Value == Value;
 
         public static implicit operator StrProperty(string s)
         {
@@ -2159,7 +2164,7 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override StringRefProperty DeepClone() => (StringRefProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => other is StringRefProperty stringRefProperty && base.Equivalent(stringRefProperty) && stringRefProperty.Value == Value;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => other is StringRefProperty stringRefProperty && base.Equivalent(stringRefProperty, objectComparer) && stringRefProperty.Value == Value;
 
 #pragma warning disable
         public event PropertyChangedEventHandler PropertyChanged;
@@ -2222,9 +2227,17 @@ namespace LegendaryExplorerCore.Unreal
         ///<inheritdoc/>
         public override DelegateProperty DeepClone() => (DelegateProperty)MemberwiseClone();
         ///<inheritdoc/>
-        public override bool Equivalent(Property other)
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null)
         {
-            return other is DelegateProperty delegateProperty && base.Equivalent(delegateProperty) && delegateProperty.Value == Value;
+            if (other is not DelegateProperty delegateProperty || !base.Equivalent(delegateProperty, objectComparer))
+            {
+                return false;
+            }
+            if (objectComparer is null)
+            {
+                return delegateProperty.Value == Value;
+            }
+            return objectComparer(Value.ContainingObjectUIndex, delegateProperty.Value.ContainingObjectUIndex) && Value.FunctionName == delegateProperty.Value.FunctionName;
         }
 #pragma warning disable
         public event PropertyChangedEventHandler PropertyChanged;
@@ -2275,6 +2288,6 @@ namespace LegendaryExplorerCore.Unreal
         }
 
         ///<inheritdoc/>
-        public override bool Equivalent(Property other) => false;
+        public override bool Equivalent(Property other, Func<int, int, bool> objectComparer = null) => false;
     }
 }

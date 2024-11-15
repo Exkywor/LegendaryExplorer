@@ -6,16 +6,10 @@ using LegendaryExplorerCore.Packages;
 
 namespace LegendaryExplorerCore.Unreal
 {
-    public readonly struct ScriptDelegate : IEquatable<ScriptDelegate>
+    public readonly struct ScriptDelegate(int containingObjectUIndex, NameReference functionName) : IEquatable<ScriptDelegate>
     {
-        public int ContainingObjectUIndex { get; }
-        public NameReference FunctionName { get; }
-
-        public ScriptDelegate(int containingObjectUIndex, NameReference functionName)
-        {
-            ContainingObjectUIndex = containingObjectUIndex;
-            FunctionName = functionName;
-        }
+        public int ContainingObjectUIndex { get; } = containingObjectUIndex;
+        public NameReference FunctionName { get; } = functionName;
 
         #region IEquatable
 

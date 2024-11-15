@@ -124,7 +124,10 @@ namespace LegendaryExplorerCore.Packages
 
                 PropertyCollection aProps = a.GetProperties();
                 PropertyCollection bProps = b.GetProperties();
-                DiffedProps = aProps.Diff(bProps);
+
+                bool ObjectComparer(int aUIdx, int bUIdx) => string.Equals(aPcc.GetEntry(aUIdx)?.InstancedFullPath ?? "", bPcc.GetEntry(bUIdx)?.InstancedFullPath ?? "", StringComparison.OrdinalIgnoreCase);
+
+                DiffedProps = aProps.Diff(bProps, objectComparer: ObjectComparer);
                 foreach (Property bProp in bProps)
                 {
                     if (aProps.GetProp<Property>(bProp.Name, bProp.StaticArrayIndex) is null)
@@ -183,7 +186,13 @@ namespace LegendaryExplorerCore.Packages
 
                 IsDifferent = SuperClassDiff.IsDifferent | LinkDiff.IsDifferent | ObjectNameDiff.IsDifferent | ArchetypeDiff.IsDifferent
                               | ObjectFlagsDiff.IsDifferent | ExportFlagsDiff.IsDifferent /*| PackageGuidDiff.IsDifferent*/ | PackageFlagsDiff.IsDifferent 
-                              | NetIndexDiff.IsDifferent | DiffedProps.Count > 0 | BinNameDiffs.Count > 0 | BinEntryDiffs.Count < 0 | HasMiscBinDiffs;
+                              | DiffedProps.Count > 0 | BinNameDiffs.Count > 0 | BinEntryDiffs.Count > 0 | HasMiscBinDiffs;
+
+                //if the files are from different games, this will always be different, so it's not meaningful
+                if (a.Game == b.Game)
+                {
+                    IsDifferent |= NetIndexDiff.IsDifferent;
+                }
             }
         }
 
@@ -284,7 +293,7 @@ namespace LegendaryExplorerCore.Packages
                         {
                             if (packageA.FindEntry(child.InstancedFullPath) is null)
                             {
-                                packageDiff.BOnlyEntries.AddRange(packageBTree.FlattenTreeOf(root.Data));
+                                packageDiff.BOnlyEntries.AddRange(packageBTree.FlattenTreeOf(child));
                             }
                         }
                         foreach (int uIndex in children)
