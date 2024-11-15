@@ -54,6 +54,23 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             pe.LoadPackage(package);
         }
 
+        public static void SelfPackageRelink(PackageEditorWindow pe)
+        {
+            if (pe.Pcc == null)
+                return;
+
+            if (pe.GetSelected(out var selectedUIndex))
+            {
+                var selectedTarget = EntrySelector.GetEntry<IEntry>(pe, pe.Pcc, "Select where to redirect references of this object to.", x => x.UIndex != selectedUIndex);
+                if (selectedTarget != null)
+                {
+                    var map = new ListenableDictionary<IEntry, IEntry>();
+                    map[pe.Pcc.GetEntry(selectedUIndex)] = selectedTarget;
+                    Relinker.RelinkSamePackage(pe.Pcc, map);
+                }
+            }
+        }
+
         public static void DumpUScriptFromPackage(PackageEditorWindow pe)
         {
 #if !DEBUG
@@ -2244,11 +2261,10 @@ defaultproperties
 
         public static void MScanner(PackageEditorWindow pe)
         {
-            if (pe.TryGetSelectedExport(out var exp) && exp.ClassName == "Material")
+            var package = pe.Pcc.Exports.FirstOrDefault(x => x.ClassName == "Package" && x.Parent == null);
+            foreach (var exp in pe.Pcc.Exports.Where(x => x.Parent == null && x.ClassName != "Package"))
             {
-                var bin = ObjectBinary.From<Material>(exp);
-                var json = JsonConvert.SerializeObject(bin);
-                Debug.WriteLine(json);
+                exp.Parent = package;
             }
 
             return;

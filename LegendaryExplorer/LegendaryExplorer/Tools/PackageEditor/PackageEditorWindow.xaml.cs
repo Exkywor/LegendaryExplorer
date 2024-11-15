@@ -571,7 +571,7 @@ namespace LegendaryExplorer.Tools.PackageEditor
                 return;
             }
 
-            // This part ported from Mass Effect 2 Randomizer POackag
+            // This part ported from Mass Effect 2 Randomizer
             var rop = new RelinkerOptionsPackage() { Cache = new PackageCache() };
             var referencer = new ExportEntry(Pcc, 0, Pcc.GetNextIndexedName("ObjectReferencer"), properties: [new ArrayProperty<ObjectProperty>("ReferencedObjects")])
             {

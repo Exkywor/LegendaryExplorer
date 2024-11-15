@@ -431,6 +431,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsM.BuildPreviewLevel(GetPEWindow());
         }
 
+        private void SelfPackageRelink_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.SelfPackageRelink(GetPEWindow());
+        }
+
         private void ExtractTextMap_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.ExtractTextMap(GetPEWindow());

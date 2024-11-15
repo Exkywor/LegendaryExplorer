@@ -42,7 +42,7 @@
         <MenuItem Header="EXPERIMENTAL: Convert export to import" Click="ConvertExportToImport_Click"/>
         <MenuItem Header="Resynthesize package" Click="ResynthesizePackage_Click"/>
         <MenuItem Header="Build Preview Level" Click="BuildPreviewLevel_Click"/>
-
+        <MenuItem Header="Self package relink (redirect references)" Click="SelfPackageRelink_Click"/>
         <MenuItem Header="LE2: Convert selected BioPawn to SFXPawn class with assets" Click="LE2ConvertToSFXPawn_Click" Visibility="{x:Static global:App.IsDebugVisibility}"/>
         <MenuItem Header="Generate text mesh" Click="GenerateTextMesh_Click"/>
         <MenuItem Header="Extract Text Map to debug console" Click="ExtractTextMap_Click"/>
