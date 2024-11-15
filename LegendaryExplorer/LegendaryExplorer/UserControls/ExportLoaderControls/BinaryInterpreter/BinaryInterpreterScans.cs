@@ -1381,38 +1381,40 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             try
             {
                 var bin = new EndianReader(CurrentLoadedExport.GetReadOnlyDataStream()) { Endian = CurrentLoadedExport.FileRef.Endian };
-
-                string nodeString;
-                subnodes.Add(new BinInterpNode(bin.Position, "Stack")
+                
+                var item = new BinInterpNode(bin.Position, "Stack")
                 {
-                    IsExpanded = true,
+                    IsExpanded = true
+                };
+                List<ITreeItem> items = item.Items;
+                items.Add(MakeEntryNode(bin, "Node", out int uIndex));
+                if (Pcc.Game is not MEGame.UDK)
+                {
+                    items.Add(MakeEntryNode(bin, "StateNode"));
+                }
+                items.Add(new BinInterpNode(bin.Position, $"ProbeMask: {bin.ReadUInt64():X16}"));
+                if (Pcc.Game >= MEGame.ME3 || Pcc.Platform is MEPackage.GamePlatform.PS3)
+                {
+                    items.Add(MakeUInt16Node(bin, "LatentAction"));
+                }
+                else
+                {
+                    items.Add(MakeUInt32Node(bin, "LatentAction"));
+                }
+                items.Add(MakeArrayNode(bin, "StateStack", i => new BinInterpNode(bin.Position, $"{i}")
+                {
                     Items =
                     {
-                        new BinInterpNode(bin.Position, $"Node: {nodeString = entryRefString(bin)}", NodeType.StructLeafObject) {Length = 4},
-                        ListInitHelper.ConditionalAddOne<ITreeItem>(Pcc.Game != MEGame.UDK, () => MakeEntryNode(bin, "StateNode")),
-                        new BinInterpNode(bin.Position, $"ProbeMask: {bin.ReadUInt64():X16}"),
-                        ListInitHelper.ConditionalAdd(Pcc.Game >= MEGame.ME3 || Pcc.Platform == MEPackage.GamePlatform.PS3, () => new ITreeItem[]
-                        {
-                            MakeUInt16Node(bin, "LatentAction")
-                        }, () => new ITreeItem[]
-                        {
-                            MakeUInt32Node(bin, "LatentAction")
-                        }),
-                        MakeArrayNode(bin, "StateStack", i => new BinInterpNode(bin.Position, $"{i}")
-                        {
-                            Items =
-                            {
-                                MakeEntryNode(bin, "State"),
-                                MakeEntryNode(bin, "Node"),
-                                MakeInt32Node(bin, "Offset")
-                            }
-                        }),
-                        ListInitHelper.ConditionalAdd(nodeString != "Null", () => new ITreeItem[]
-                        {
-                            MakeInt32Node(bin, "Offset")
-                        })
+                        MakeEntryNode(bin, "State"),
+                        MakeEntryNode(bin, "Node"),
+                        MakeInt32Node(bin, "Offset")
                     }
-                });
+                }));
+                if (uIndex is not 0)
+                {
+                    items.Add(MakeInt32Node(bin, "Offset"));
+                }
+                subnodes.Add(item);
                 endPos = (int)bin.Position;
             }
             catch (Exception ex)
@@ -4792,6 +4794,13 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
             new BinInterpNode(bin.Position, $"{name}: {nameRef = bin.ReadNameReference(Pcc).Instanced}", NodeType.StructLeafName) { Length = 8 };
 
         private BinInterpNode MakeEntryNode(EndianReader bin, string name) => new BinInterpNode(bin.Position, $"{name}: {entryRefString(bin)}", NodeType.StructLeafObject) { Length = 4 };
+        private BinInterpNode MakeEntryNode(EndianReader bin, string name, out int uIndex)
+        {
+            long binPosition = bin.Position;
+            uIndex = bin.ReadInt32();
+            string refString = $"#{uIndex} {CurrentLoadedExport.FileRef.GetEntryString(uIndex)}";
+            return new BinInterpNode(binPosition, $"{name}: {refString}", NodeType.StructLeafObject) { Length = 4 };
+        }
 
         private static BinInterpNode MakePackedNormalNode(EndianReader bin, string name) =>
             new BinInterpNode(bin.Position, $"{name}: (X: {bin.ReadByte() / 127.5f - 1}, Y: {bin.ReadByte() / 127.5f - 1}, Z: {bin.ReadByte() / 127.5f - 1}, W: {bin.ReadByte() / 127.5f - 1})")

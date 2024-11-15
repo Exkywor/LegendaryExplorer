@@ -225,7 +225,20 @@ namespace LegendaryExplorerCore.Packages
                 }
             }
         }
-        //int PackageNameNumber
+
+        public int PackageFileNameNumber
+        {
+            get => _header.PackageFileNameNumber;
+            set
+            {
+                if (_header.PackageFileNameNumber != value)
+                {
+                    _header.PackageFileNameNumber = value;
+                    HeaderChanged = true;
+                }
+            }
+        }
+
         public int idxClassName
         {
             get => _header.ClassNameIndex;
@@ -238,7 +251,20 @@ namespace LegendaryExplorerCore.Packages
                 }
             }
         }
-        //int ClassNameNumber
+
+        public int ClassNameNumber
+        {
+            get => _header.ClassNameNumber;
+            set
+            {
+                if (_header.ClassNameNumber != value)
+                {
+                    _header.ClassNameNumber = value;
+                    HeaderChanged = true;
+                }
+            }
+        }
+
         public int idxLink
         {
             get => _header.Link;

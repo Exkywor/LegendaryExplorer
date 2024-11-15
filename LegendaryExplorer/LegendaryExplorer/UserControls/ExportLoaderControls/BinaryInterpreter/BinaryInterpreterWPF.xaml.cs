@@ -605,6 +605,19 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 {
                     int n = EndianReader.ToInt32(CurrentLoadedExport.DataReadOnly[toci..], CurrentLoadedExport.FileRef.Endian);
                     subNodes.Add(new BinInterpNode(toci, $"TemplateOwnerClass: #{n} {CurrentLoadedExport.FileRef.GetEntryString(n)}", NodeType.StructLeafObject) { Length = 4 });
+                    IEntry parent = CurrentLoadedExport.Parent;
+                    while (parent is not null)
+                    {
+                        if (parent is ExportEntry { IsDefaultObject: true })
+                        {
+                            var dataReadOnly = CurrentLoadedExport.DataReadOnly;
+                            string templateNameString = Pcc.GetNameEntry(EndianReader.ToInt32(dataReadOnly[(toci + 4)..], CurrentLoadedExport.FileRef.Endian));
+                            var templateName = new NameReference(templateNameString, EndianReader.ToInt32(dataReadOnly[(toci + 8)..], CurrentLoadedExport.FileRef.Endian));
+                            subNodes.Add(new BinInterpNode(toci + 4, $"TemplateName: {templateName.Instanced}", NodeType.StructLeafName) { Length = 8 });
+                            break;
+                        }
+                        parent = parent.Parent;
+                    }
                 }
                 else
                 {
@@ -1073,12 +1086,12 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                             case FloatProperty fp:
                             case IntProperty ip:
                                 {
-                                    if (uptve.UPParent.Property is StructProperty p && p.IsImmutable)
+                                    if (uptve.UPParent.Property is StructProperty { IsImmutable: true })
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 4);
                                         return;
                                     }
-                                    else if (uptve.UPParent.Property is ArrayProperty<IntProperty> || uptve.UPParent.Property is ArrayProperty<FloatProperty> || uptve.UPParent.Property is ArrayProperty<ObjectProperty>)
+                                    if (uptve.UPParent.Property is ArrayProperty<IntProperty> or ArrayProperty<FloatProperty> or ArrayProperty<ObjectProperty>)
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 4);
                                         return;
@@ -1088,12 +1101,12 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                                 break;
                             case NameProperty np:
                                 {
-                                    if (uptve.UPParent.Property is StructProperty p && p.IsImmutable)
+                                    if (uptve.UPParent.Property is StructProperty { IsImmutable: true })
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 8);
                                         return;
                                     }
-                                    else if (uptve.UPParent.Property is ArrayProperty<NameProperty>)
+                                    if (uptve.UPParent.Property is ArrayProperty<NameProperty>)
                                     {
                                         BinaryInterpreter_Hexbox.Highlight(uptve.Property.ValueOffset, 8);
                                         return;

@@ -933,7 +933,7 @@ namespace LegendaryExplorerCore.Packages
         {
             if (HasStack)
             {
-                return stackLength;
+                return StackLength;
             }
 
             int start = 0;
@@ -993,7 +993,7 @@ namespace LegendaryExplorerCore.Packages
             }
         }
 
-        private int stackLength =>
+        private int StackLength =>
             Game switch
             {
                 MEGame.UDK => 26,
@@ -1154,11 +1154,11 @@ namespace LegendaryExplorerCore.Packages
         /// </summary>
         /// <param name="preProps"></param>
         /// <param name="props"></param>
-        public void WritePrePropsAndPropertiesAndBinary(byte[] preProps, PropertyCollection props, ObjectBinary binary)
+        public void WritePrePropsAndPropertiesAndBinary(ReadOnlySpan<byte> preProps, PropertyCollection props, ObjectBinary binary)
         {
             MemoryStream ms = MemoryManager.GetMemoryStream(_data.Length);
             var m = new EndianReader(ms) { Endian = _fileRef.Endian };
-            m.Writer.WriteBytes(preProps);
+            m.Writer.Write(preProps);
             props?.WriteTo(m.Writer, _fileRef); //props could be null if this is a class
             binary.WriteTo(m.Writer, _fileRef, _commonHeaderFields._dataOffset);
             Data = m.ToArray();
