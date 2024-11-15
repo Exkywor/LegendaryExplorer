@@ -608,5 +608,17 @@ namespace LegendaryExplorerCore.Unreal.Classes
         {
             return mappedColumnNames.TryGetValue(colname, out colIndex);
         }
+
+        /// <summary>
+        /// Adds the passed in columns to the 2DA. If the column exists, it won't be added, so you cannot guarantee order with this method.
+        /// </summary>
+        /// <param name="columnNames">Column names to add</param>
+        public void AddColumns(params string[] columnNames)
+        {
+            foreach (var col in columnNames)
+            {
+                AddColumn(col);
+            }
+        }
     }
 }

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 
 namespace LegendaryExplorerCore.GameFilesystem
 {
@@ -124,7 +126,7 @@ namespace LegendaryExplorerCore.GameFilesystem
         /// <summary>
         /// The filenames of any valid UDK executables
         /// </summary>
-        public static readonly ReadOnlyCollection<string> ExecutableNames = Array.AsReadOnly(new [] { "UDK.exe" });
+        public static readonly ReadOnlyCollection<string> ExecutableNames = Array.AsReadOnly(new[] { "UDK.exe" });
 
         private static string _DefaultGamePath;
         /// <summary>
@@ -148,22 +150,56 @@ namespace LegendaryExplorerCore.GameFilesystem
             }
             set => _DefaultGamePath = value;
         }
-        
+
         static UDKDirectory()
         {
             ReloadDefaultGamePath();
         }
 
         /// <summary>
-        /// Reloads the default UDK game path from LEC settings
+        /// Reloads the default ME3 game path, either from LEC settings or from the registry
         /// </summary>
-        public static void ReloadDefaultGamePath()
+        /// <param name="forceUseRegistry">If true, registry will be used to determine game path. If false, LEC settings may be used instead</param>
+        public static void ReloadDefaultGamePath(bool forceUseRegistry = false)
         {
-            if (!string.IsNullOrEmpty(LegendaryExplorerCoreLibSettings.Instance?.UDKCustomDirectory))
+            if (!forceUseRegistry && !string.IsNullOrEmpty(LegendaryExplorerCoreLibSettings.Instance?.UDKCustomDirectory))
             {
                 DefaultGamePath = LegendaryExplorerCoreLibSettings.Instance.UDKCustomDirectory;
             }
+            else
+            {
+#pragma warning disable CA1416
+#if WINDOWS
+                string hkey64 = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+
+                var uninstallList = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\");
+                if (uninstallList != null)
+                {
+                    var key = uninstallList.GetSubKeyNames().FirstOrDefault(x => x.StartsWith("UDK-"));
+                    if (key != null)
+                    {
+                        var installEntry = uninstallList.OpenSubKey(key);
+                        if (installEntry != null)
+                        {
+                            string installLoc = (string) installEntry.GetValue("InstallLocation");
+                            if (installLoc != null)
+                            {
+                                DefaultGamePath = installLoc;
+                                if (!DefaultGamePath.EndsWith(Path.DirectorySeparatorChar))
+                                {
+                                    DefaultGamePath += Path.DirectorySeparatorChar;
+                                }
+                                LegendaryExplorerCoreLibSettings.Instance.UDKCustomDirectory = DefaultGamePath;
+                                return;
+                            }
+                        }
+                    }
+                }
+#endif
+#pragma warning restore CA1416
+            }
         }
+
 
         /// <summary>
         /// Determines if a UDK folder is a valid game directory by checking for the udk executable

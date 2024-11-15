@@ -8,6 +8,7 @@ using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
+using LegendaryExplorerCore.Helpers;
 
 namespace LegendaryExplorerCore.Kismet
 {
@@ -220,6 +221,73 @@ namespace LegendaryExplorerCore.Kismet
         {
             var props = export.GetProperties();
             return GetVariableLinks(props, export.FileRef);
+        }
+
+        /// <summary>
+        /// Gets the list of EventLinks that can be attached to by the specified sequence object export.
+        /// </summary>
+        /// <remarks>You cannot ADD new eventlinks this way as the serialization does not include all types.</remarks>
+        /// <param name="export">Export to get event links for</param>
+        /// <returns>List of vent link infos</returns>
+        public static List<EventLinkInfo> GetEventLinksOfNode(ExportEntry export)
+        {
+            var props = export.GetProperties();
+            return GetEventLinks(props, export.FileRef);
+        }
+
+        /// <summary>
+        /// Gets the list of event links from a collection of properties. If there is no EventLinks property, this returns an empty list.
+        /// </summary>
+        /// <param name="props">Properties to get event links from</param>
+        /// <param name="pcc">Package containing the property collection</param>
+        /// <returns>List of any event links</returns>
+        public static List<EventLinkInfo> GetEventLinks(PropertyCollection props, IMEPackage pcc)
+        {
+            var varLinks = new List<EventLinkInfo>();
+            var variableLinks = props.GetProp<ArrayProperty<StructProperty>>("EventLinks");
+            if (variableLinks != null)
+            {
+                foreach (var vl in variableLinks)
+                {
+                    varLinks.Add(EventLinkInfo.FromStruct(vl, pcc));
+                }
+            }
+
+            return varLinks;
+        }
+
+        /// <summary>
+        /// Writes the list of event links to the node. Only the linked objects are written.
+        /// The list MUST be in the same order and be the same length as the current event links on the export.
+        /// </summary>
+        /// <remarks>This can't be used to add any new event link points.</remarks>
+        /// <param name="export">Export to write links to</param>
+        /// <param name="eventLinks">Event links to write</param>
+        public static void WriteEventLinksToNode(ExportEntry export, List<EventLinkInfo> eventLinks)
+        {
+            var properties = export.GetProperties();
+            WriteEventLinksToProperties(eventLinks, properties);
+            export.WriteProperties(properties);
+        }
+
+        /// <summary>
+        /// Writes the list of event links to the given property collection. Only writes the linked event variables.
+        /// The list MUST be in the same order and be the same length as the current event links in the collection.
+        /// </summary>
+        /// <remarks>This can't be used to add any new event link points. LinkedEvents property must already exist.</remarks>
+        /// <param name="varLinks">Event links to write</param>
+        /// <param name="props">Properties to write links to</param>
+        public static void WriteEventLinksToProperties(List<EventLinkInfo> varLinks, PropertyCollection props)
+        {
+            var eventLinks = props.GetProp<ArrayProperty<StructProperty>>("EventLinks");
+            if (eventLinks != null && varLinks.Count == eventLinks.Count)
+            {
+                for (int i = 0; i < eventLinks.Count; i++)
+                {
+                    var linkedEventsList = eventLinks[i].GetProp<ArrayProperty<ObjectProperty>>("LinkedEvents");
+                    linkedEventsList?.ReplaceAll(varLinks[i].LinkedNodes.Select(x => new ObjectProperty(x)));
+                }
+            }
         }
 
         /// <summary>
@@ -960,12 +1028,13 @@ namespace LegendaryExplorerCore.Kismet
         }
 
         /// <summary>
-        /// Finds sequence objects with variable connections that come to this node
+        /// Finds sequence objects with variable link connections that come to this node
         /// </summary>
-        /// <param name="node">Sequence variable to find connections to</param>
+        /// <param name="node">Node to find variable connections to</param>
         /// <param name="sequenceElements">Sequence objects to search for connections</param>
+        /// <param name="filteredLinkNames">Optional: Link desc of variable link that any sequence objects must match</param>
         /// <returns>List of any sequence objects that link to this node</returns>
-        public static List<ExportEntry> FindVariableConnectionsToNode(ExportEntry node, List<ExportEntry> sequenceElements)
+        public static List<ExportEntry> FindVariableConnectionsToNode(ExportEntry node, IEnumerable<ExportEntry> sequenceElements, List<string> filteredLinkNames = null)
         {
             List<ExportEntry> referencingNodes = [];
 
@@ -973,9 +1042,93 @@ namespace LegendaryExplorerCore.Kismet
             {
                 if (seqObj == node) continue; // Skip node pointing to itself
                 var linkSet = GetVariableLinksOfNode(seqObj);
-                if (linkSet.Any(x => x.LinkedNodes.Any(y => y == node)))
+                var matchingLinks = linkSet.Where(x => x.LinkedNodes.Any(y => y != null && y.UIndex == node.UIndex)).ToList();
+                if (matchingLinks.Count == 0)
+                    continue; // No match
+
+                if (filteredLinkNames == null && Enumerable.Any(matchingLinks))
                 {
+                    // Just add it
                     referencingNodes.Add(seqObj);
+                    continue;
+                }
+
+                // Check if the name matches the filters
+                // Determine if it comes in on our named input idx
+                if (filteredLinkNames != null)
+                {
+                    // Build the list of allowed input idxs
+                    // This is not that reliable, as the inputs will be defined on the class, not the instance
+                    // oops
+                    bool matched = false;
+                    foreach (var link in linkSet)
+                    {
+                        if (matched)
+                            break;
+                        foreach (var filteredLinkName in filteredLinkNames)
+                        {
+                            if (link.LinkDesc.CaseInsensitiveEquals(filteredLinkName))
+                            {
+                                referencingNodes.Add(seqObj);
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return referencingNodes.Distinct().ToList();
+        }
+
+        /// <summary>
+        /// Finds sequence objects with event link connections that come to this node
+        /// </summary>
+        /// <param name="node">Node to find event connections to</param>
+        /// <param name="sequenceElements">Sequence objects to search for connections</param>
+        /// <param name="filteredLinkNames">Optional: Link desc of event link that any sequence objects must match</param>
+        /// <returns>List of any sequence objects that link to this node</returns>
+        public static List<ExportEntry> FindEventConnectionsToNode(ExportEntry node, IEnumerable<ExportEntry> sequenceElements, List<string> filteredLinkNames = null)
+        {
+            List<ExportEntry> referencingNodes = [];
+
+            foreach (var seqObj in sequenceElements)
+            {
+                if (seqObj == node) continue; // Skip node pointing to itself
+                var linkSet = GetEventLinksOfNode(seqObj);
+                var matchingLinks = linkSet.Where(x => x.LinkedNodes.Any(y => y != null && y.UIndex == node.UIndex)).ToList();
+                if (matchingLinks.Count == 0)
+                    continue; // No match
+
+                if (filteredLinkNames == null && Enumerable.Any(matchingLinks))
+                {
+                    // Just add it
+                    referencingNodes.Add(seqObj);
+                    continue;
+                }
+
+                // Check if the name matches the filters
+                // Determine if it comes in on our named input idx
+                if (filteredLinkNames != null)
+                {
+                    // Build the list of allowed input idxs
+                    // This is not that reliable, as the inputs will be defined on the class, not the instance
+                    // oops
+                    bool matched = false;
+                    foreach (var link in linkSet)
+                    {
+                        if (matched)
+                            break;
+                        foreach (var filteredLinkName in filteredLinkNames)
+                        {
+                            if (link.LinkDesc.CaseInsensitiveEquals(filteredLinkName))
+                            {
+                                referencingNodes.Add(seqObj);
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1050,6 +1203,7 @@ namespace LegendaryExplorerCore.Kismet
                 return; // May have already been removed.
 
             RemoveAllLinks(node);
+            RemoveLinksToNode(node);
             var seq = GetParentSequence(node);
             var seqObjs = seq.GetProperty<ArrayProperty<ObjectProperty>>("SequenceObjects");
             var arrayObj = seqObjs?.FirstOrDefault(x => x.Value == node.UIndex);
@@ -1063,6 +1217,51 @@ namespace LegendaryExplorerCore.Kismet
             {
                 //Trash
                 EntryPruner.TrashEntryAndDescendants(node);
+            }
+        }
+
+        /// <summary>
+        /// Removes all incoming links to the given node
+        /// </summary>
+        /// <param name="node">Node to remove links to</param>
+        private static void RemoveLinksToNode(ExportEntry node)
+        {
+            var sequenceObjs = KismetHelper.GetSequenceObjects(KismetHelper.GetParentSequence(node)).OfType<ExportEntry>().ToList();
+            var incomingInputConnections = KismetHelper.FindOutputConnectionsToNode(node, sequenceObjs);
+            var incomingVariableConnections = KismetHelper.FindVariableConnectionsToNode(node, sequenceObjs);
+            var incomingEventConnections = KismetHelper.FindEventConnectionsToNode(node, sequenceObjs);
+
+            // Out Links
+            foreach (var incomingInputNode in incomingInputConnections)
+            {
+                var outLinks = KismetHelper.GetOutputLinksOfNode(incomingInputNode);
+                foreach (var outLink in outLinks)
+                {
+                    outLink.RemoveAll(x => x.LinkedOp == node);
+                }
+                KismetHelper.WriteOutputLinksToNode(incomingInputNode, outLinks);
+            }
+
+            // Variable links
+            foreach (var incomingVarLinkNode in incomingVariableConnections)
+            {
+                var varLinks = KismetHelper.GetVariableLinksOfNode(incomingVarLinkNode);
+                foreach (var varLink in varLinks)
+                {
+                    varLink.LinkedNodes.RemoveAll(x => x == node);
+                }
+                KismetHelper.WriteVariableLinksToNode(incomingVarLinkNode, varLinks);
+            }
+
+            // Event links
+            foreach (var incomingEventLinkNode in incomingEventConnections)
+            {
+                var eventLinks = KismetHelper.GetEventLinksOfNode(incomingEventLinkNode);
+                foreach (var eventLink in eventLinks)
+                {
+                    eventLink.LinkedNodes.RemoveAll(x => x == node);
+                }
+                KismetHelper.WriteEventLinksToNode(incomingEventLinkNode, eventLinks);
             }
         }
     }

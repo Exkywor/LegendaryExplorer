@@ -34,8 +34,13 @@ namespace LegendaryExplorerCore.Packages
         /// Reconstructs a package file in a more sensible layout.
         /// </summary>
         /// <param name="package">Package file to reconstruct</param>
-        public static IMEPackage ResynthesizePackage(IMEPackage package, PackageCache cache)
+        /// <param name="dumpUnreferencedObjects">Only ports objects referenced by ObjectReferencer and TheWorld, which will dump unreferenced objects.</param>
+        public static IMEPackage ResynthesizePackage(IMEPackage package, PackageCache cache, bool dumpUnreferencedObjects = false)
         {
+            if (dumpUnreferencedObjects)
+            {
+                package = DumpUnreferencedObjects(package, cache);
+            }
             var hasDuplicates = package.HasDuplicateObjects();
             if (hasDuplicates)
             {
@@ -43,7 +48,7 @@ namespace LegendaryExplorerCore.Packages
                 return package;
             }
 
-            var newPackage = MEPackageHandler.CreateMemoryEmptyPackage(package.FilePath, package.Game);
+            var newPackage = MEPackageHandler.CreateMemoryEmptyPackage(package.FileNameNoExtension + "_RESYNTHING.pcc", package.Game);
             newPackage.setFlags(package.Flags);
 
             if (package.Game.IsMEGame())
@@ -109,7 +114,58 @@ namespace LegendaryExplorerCore.Packages
             PortOrdering(ordering, newPackage, null, ESynthesisMode.Synth_Stubbing);
             PortOrdering(ordering, newPackage, null, ESynthesisMode.Synth_Resolving);
             PortOrdering(ordering, newPackage, null, ESynthesisMode.Synth_Transferring);
+            newPackage.SetInternalFilepath(package.FilePath);
             return newPackage;
+        }
+
+        private static IMEPackage DumpUnreferencedObjects(IMEPackage package, PackageCache cache)
+        {
+            // Package must be inventoried before dumping objects because otherwise we will try to resolve array types
+            // when package may not yet be fully setup, which causes problems.
+
+            foreach (var exp in package.Exports.Where(x => x.ClassName is "ScriptStruct" or "Class"))
+            {
+                GlobalUnrealObjectInfo.generateClassInfo(exp, exp.ClassName == "ScriptStruct", cache);
+            }
+
+            var newPackage = MEPackageHandler.CreateMemoryEmptyPackage("RebuildingPackage.pcc", package.Game);
+            
+            var theWorld = package.FindExport("TheWorld");
+            if (theWorld != null)
+            {
+                EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.CloneAllDependencies, theWorld, newPackage, null, true, new RelinkerOptionsPackage() { Cache = cache }, out var portedWorld);
+            }
+            else
+            {
+                // Not level package
+                foreach (var objReferencer in package.Exports.Where(x => x.Parent == null && x.ClassName == "ObjectReferencer"))
+                {
+                    EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.CloneAllDependencies,
+                        objReferencer, newPackage, null, true, new RelinkerOptionsPackage() { Cache = cache },
+                        out var portedReferencer);
+                }
+            }
+
+            CopyPackageHeader(package, newPackage);
+
+            newPackage.SetInternalFilepath(package.FilePath);
+            return newPackage;
+        }
+
+        /// <summary>
+        /// Copies package header data over to a new package
+        /// </summary>
+        /// <param name="package"></param>
+        /// <param name="newPackage"></param>
+        private static void CopyPackageHeader(IMEPackage package, IMEPackage newPackage)
+        {
+            newPackage.setFlags(package.Flags);
+            newPackage.PackageGuid = package.PackageGuid;
+            if (package is MEPackage mePackage && newPackage is MEPackage meNewPackage)
+            {
+                meNewPackage.AdditionalPackagesToCook.AddRange(mePackage.AdditionalPackagesToCook);
+            }
+            // Todo: Generations?
         }
 
         private static void PortOrdering(EntryOrdering ordering, IMEPackage newPackage, IEntry parent, ESynthesisMode mode, List<ImportEntry> importsToConvert = null)
@@ -149,7 +205,7 @@ namespace LegendaryExplorerCore.Packages
                 }
                 else if (mode == ESynthesisMode.Synth_Resolving)
                 {
-                    // Transfer classes
+                    // Transfer classes and replace data WITHOUT RELINK
                     if (ordering.Entry is ExportEntry oExp && IsClassSubObj(oExp))
                     {
                         var destExp = newPackage.FindExport(ordering.Entry.InstancedFullPath);
@@ -349,8 +405,10 @@ namespace LegendaryExplorerCore.Packages
             int score = 0;
             if (!exp.IsDefaultObject)
             {
+                if (exp.ObjectName == "SeekFreeShaderCache")
+                    return -100; // Should go first as porting other objects may modify this
                 if (exp.ObjectName == "ObjectReferencer")
-                    return -10; // Should go earlier
+                    return -11; // Should go earlier
                 if (exp.ObjectName.Name.StartsWith("PersistentLevel")) // Go above LSKs
                     return -10;
 

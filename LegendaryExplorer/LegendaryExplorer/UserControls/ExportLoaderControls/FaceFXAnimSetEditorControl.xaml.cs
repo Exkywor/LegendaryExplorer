@@ -798,10 +798,43 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 var wwiseevent = Pcc.GetEntry(eventRefs[line.Line.Index].Value);
                 if (wwiseevent != null)
                 {
-                    line.Line.Path = wwiseevent.FullPath;
+                    line.Line.Path = wwiseevent.InstancedFullPath;
                 }
             }
             SaveChanges();
+            UpdateTreeItems(FaceFX, SelectedLineEntry.Line);
+        }
+        private void SetEvent_Click(object sender, RoutedEventArgs e)
+        {
+            string eventName = $"VO_{SelectedLineEntry.TLKID.ToString()}_{(SelectedLineEntry.IsMale ? "m" : "f")}_Play";
+            string fxaParent = CurrentLoadedExport.ParentInstancedFullPath;
+            var wwEvent = Pcc.Exports.FirstOrDefault(e => e.ObjectNameString == eventName && e.ParentInstancedFullPath.Contains(fxaParent));
+            if(wwEvent == null)
+            {
+                MessageBox.Show("No Event found in this dialogue.", "Error", MessageBoxButton.OK);
+                return;
+            }
+
+            // Set EventRef
+            var p = CurrentLoadedExport.GetProperties();
+            var refs = p.GetProp<ArrayProperty<ObjectProperty>>("ReferencedSoundCues");
+            if(refs.IsNull())
+                refs = new ArrayProperty<ObjectProperty>("ReferencedSoundCues");
+            if(refs.Count >= SelectedLine.Index)
+            {
+                for(int n = refs.Count; n <= SelectedLine.Index; n++)
+                {
+                    refs.Add(new ObjectProperty(0));
+                }
+            }
+            refs[SelectedLine.Index] = new ObjectProperty(wwEvent);
+            p.AddOrReplaceProp(refs);
+            CurrentLoadedExport.WriteProperties(p);
+
+            // Set path
+            SelectedLine.Path = wwEvent.InstancedFullPath;
+            SaveChanges();
+            UpdateTreeItems(FaceFX, SelectedLineEntry.Line);
         }
         private void UpdateTreeItems(IFaceFXBinary animSet, FaceFXLine d)
         {
@@ -1472,6 +1505,8 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                 UpdateAnimListBox();
             }
         }
+
+
     }
 
     public class Animation : NotifyPropertyChangedBase

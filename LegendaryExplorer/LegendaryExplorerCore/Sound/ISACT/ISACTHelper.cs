@@ -563,8 +563,7 @@ namespace LegendaryExplorerCore.Sound.ISACT
         /// Constructs an ISB with only sample-related information for conversion
         /// </summary>
         /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public byte[] GenerateFakeSampleISB()
+        public byte[] GenerateFakeSampleISB(byte[] audioData)
         {
             MemoryStream outStream = new MemoryStream();
             EndianWriter writer = new EndianWriter(outStream);
@@ -581,8 +580,8 @@ namespace LegendaryExplorerCore.Sound.ISACT
             BankSubChunkMap[ChannelBankChunk.FixedChunkTitle].Write(outStream);
             BankSubChunkMap[SampleInfoBankChunk.FixedChunkTitle].Write(outStream);
             BankSubChunkMap[CompressionInfoBankChunk.FixedChunkTitle].Write(outStream);
-            BankSubChunkMap[DataBankChunk.FixedChunkTitle].Write(outStream);
-
+            outStream.Write(audioData);
+            
             //Correct headers
             writer.BaseStream.Position = listsizepos;
             writer.Write((uint)writer.BaseStream.Length - (uint)listsizepos);

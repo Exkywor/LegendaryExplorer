@@ -1366,9 +1366,10 @@ namespace LegendaryExplorerCore.Kismet
         /// <param name="seq">Sequence to add the new object to</param>
         /// <param name="controllerClass">Optional: The controller class property to set on the object</param>
         /// <param name="pawn">Optional: The pawn actor object to link to the Pawn terminal</param>
+        /// <param name="saveOldController">Optional: If the OldAIController variable on this class should be populated when changed</param>
         /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
         /// <returns>The created kismet object</returns>
-        public static ExportEntry CreateChangeAI(ExportEntry seq, IEntry controllerClass = null, ExportEntry pawn = null, PackageCache cache = null)
+        public static ExportEntry CreateChangeAI(ExportEntry seq, IEntry controllerClass = null, ExportEntry pawn = null, bool saveOldController = false, PackageCache cache = null)
         {
             // Validated for LE1
             var setObj = CreateSequenceObject(seq.FileRef, "BioSeqAct_ChangeAI", cache);
@@ -1382,6 +1383,11 @@ namespace LegendaryExplorerCore.Kismet
             if (pawn != null)
             {
                 KismetHelper.CreateVariableLink(setObj, "Pawn", pawn);
+            }
+
+            if (saveOldController)
+            {
+                setObj.WriteProperty(new BoolProperty(true, "SaveOldAIController"));
             }
 
             return setObj;
@@ -1459,6 +1465,197 @@ namespace LegendaryExplorerCore.Kismet
                 causeDamage.WriteProperty(new FloatProperty(damagePercent.Value, "m_fDamageAmountAsPercentOfMaxHealth"));
             }
             return causeDamage;
+        }
+
+        /// <summary>
+        /// Adds a BioSeqAct_CauseDamage object in the given sequence, optionally linking the extra parameters if set.
+        /// </summary>
+        /// <param name="seq">Sequence to add the new object to</param>
+        /// <param name="target">Optional: The object to connect to the Target pin</param>
+        /// <param name="instigator">Optional: The object to connect to the Instigator pin</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateDivideFloat(ExportEntry seq, ExportEntry A = null, ExportEntry B = null, ExportEntry floatResult = null, ExportEntry intResult = null, PackageCache cache = null)
+        {
+            // Likely only works for LE1
+            var divide = CreateSequenceObject(seq.FileRef, "SeqAct_DivideFloat", cache);
+            KismetHelper.AddObjectToSequence(divide, seq);
+            if (A != null)
+            {
+                KismetHelper.CreateVariableLink(divide, "A", A);
+            }
+            if (B != null)
+            {
+                KismetHelper.CreateVariableLink(divide, "B", B);
+            }
+            if (floatResult != null)
+            {
+                KismetHelper.CreateVariableLink(divide, "FloatResult", floatResult);
+            }
+            if (intResult != null)
+            {
+                KismetHelper.CreateVariableLink(divide, "IntResult", intResult);
+            }
+            return divide;
+        }
+
+        /// <summary>
+        /// Adds a SeqAct_StreamInTextures object in the given sequence, optionally linking the extra parameters if set.
+        /// </summary>
+        /// <param name="seq">Sequence to add the new object to</param>
+        /// <param name="actor">Optional: The object to connect to the Actor pin</param>
+        /// <param name="location">Optional: The object to connect to the Location pin (actors)</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateStreamInTextures(ExportEntry seq, ExportEntry actor = null, ExportEntry location = null, PackageCache cache = null)
+        {
+            // Likely only works for LE1
+            var sin = CreateSequenceObject(seq.FileRef, "SeqAct_StreamInTextures", cache);
+            KismetHelper.AddObjectToSequence(sin, seq);
+            if (actor != null)
+            {
+                KismetHelper.CreateVariableLink(sin, "Actor", actor);
+            }
+            if (location != null)
+            {
+                KismetHelper.CreateVariableLink(sin, "Location", location);
+            }
+            return sin;
+        }
+
+        /// <summary>
+        /// Creates a new SeqEvent_ConsoleEvent with the given ConsoleEventName
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="consoleEventName">The console event name that is used to trigger the event</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateSeqEventConsole(ExportEntry sequence, string consoleEventName, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "SeqEvent_Console", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            fObj.WriteProperty(new NameProperty(consoleEventName, "ConsoleEventName"));
+
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_InitLoadingMovie with the given movie filename, if any
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="movieName">Name of loading movie to prepare</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateInitLoadingMovie(ExportEntry sequence, string movieName, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_InitLoadingMovie", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            if (movieName != null)
+            {
+                fObj.WriteProperty(new StrProperty(movieName, "sMovieName"));
+            }
+
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_PlayLoadingMovie
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreatePlayLoadingMovie(ExportEntry sequence, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_PlayLoadingMovie", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_StopLoadingMovie
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateStopLoadingMovie(ExportEntry sequence, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_StopLoadingMovie", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+            return fObj;
+        }
+
+
+        /// <summary>
+        /// Creates a new BioSeqAct_ForceActorMipsResident for the given actor, if any.
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateForceActorMipsResident(ExportEntry sequence, ExportEntry pawnRef = null, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_ForceActorMipsResident", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            if (pawnRef != null)
+            {
+                KismetHelper.CreateVariableLink(fObj, "Actor", pawnRef);
+            }
+
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_SetStreamingState for with the given state name and value, if provided.
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="stateName">Optional: The name of the state.</param>
+        /// <param name="set">Optional: The value to set the state to. If null, the value will be false.</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateSetStreamingState(ExportEntry sequence, ExportEntry stateName = null, ExportEntry set = null, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_SetStreamingState", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            if (stateName != null)
+            {
+                KismetHelper.CreateVariableLink(fObj, "State Name", stateName);
+            }
+
+            if (stateName != null)
+            {
+                KismetHelper.CreateVariableLink(fObj, "New Value", set);
+            }
+
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new SeqAct_SetMaterial for with the given object and material, if provided.
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="targetObj">Optional: The target object to link on the Target pin.</param>
+        /// <param name="newMaterial">Optional: The new material to set on the target.</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateSetMaterial(ExportEntry sequence, ExportEntry targetObj = null, ExportEntry newMaterial = null, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "SeqAct_SetMaterial", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
+
+            if (targetObj != null)
+            {
+                KismetHelper.CreateVariableLink(fObj, "Target", targetObj);
+            }
+
+            if (newMaterial != null)
+            {
+                fObj.WriteProperty(new ObjectProperty(newMaterial, "NewMaterial"));
+            }
+
+            return fObj;
         }
     }
 }

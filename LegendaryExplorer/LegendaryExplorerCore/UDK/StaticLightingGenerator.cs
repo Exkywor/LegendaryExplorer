@@ -81,6 +81,7 @@ namespace LegendaryExplorerCore.UDK
         public static string GenerateUDKFileForLevel(IMEPackage pcc, string mapOutputPath = null,
             string assetsOutputPath = null, string decookedMaterialsFolder = null)
         {
+            decookedMaterialsFolder ??= Path.Combine(UDKDirectory.SharedPath, $"{pcc.Game}MaterialPort");
             var assetInfo = GenerateAssetsPackage(pcc, assetsOutputPath, decookedMaterialsFolder);
 
             MELoadedFiles.InvalidateCaches();
@@ -295,15 +296,11 @@ namespace LegendaryExplorerCore.UDK
                                 }
                             }
 
-                            var pla = new ExportEntry(assetInfo.TempPackage, assetInfo.LevelExport,
-                                new NameReference("PointLight", plaIndex++),
-                                EntryImporter.CreateStack(MEGame.UDK, pointLightClass.UIndex))
+                            var pla = new ExportEntry(assetInfo.TempPackage, assetInfo.LevelExport, new NameReference("PointLight", plaIndex++), EntryImporter.CreateStack(MEGame.UDK, pointLightClass.UIndex))
                             {
                                 Class = pointLightClass,
                             };
                             pla.ObjectFlags |= UnrealFlags.EObjectFlags.HasStack;
-                            pla.WriteProperty(
-                                new NameProperty(new NameReference(originalIFP, lightComponent.UIndex), "Tag"));
 
                             assetInfo.TempPackage.AddExport(pla);
 
@@ -311,27 +308,27 @@ namespace LegendaryExplorerCore.UDK
                                 lightComponent, assetInfo.TempPackage, pla, true,
                                 new RelinkerOptionsPackage(cache),
                                 out IEntry portedPLC);
-                            var plsProps = new PropertyCollection
+                            var plaProps = new PropertyCollection
                             {
                                 new ObjectProperty(portedPLC.UIndex, "LightComponent"),
-                                new NameProperty("PointLight", "Tag"),
+                                new NameProperty(new NameReference(originalIFP, lightComponent.UIndex), "Tag")
                             };
                             if (locationProp != null)
                             {
-                                plsProps.Add(locationProp);
+                                plaProps.Add(locationProp);
                             }
 
                             if (rotationProp != null)
                             {
-                                plsProps.Add(rotationProp);
+                                plaProps.Add(rotationProp);
                             }
 
                             if (scaleProp != null)
                             {
-                                plsProps.Add(scaleProp);
+                                plaProps.Add(scaleProp);
                             }
 
-                            pla.WriteProperties(plsProps);
+                            pla.WriteProperties(plaProps);
 
                             var plce = portedPLC as ExportEntry;
                             plce.ObjectFlags |= UnrealFlags.EObjectFlags.Transactional;
@@ -378,8 +375,6 @@ namespace LegendaryExplorerCore.UDK
                                 Class = spotLightClass
                             };
                             sla.ObjectFlags |= UnrealFlags.EObjectFlags.HasStack;
-                            sla.WriteProperty(
-                                new NameProperty(new NameReference(originalIFP, lightComponent.UIndex), "Tag"));
                             assetInfo.TempPackage.AddExport(sla);
 
                             EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.AddSingularAsChild,
@@ -389,7 +384,7 @@ namespace LegendaryExplorerCore.UDK
                             var slaProps = new PropertyCollection
                             {
                                 new ObjectProperty(portedSLC.UIndex, "LightComponent"),
-                                new NameProperty("SpotLight", "Tag"),
+                                new NameProperty(new NameReference(originalIFP, lightComponent.UIndex), "Tag")
                             };
                             if (locationProp != null)
                             {
@@ -453,8 +448,6 @@ namespace LegendaryExplorerCore.UDK
                                 Class = directionalLightClass
                             };
                             dla.ObjectFlags |= UnrealFlags.EObjectFlags.HasStack;
-                            dla.WriteProperty(
-                                new NameProperty(new NameReference(originalIFP, lightComponent.UIndex), "Tag"));
                             assetInfo.TempPackage.AddExport(dla);
 
                             EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.AddSingularAsChild,
@@ -464,7 +457,7 @@ namespace LegendaryExplorerCore.UDK
                             var dlaProps = new PropertyCollection
                             {
                                 new ObjectProperty(portedDLC.UIndex, "LightComponent"),
-                                new NameProperty("DirectionalLight", "Tag"),
+                                new NameProperty(new NameReference(originalIFP, lightComponent.UIndex), "Tag")
                             };
                             if (locationProp != null)
                             {
@@ -506,9 +499,12 @@ namespace LegendaryExplorerCore.UDK
             int smcIndex = 2;
             foreach (ExportEntry smc in assetInfo.SourcePackage.Exports.Where(exp => exp.ClassName == "StaticMeshComponent"))
             {
-                if (smc.Parent is ExportEntry parent && assetInfo.ActorsInLevel.Contains(parent.UIndex) && parent.IsA("StaticMeshActorBase"))
+                if (smc.Parent is ExportEntry parent && assetInfo.ActorsInLevel.Contains(parent.UIndex) && (parent.IsA("StaticMeshActorBase") || parent.IsA("BioInert") || parent.IsA("BioUseable")))
                 {
                     var originalIFP = smc.InstancedFullPath;
+
+                    if ((smc.ObjectFlags & UnrealFlags.EObjectFlags.ArchetypeObject) != 0)
+                        continue; // Don't do static lighting on archetype objects as they aren't actually in a level
 
                     // List of things to not port
                     if (parent.IsA("BioLedgeMeshActor"))
@@ -524,13 +520,20 @@ namespace LegendaryExplorerCore.UDK
                     }
 
                     smc.WriteBinary(emptySMCBin);
-                    smc.RemoveProperty("bBioIsReceivingDecals");
-                    smc.RemoveProperty("bBioForcePrecomputedShadows");
-                    //smc.RemoveProperty("bUsePreComputedShadows");
-                    smc.RemoveProperty("bAcceptsLights");
-                    smc.RemoveProperty("IrrelevantLights");
-                    smc.RemoveProperty("PhysMaterialOverride");
-                    smc.RemoveProperty("Materials"); //should make use of this?
+
+                    var props = smc.GetProperties();
+                    props.RemoveAll(x => x is ObjectProperty ob && ob.Name != "StaticMesh"); // We don't want any object references to be pulled over
+
+                    props.RemoveNamedProperty("bBioIsReceivingDecals");
+                    props.RemoveNamedProperty("bBioForcePrecomputedShadows");
+                    //props.RemoveNamedProperty("bUsePreComputedShadows");
+                    props.RemoveNamedProperty("bAcceptsLights");
+                    props.RemoveNamedProperty("IrrelevantLights");
+                    props.RemoveNamedProperty("PhysMaterialOverride");
+                    props.RemoveNamedProperty("LightEnvironment"); // May want to add this manually so it doesn't pull in the parent?
+                    props.RemoveNamedProperty("Materials"); //should make use of this?
+                    smc.WriteProperties(props);
+                    
                     smc.ObjectName = new NameReference("StaticMeshComponent", smcIndex++);
                     if (parent.ClassName == "StaticMeshCollectionActor")
                     {
@@ -571,7 +574,7 @@ namespace LegendaryExplorerCore.UDK
                     EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.AddSingularAsChild, smc, assetInfo.TempPackage,
                                                          sma, true, new RelinkerOptionsPackage(cache) { PortExportsAsImportsWhenPossible = true }, out IEntry result);
                     ((ExportEntry)result).Archetype = staticMeshComponentArchetype;
-                    var props = new PropertyCollection
+                    props = new PropertyCollection
                             {
                                 new ObjectProperty(result.UIndex, "StaticMeshComponent"),
                                 // 08/24/2024 - Use InstancedFullPath instead. If the source file changes at all, static lighting import will not be reliable. IFP is more reliable at the cost of more names.
@@ -864,7 +867,7 @@ namespace LegendaryExplorerCore.UDK
                                 //importedExport.idxLink = 0;
                             }
 
-                            return (ExportEntry) ent;
+                            return (ExportEntry)ent;
                         }
 
                         if (diff == null)
@@ -1083,7 +1086,7 @@ namespace LegendaryExplorerCore.UDK
             var cache = new PackageCache();
             foreach (var exp in meshPackage.Exports.Where(IsAsset))
             {
-                EntryExporter.ExportExportToPackage(exp, package, out _, cache, new RelinkerOptionsPackage() { ImportExportDependencies = true, Cache = cache, PortExportsAsImportsWhenPossible = true});
+                EntryExporter.ExportExportToPackage(exp, package, out _, cache, new RelinkerOptionsPackage() { ImportExportDependencies = true, Cache = cache, PortExportsAsImportsWhenPossible = true });
             }
 
             return package;

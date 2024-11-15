@@ -682,17 +682,16 @@ namespace LegendaryExplorer.Tools.TlkManagerNS
                 var tlks = new List<LoadedTLK>();
                 foreach (string tlk in tlkfiles)
                 {
-                    using (IMEPackage upk = MEPackageHandler.OpenLE1Package(tlk))
+                    using var upk = MEPackageHandler.UnsafePartialLoad(tlk, x => x.ClassName == "BioTlkFile");
                     {
-                        foreach (ExportEntry exp in upk.Exports.Where(exp => exp.ClassName == "BioTlkFile"))
+                        foreach (ExportEntry exp in upk.Exports.Where(exp => exp.IsDataLoaded()))
                         {
                             tlks.Add(new LoadedTLK(tlk, exp.UIndex, exp.ObjectName, false));
                         }
                     }
-                    //these startup files are LARGE. If they aren't forcibly cleared out every iteration, memory usage jumps to > 3 GBs
-                    MemoryAnalyzer.ForceFullGC();
+
                 }
-                MemoryAnalyzer.ForceFullGC(true);
+                // MemoryAnalyzer.ForceFullGC(true);
                 return tlks;
             }).ContinueWithOnUIThread(prevTask =>
             {
@@ -909,25 +908,38 @@ namespace LegendaryExplorer.Tools.TlkManagerNS
             bool male = tlkLang.EndsWith("Male");
             if (male)
             {
+                // ' - Male'
                 tlkLang = tlkLang.Substring(0, tlkLang.Length - 7); //include 2 spaces and -
             }
             else
             {
-                tlkLang = tlkLang.Substring(0, tlkLang.Length - 9); //include 2 spaces and -
+                // ' - Female'
+                tlkLang = tlkLang.Substring(0, tlkLang.Length - 9); //include 2 spaces and - 
             }
 
-            if (tlkLang != "Default")
-            {
-                tlkLang += ".pcc";
-            }
-            else
-            {
-                tlkLang = "INT.pcc";
-            }
-
+            // Will be either Default (INT) or RA/JP/DE... etc
+            var tlkLoc = tlkLang == "Default" ? MELocalization.INT : tlkLang.GetUnrealLocalization();
             foreach (LoadedTLK tlk in LE1TLKItems)
             {
-                tlk.selectedForLoad = ((tlk.exportName.EndsWith("_M") && male) || (!tlk.exportName.EndsWith("_M") && !male)) && tlk.tlkPath.EndsWith(tlkLang);
+                // Startup uses _INT.pcc
+                // DLCs do not
+                //if (tlk.tlkPath.GetUnrealLocalization() )
+                var filename = Path.GetFileNameWithoutExtension(tlk.tlkPath);
+                var localization = filename.GetUnrealLocalization();
+                // INT
+                if (localization is MELocalization.None or MELocalization.INT && tlkLoc is MELocalization.INT)
+                {
+                    // Gender
+                    tlk.selectedForLoad = ((tlk.exportName.EndsWith("_M") && male) || (!tlk.exportName.EndsWith("_M") && !male));
+                    continue;
+                }
+
+                if (localization == tlkLoc)
+                {
+                    // Gender
+                    tlk.selectedForLoad = ((tlk.exportName.EndsWith("_M") && male) || (!tlk.exportName.EndsWith("_M") && !male));
+                    continue;
+                }
             }
         }
 
@@ -956,17 +968,17 @@ namespace LegendaryExplorer.Tools.TlkManagerNS
 
         private async void TLKManager_Closing(object sender, CancelEventArgs e)
         {
-            if(bSaveNeededME1 || bSaveNeededME2 || bSaveNeededME3 || bSaveNeededLE1 || bSaveNeededLE2 || bSaveNeededLE3)
+            if (bSaveNeededME1 || bSaveNeededME2 || bSaveNeededME3 || bSaveNeededLE1 || bSaveNeededLE2 || bSaveNeededLE3)
             {
                 var confirm = MessageBox.Show("You are exiting the manager without saving the changes to the TLK list(s). Save now?", "TLK Manager", MessageBoxButton.YesNoCancel);
-                if(confirm == MessageBoxResult.Yes)
+                if (confirm == MessageBoxResult.Yes)
                 {
-                    if(bSaveNeededME1)
+                    if (bSaveNeededME1)
                     {
                         ME1TalkFiles.LoadedTlks.Clear();
                         await Task.Run(() => ME1ReloadTLKStringsAsync(ME1TLKItems.Where(x => x.selectedForLoad).ToList()));
                     }
-                    if(bSaveNeededME2)
+                    if (bSaveNeededME2)
                     {
                         ME2TalkFiles.LoadedTlks.Clear();
                         await Task.Run(() => ME2ReloadTLKStringsAsync(ME2TLKItems.Where(x => x.selectedForLoad).ToList()));
@@ -976,12 +988,12 @@ namespace LegendaryExplorer.Tools.TlkManagerNS
                         ME3TalkFiles.LoadedTlks.Clear();
                         await Task.Run(() => ME3ReloadTLKStringsAsync(ME3TLKItems.Where(x => x.selectedForLoad).ToList()));
                     }
-                    if(bSaveNeededLE1)
+                    if (bSaveNeededLE1)
                     {
                         LE1TalkFiles.LoadedTlks.Clear();
                         await Task.Run(() => LE1ReloadTLKStringsAsync(LE1TLKItems.Where(x => x.selectedForLoad).ToList()));
                     }
-                    if(bSaveNeededLE2)
+                    if (bSaveNeededLE2)
                     {
                         LE2TalkFiles.LoadedTlks.Clear();
                         await Task.Run(() => LE2ReloadTLKStringsAsync(LE2TLKItems.Where(x => x.selectedForLoad).ToList()));

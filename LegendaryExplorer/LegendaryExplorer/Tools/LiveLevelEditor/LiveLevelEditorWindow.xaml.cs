@@ -744,7 +744,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             camPathPackage.GetUExport(CamPath_InterpDataIDX).WriteProperty(new FloatProperty(Math.Max(Move_CurveEditor.Time, FOV_CurveEditor.Time), "InterpLength"));
             camPathPackage.GetUExport(CamPath_LoopGateIDX).WriteProperty(new BoolProperty(ShouldLoop, "bOpen"));
             camPathPackage.Save();
-            LiveEditHelper.PadCamPathFile(Game);
+            LiveEditHelper.PadME3CamPathFile();
             GameTarget.ME3ExecuteConsoleCommands("ce stopcam", "ce LoadCamPath");
             playbackState = PlaybackState.Stopped;
             PlayPauseIcon = EFontAwesomeIcon.Solid_Play;
@@ -756,7 +756,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             {
                 return;
             }
-            camPathPackage = MEPackageHandler.OpenMEPackage(LiveEditHelper.CamPathFilePath(Game));
+            camPathPackage = MEPackageHandler.OpenMEPackage(LiveEditHelper.ME3CamPathPccInstallPath);
             interpTrackMove = camPathPackage.GetUExport(CamPath_InterpTrackMoveIDX);
             fovTrackExport = camPathPackage.GetUExport(CamPath_FOVTrackIDX);
             ReloadCurveEdExports();
@@ -780,7 +780,7 @@ namespace LegendaryExplorer.Tools.LiveLevelEditor
             Dispatcher.BeginInvoke(new Action(ReloadCams));
         }
 
-        private void ReloadCams() => SavedCams.ReplaceAll(LiveEditHelper.ReadSavedCamsFile());
+        private void ReloadCams() => SavedCams.ReplaceAll(LiveEditHelper.ReadSavedCamsFile(Game));
 
         private void DisposeCamPath()
         {

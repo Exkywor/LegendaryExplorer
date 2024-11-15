@@ -39,6 +39,7 @@ namespace LegendaryExplorerCore.Audio
         public static string ImportBank(string bankPath,
             bool useWwiseObjectNames,
             IMEPackage package,
+            bool importNewStreamsOnly = false,
             string wwiseLanguage = null,
             XDocument preloadedInfoDoc = null,
             string bankPackageName = null,
@@ -46,9 +47,6 @@ namespace LegendaryExplorerCore.Audio
         {
             var bankName = Path.GetFileNameWithoutExtension(bankPath);
             var bankNameWithExtension = Path.GetFileName(bankPath);
-
-
-            // TODO: Check if bank exists as an import - we can't import in this scenario!
 
             // Preprocessing
             var generatedDir = Directory.GetParent(bankPath).FullName;
@@ -119,18 +117,29 @@ namespace LegendaryExplorerCore.Audio
                 .Select(x => uint.Parse(x.Attribute("Id").Value));
             var referencedStreamingAudio = referencedStreamingAudioIds != null ? allStreamedFiles.Where(x => referencedStreamingAudioIds.Contains(x.Id)) : null;
 
-            // Import the bank export 
-            var parentPackage = package.FindEntry(bankPackageName ?? bankName);
-            if (parentPackage == null)
+            // Check if bank exists as an import - we can't import in this scenario!
+            ImportEntry bankImport = package.Imports.FirstOrDefault(i => i.ObjectNameString == bankName);
+            if(bankImport != null)
             {
-                // Create container
-                parentPackage = ExportCreator.CreatePackageExport(package, bankPackageName ?? bankName);
+                return "Bank Import found with that name, process can only work with local banks. Terminated.";
             }
 
-            ExportEntry bankExport = package.FindExport($"{bankPackageName ?? bankName}.{bankName}");
-            if (bankExport == null)
+            // Import the bank export - check if bank exits and use that (otherwise use standard wwise_bankname.wwise_bankname package layout)
+            ExportEntry bankExport = package.Exports.FirstOrDefault(x => x.ObjectNameString == bankName);
+            var parentPackage = bankExport?.Parent;
+            if (parentPackage == null)
             {
-                bankExport = ExportCreator.CreateExport(package, bankName, "WwiseBank", parentPackage, indexed: false);
+                parentPackage = package.FindEntry(bankPackageName ?? bankName);
+                if (parentPackage == null)
+                {
+                    // Create container
+                    parentPackage = ExportCreator.CreatePackageExport(package, bankPackageName ?? bankName);
+                }
+                bankExport = package.FindExport($"{bankPackageName ?? bankName}.{bankName}");
+                if (bankExport == null)
+                {
+                    bankExport = ExportCreator.CreateExport(package, bankName, "WwiseBank", parentPackage, indexed: false);
+                }
             }
 
             bankExport.WriteProperty(new ObjectProperty(GetInitBankReference(package), "Parent"));
@@ -147,7 +156,7 @@ namespace LegendaryExplorerCore.Audio
             }
 
             afcPath += ".afc";
-            using var afcStream = File.Create(afcPath);
+            using var afcStream = File.Open(afcPath, FileMode.OpenOrCreate);
 
             // Import the streams
             List<ExportEntry> streamExports = new List<ExportEntry>();
@@ -181,43 +190,70 @@ namespace LegendaryExplorerCore.Audio
                 {
                     var exportName = GetExportNameFromShortname(streamInfo.Shortname);
                     var streamExport = package.FindExport($"{parentPackage.InstancedFullPath}.{exportName}");
+                    bool newStreamExport = false;
                     if (streamExport == null)
                     {
                         streamExport = ExportCreator.CreateExport(package, exportName, "WwiseStream", parentPackage, indexed: false);
+                        newStreamExport = true;
                     }
 
                     PropertyCollection p = new PropertyCollection();
-                    if (package.Game == MEGame.LE3)
+                    if (!importNewStreamsOnly || newStreamExport)
                     {
-                        // LE3
-                        p.Add(new NameProperty(Path.GetFileNameWithoutExtension(afcPath), "Filename"));
-                        p.Add(new IntProperty((int)streamInfo.Id, "Id"));
+                        if (package.Game == MEGame.LE3)
+                        {
+                            // LE3
+                            p.Add(new NameProperty(Path.GetFileNameWithoutExtension(afcPath), "Filename"));
+                            p.Add(new IntProperty((int)streamInfo.Id, "Id"));
+                        }
+                        else
+                        {
+                            // LE2
+                            p.Add(new NameProperty(Path.GetFileNameWithoutExtension(afcPath), "Filename"));
+                            p.Add(new NameProperty(Path.GetFileNameWithoutExtension(afcPath), "BankName"));
+                            p.Add(new IntProperty((int)streamInfo.Id, "Id"));
+                        }
                     }
                     else
                     {
-                        // LE2
-                        p.Add(new NameProperty(Path.GetFileNameWithoutExtension(afcPath), "Filename"));
-                        p.Add(new NameProperty(Path.GetFileNameWithoutExtension(afcPath), "BankName"));
-                        p.Add(new IntProperty((int)streamInfo.Id, "Id"));
+                        p = streamExport.GetProperties();
+                        if (package.Game == MEGame.LE3)
+                        {
+                            // LE3
+                            p.AddOrReplaceProp(new IntProperty((int)streamInfo.Id, "Id"));
+                        }
+                        else
+                        {
+                            // LE2
+                            p.AddOrReplaceProp(new IntProperty((int)streamInfo.Id, "Id"));
+                        }
                     }
 
-                    var wemPath =
-                        Path.Combine(generatedDir,
-                            $"{streamInfo.Id}.wem"); // Seems to dump here for non-localized audio.
                     WwiseStream ws = new WwiseStream();
-                    ws.Id = (int)streamInfo.Id;
-                    ws.DataOffset = (int)afcStream.Position;
-                    var wemData = File.ReadAllBytes(wemPath);
-                    afcStream.Write(wemData);
-                    ws.DataSize = wemData.Length;
-                    ws.Filename = bankName; // This is needed internally for serialization
-                    ws.BulkDataFlags = 0x1; // Stored externally, uncompressed
-
-                    if (package.Game == MEGame.LE2)
+                    if (!importNewStreamsOnly || newStreamExport)
                     {
-                        // Not sure what these are but they are typically 0x1
-                        ws.Unk1 = 0x1;
-                        ws.Unk2 = 0x1;
+                        var wemPath =
+                            Path.Combine(generatedDir,
+                                $"{streamInfo.Id}.wem"); // Seems to dump here for non-localized audio.
+                        ws.Id = (int)streamInfo.Id;
+                        ws.DataOffset = (int)afcStream.Position;
+                        var wemData = File.ReadAllBytes(wemPath);
+                        afcStream.Write(wemData);
+                        ws.DataSize = wemData.Length;
+                        ws.Filename = bankName; // This is needed internally for serialization
+                        ws.BulkDataFlags = 0x1; // Stored externally, uncompressed
+
+                        if (package.Game == MEGame.LE2)
+                        {
+                            // Not sure what these are but they are typically 0x1
+                            ws.Unk1 = 0x1;
+                            ws.Unk2 = 0x1;
+                        }
+
+                    }
+                    else
+                    {
+                        ws = streamExport.GetBinaryData<WwiseStream>();
                     }
 
                     streamExport.WritePropertiesAndBinary(p, ws);
@@ -226,12 +262,10 @@ namespace LegendaryExplorerCore.Audio
             }
 
             // Import the events
-            // Events go next to the bank. Reset it again.
-            parentPackage = package.FindEntry(bankPackageName ?? bankName);
-
+            parentPackage = bankExport.Parent; //Events go next to bank. Reset.
             foreach (var eventInfo in eventInfos)
             {
-                var eventExport = package.FindExport($"{bankName}.{eventInfo.Name}");
+                var eventExport = package.FindExport($"{parentPackage.InstancedFullPath}.{eventInfo.Name}"); 
                 if (eventExport == null)
                 {
                     eventExport = ExportCreator.CreateExport(package, eventInfo.Name, "WwiseEvent", parentPackage, indexed: false);
@@ -249,6 +283,10 @@ namespace LegendaryExplorerCore.Audio
                     {
                         var duration = (maxDur + minDur) / 2;
                         p.Add(new FloatProperty(duration, "DurationSeconds")); //for duration wwise project must be set to export them - project settings -> soundbanks -> estimated duration
+                    }
+                    if (localization != MELocalization.None)
+                    {
+                        p.Add(new BoolProperty(true, "IsLocalised"));
                     }
 
                 }

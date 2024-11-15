@@ -211,11 +211,18 @@ namespace LegendaryExplorer.Tools.PackageDumper
                     {
                         if (MELoadedFiles.TryGetHighestMountedFile(game, f, out var fPath))
                         {
-                            PostLoadCache.InsertIntoCache(MEPackageHandler.OpenMEPackage(fPath));
+                            // Use forceloadfromdisk so we don't use shared version that will be later released
+                            PostLoadCache.InsertIntoCache(MEPackageHandler.OpenMEPackage(fPath, forceLoadFromDisk: true));
                         }
                     }
                 }
             }
+        }
+
+        private void ReleaseAllCaches()
+        {
+            GlobalCache?.Dispose();
+            PostLoadCache?.Dispose();
         }
 
         private async void DumpGame(MEGame game)
@@ -449,6 +456,7 @@ namespace LegendaryExplorer.Tools.PackageDumper
 
         private void PackageDumper_Closing(object sender, CancelEventArgs e)
         {
+            ReleaseAllCaches();
             DumpCanceled = true;
             AllDumpingItems?.ForEach(x => x.DumpCanceled = true);
             AllDumpingItems = null;
