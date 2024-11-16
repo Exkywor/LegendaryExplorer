@@ -9,6 +9,7 @@ using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
 using LegendaryExplorerCore.Helpers;
+using LegendaryExplorerCore.Misc;
 
 namespace LegendaryExplorerCore.Kismet
 {
@@ -551,7 +552,8 @@ namespace LegendaryExplorerCore.Kismet
         /// <param name="newObject">Sequence object to add to a sequence</param>
         /// <param name="sequenceExport">Sequence to add it to</param>
         /// <param name="removeLinks">If true, all links will be removed from the new object after adding</param>
-        public static void AddObjectToSequence(ExportEntry newObject, ExportEntry sequenceExport, bool removeLinks = false)
+        /// <param name="keepPositioning">If false, ObjPosX and ObjPosY will be stripped out.</param>
+        public static void AddObjectToSequence(ExportEntry newObject, ExportEntry sequenceExport, bool removeLinks = false, bool keepPositioning = false)
         {
             if (sequenceExport.ClassName is not "SequenceReference")
             {
@@ -566,8 +568,13 @@ namespace LegendaryExplorerCore.Kismet
 
             PropertyCollection newObjectProps = newObject.GetProperties();
             newObjectProps.AddOrReplaceProp(new ObjectProperty(sequenceExport, "ParentSequence"));
-            newObjectProps.RemoveNamedProperty("ObjPosX");
-            newObjectProps.RemoveNamedProperty("ObjPosY");
+            // Should we just leave this? Why strip it?
+            if (!keepPositioning)
+            {
+                newObjectProps.RemoveNamedProperty("ObjPosX");
+                newObjectProps.RemoveNamedProperty("ObjPosY");
+            }
+
             newObject.WriteProperties(newObjectProps);
             if (removeLinks)
             {
@@ -761,30 +768,43 @@ namespace LegendaryExplorerCore.Kismet
 #endif
 
         /// <summary>
-        /// Clones a sequence object and places it into the given sequence.
+        /// Clones a parentSequence object and places it into the given parentSequence.
         /// </summary>
         /// <param name="itemToClone"></param>
-        /// <param name="sequence"></param>
+        /// <param name="keepPositioning">If position data should be kept</param>
+        /// <param name="parentSequence">What sequence to put this object under</param>
         /// <param name="topLevel"></param>
         /// <param name="incrementIndex"></param>
         /// <param name="cloneChildren">Whether or not to clone any children objects as well</param>
         /// <returns></returns>
-        public static ExportEntry CloneObject(ExportEntry itemToClone, ExportEntry sequence = null, bool topLevel = true, bool incrementIndex = true, bool cloneChildren = false)
+        public static ExportEntry CloneObject(ExportEntry itemToClone,
+            ExportEntry parentSequence = null, bool topLevel = true, bool incrementIndex = true, bool cloneChildren = false,
+            bool keepPositioning = false)
         {
+            var isSequence = itemToClone.ClassName is "Sequence" or "SequenceReference";
+
+            // Do not clone children of sequences, as they will be cloned by SetupClonedSequence.
+            cloneChildren = !isSequence && cloneChildren;
+
             //SeqVar_External needs to have the same index to work properly
-            ExportEntry exp = cloneChildren ? EntryCloner.CloneTree(itemToClone) : EntryCloner.CloneEntry(itemToClone, incrementIndex: incrementIndex && itemToClone.ClassName != "SeqVar_External");
-            AddObjectToSequence(exp, sequence ?? GetParentSequence(itemToClone), topLevel);
-            CloneSequence(exp);
+            var exp = cloneChildren ? EntryCloner.CloneTree(itemToClone, incrementIndex) : EntryCloner.CloneEntry(itemToClone, incrementIndex: incrementIndex && itemToClone.ClassName != "SeqVar_External");
+            AddObjectToSequence(exp, parentSequence ?? GetParentSequence(itemToClone), topLevel, keepPositioning: keepPositioning);
+            if (isSequence)
+            {
+                SetupClonedSequence(exp, keepPositioning: keepPositioning);
+            }
+
             return exp;
         }
 
         /// <summary>
-        /// Clones an entire Kismet sequence
+        /// Sets up the given sequence to be a new copy. This object MUST already be a clone or it will just modify the original!
         /// </summary>
         /// <param name="sequence"></param>
-        public static void CloneSequence(ExportEntry sequence)
+        private static ExportEntry SetupClonedSequence(ExportEntry sequence, bool keepPositioning = false)
         {
             IMEPackage pcc = sequence.FileRef;
+            ExportEntry newSequence = null;
             if (sequence.ClassName == "Sequence")
             {
                 //sequence names need to be unique I think?
@@ -793,7 +813,7 @@ namespace LegendaryExplorerCore.Kismet
                 var seqObjs = sequence.GetProperty<ArrayProperty<ObjectProperty>>("SequenceObjects");
                 if (seqObjs == null || seqObjs.Count == 0)
                 {
-                    return;
+                    return null;
                 }
 
                 //store original list of sequence objects;
@@ -806,7 +826,7 @@ namespace LegendaryExplorerCore.Kismet
                 //clone all children
                 foreach (var obj in oldObjectUindices)
                 {
-                    CloneObject(pcc.GetUExport(obj), sequence, false, false);
+                    CloneObject(pcc.GetUExport(obj), sequence, topLevel: false, incrementIndex: false, keepPositioning: keepPositioning);
                 }
 
                 //re-point children's links to new objects
@@ -913,22 +933,40 @@ namespace LegendaryExplorerCore.Kismet
             }
             else if (sequence.ClassName == "SequenceReference")
             {
+                // This is to make this code more readable and less confusing.
+                var sequenceRefObj = sequence;
+
                 //set OSequenceReference to new sequence
-                var oSeqRefProp = sequence.GetProperty<ObjectProperty>("oSequenceReference");
+                var oSeqRefProp = sequenceRefObj.GetProperty<ObjectProperty>("oSequenceReference");
                 if (oSeqRefProp == null || oSeqRefProp.Value == 0)
                 {
-                    return;
+                    return null;
                 }
 
+                // 11/16/2024 - Is this code assuming the passed-in parameter (sequence) is the current final export in the package?
+                // That is a bold assumption if that is what it is doing
                 int oldSeqIndex = oSeqRefProp.Value;
-                oSeqRefProp.Value = sequence.UIndex + 1;
-                sequence.WriteProperty(oSeqRefProp);
+                // What is this doing??
+                oSeqRefProp.Value = sequenceRefObj.UIndex + 1;
+                sequenceRefObj.WriteProperty(oSeqRefProp);
 
-                //clone sequence
-                ExportEntry newSequence = CloneObject(pcc.GetUExport(oldSeqIndex), sequence, false);
+                //clone the referenced sequence that sits under us
+                newSequence = CloneObject(pcc.GetUExport(oldSeqIndex), sequenceRefObj, topLevel: false, keepPositioning: keepPositioning);
+
                 //set SequenceReference's linked name indices
-                var inputIndices = new List<int>();
-                var outputIndices = new List<int>();
+                //var inputIndices = new List<int>();
+                //var outputIndices = new List<int>();
+
+                // GET INPUTS TO UNDERLAYING SEQUENCE
+                // 11/16/2024 - ME1 - Demiurge has sequence references that the underlying sequence
+                // does not have same matching pins as the upper one.
+                // As a result, copying the data up will actually cause wrong sequencing to trigger.
+                // We need to match the input names and copy it that way instead of just by array index.
+                // Sigh...
+
+                var inputLinkMap = new CaseInsensitiveDictionary<int>();
+                var outputLinkMap = new CaseInsensitiveDictionary<int>();
+
 
                 var props = newSequence.GetProperties();
                 var inLinksProp = props.GetProp<ArrayProperty<StructProperty>>("InputLinks");
@@ -936,7 +974,7 @@ namespace LegendaryExplorerCore.Kismet
                 {
                     foreach (var inLink in inLinksProp)
                     {
-                        inputIndices.Add(inLink.GetProp<NameProperty>("LinkAction").Value.Number);
+                        inputLinkMap[inLink.GetProp<StrProperty>("LinkDesc").Value] = inLink.GetProp<NameProperty>("LinkAction").Value.Number;
                     }
                 }
 
@@ -945,18 +983,20 @@ namespace LegendaryExplorerCore.Kismet
                 {
                     foreach (var outLinks in outLinksProp)
                     {
-                        outputIndices.Add(outLinks.GetProp<NameProperty>("LinkAction").Value.Number);
+                        outputLinkMap[outLinks.GetProp<StrProperty>("LinkDesc").Value] = outLinks.GetProp<NameProperty>("LinkAction").Value.Number;
                     }
                 }
 
-                props = sequence.GetProperties();
+                // COPY THEM UP TO THE CONTAINER, MATCHING ON NAME
+                props = sequenceRefObj.GetProperties();
                 inLinksProp = props.GetProp<ArrayProperty<StructProperty>>("InputLinks");
                 if (inLinksProp != null)
                 {
                     for (int i = 0; i < inLinksProp.Count; i++)
                     {
+                        var linkDesc = inLinksProp[i].GetProp<StrProperty>("LinkDesc").Value;
                         NameProperty linkAction = inLinksProp[i].GetProp<NameProperty>("LinkAction");
-                        linkAction.Value = new NameReference(linkAction.Value.Name, inputIndices[i]);
+                        linkAction.Value = new NameReference(linkAction.Value.Name, inputLinkMap[linkDesc]);
                     }
                 }
 
@@ -965,13 +1005,17 @@ namespace LegendaryExplorerCore.Kismet
                 {
                     for (int i = 0; i < outLinksProp.Count; i++)
                     {
+                        var linkDesc = outLinksProp[i].GetProp<StrProperty>("LinkDesc").Value;
                         NameProperty linkAction = outLinksProp[i].GetProp<NameProperty>("LinkAction");
-                        linkAction.Value = new NameReference(linkAction.Value.Name, outputIndices[i]);
+                        linkAction.Value = new NameReference(linkAction.Value.Name, outputLinkMap[linkDesc]);
                     }
                 }
 
-                sequence.WriteProperties(props);
+                sequenceRefObj.WriteProperties(props);
+                return newSequence;
             }
+
+            return newSequence;
         }
 
         /// <summary>
