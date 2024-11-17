@@ -1129,69 +1129,6 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             }
         }
 
-        private void TransferLevelBetweenGames(object sender, RoutedEventArgs e)
-        {
-            var pew = GetPEWindow();
-            var Pcc = pew.Pcc;
-            if (Pcc is MEPackage pcc && Path.GetFileNameWithoutExtension(pcc.FilePath).StartsWith("BioP") &&
-                pcc.Game == MEGame.ME2)
-            {
-                var cdlg = MessageBox.Show(
-                    "GetPEWindow() is a highly experimental method to copy the static art and collision from an ME2 level to an ME3 one.  It will not copy materials or design elements.",
-                    "Warning", MessageBoxButton.OKCancel);
-                if (cdlg == MessageBoxResult.Cancel)
-                    return;
-
-                CommonOpenFileDialog o = new CommonOpenFileDialog
-                {
-                    IsFolderPicker = true,
-                    EnsurePathExists = true,
-                    Title = "Select output folder"
-                };
-                if (o.ShowDialog(GetPEWindow()) == CommonFileDialogResult.Ok)
-                {
-                    string tfc = PromptDialog.Prompt(GetPEWindow(),
-                        "Enter Name of Target Textures File Cache (tfc) without extension", "Level Conversion Tool",
-                        "Textures_DLC_MOD_", false, inputType: PromptDialog.InputType.Text);
-
-                    if (tfc == null || tfc == "Textures_DLC_MOD_")
-                        return;
-
-                    pew.BusyText = "Parsing level files";
-                    pew.IsBusy = true;
-                    Task.Run(() =>
-                        PackageEditorExperimentsK.ConvertLevelToGame(MEGame.ME3, pcc, o.FileName, tfc,
-                            newText => pew.BusyText = newText)).ContinueWithOnUIThread(prevTask =>
-                    {
-                        if (Pcc != null)
-                            pew.LoadFile(Pcc.FilePath);
-                        pew.IsBusy = false;
-                        var dlg = new ListDialog(prevTask.Result, $"Conversion errors: ({prevTask?.Result.Count})", "",
-                            GetPEWindow())
-                        {
-                            DoubleClickEntryHandler = pew.GetEntryDoubleClickAction()
-                        };
-                        dlg.Show();
-                    });
-                }
-            }
-            else
-            {
-                MessageBox.Show(GetPEWindow(),
-                    "Load a level's BioP file to start the transfer.\nCurrently can only convert from ME2 to ME3.");
-            }
-        }
-
-        private void RestartTransferFromJSON(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsK.RestartTransferFromJSON(GetPEWindow(), GetPEWindow().GetEntryDoubleClickAction());
-        }
-
-        private void RecookLevelToTestFromJSON(object sender, RoutedEventArgs e)
-        {
-            PackageEditorExperimentsK.RecookLevelToTestFromJSON(GetPEWindow(), GetPEWindow().GetEntryDoubleClickAction());
-        }
-
         private void CopyPackageName(object sender, RoutedEventArgs e)
         {
             Clipboard.SetText(Path.GetFileNameWithoutExtension(GetPEWindow().Pcc?.FilePath));
