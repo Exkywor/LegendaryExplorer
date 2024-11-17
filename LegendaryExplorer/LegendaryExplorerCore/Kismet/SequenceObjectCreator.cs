@@ -831,11 +831,18 @@ namespace LegendaryExplorerCore.Kismet
         /// <param name="seq"></param>
         /// <param name="comment"></param>
         /// <returns></returns>
-        public static ExportEntry CreateLog(ExportEntry seq, string comment, PackageCache cache = null)
+        public static ExportEntry CreateLog(ExportEntry seq, string comment, bool createCommentObj = true, PackageCache cache = null)
         {
             // This is often used for hackjobbing things
             var obj = CreateAndAddToSequence(seq, "SeqAct_Log", cache);
             KismetHelper.SetComment(obj, comment);
+            if (createCommentObj)
+            {
+                // Make string as well. This makes it more reliable.
+                var commentObj = CreateString(seq, comment, cache);
+                KismetHelper.CreateVariableLink(obj, "String", commentObj);
+            }
+
             return obj;
         }
 
@@ -1655,6 +1662,19 @@ namespace LegendaryExplorerCore.Kismet
                 fObj.WriteProperty(new ObjectProperty(newMaterial, "NewMaterial"));
             }
 
+            return fObj;
+        }
+
+        /// <summary>
+        /// Creates a new BioSeqAct_BlockForTextureStreaming in the given sequence.
+        /// </summary>
+        /// <param name="sequence">Sequence this object will be placed into</param>
+        /// <param name="cache">Cache to use when creating the object. If you are doing many object creations, this will greatly improve performance.</param>
+        /// <returns>The created kismet object</returns>
+        public static ExportEntry CreateBlockForTextureStreaming(ExportEntry sequence, PackageCache cache = null)
+        {
+            var fObj = CreateSequenceObject(sequence.FileRef, "BioSeqAct_BlockForTextureStreaming", cache);
+            KismetHelper.AddObjectToSequence(fObj, sequence);
             return fObj;
         }
     }
