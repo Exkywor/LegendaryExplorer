@@ -1169,6 +1169,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsK.AddNewInterpGroups(GetPEWindow());
         }
 
+        private void AddPreloadsToInterpData(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsK.CompileAudioPreloads(GetPEWindow());
+        }
+
         private void ParseMapNamesToObjects(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsK.ParseMapNames(GetPEWindow());

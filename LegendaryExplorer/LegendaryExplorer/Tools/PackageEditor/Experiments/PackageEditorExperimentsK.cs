@@ -490,6 +490,77 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             interp.WriteProperty(grpsProp);
         }
 
+        public static void CompileAudioPreloads(PackageEditorWindow pewpf)
+        {
+            if (pewpf.SelectedItem.Entry.ClassName != "InterpData")
+            {
+                MessageBox.Show("InterpData not selected.", "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            if (pewpf.SelectedItem.Entry is not ExportEntry interp)
+                return;
+
+            var preProp = interp.GetProperty<ArrayProperty<StructProperty>>("m_aBioPreloadData");
+            if (preProp == null)
+                preProp = new ArrayProperty<StructProperty>("m_aBioPreloadData");
+
+            var grps = interp.GetProperty<ArrayProperty<ObjectProperty>>("InterpGroups");
+            if (grps == null)
+                return;
+            var preLoadData = new List<(ExportEntry,int,float)>();
+            foreach(var g in grps)
+            {
+                var grp = pewpf.Pcc.GetUExport(g.Value);
+                if(grp != null)
+                {
+                    var trcks = grp.GetProperty<ArrayProperty<ObjectProperty>>("InterpTracks");
+                    if (trcks != null)
+                    {
+                        foreach (var t in trcks)
+                        {
+                            var itrk = pewpf.Pcc.GetUExport(t.Value);
+                            if(itrk != null)
+                            {
+                                if(itrk.ClassName == "InterpTrackWwiseEvent" || itrk.ClassName == "InterpTrackWwiseSoundEffect")
+                                {
+                                    var awt = itrk.GetProperty<ArrayProperty<StructProperty>>("WwiseEvents");
+                                    for(int n = 0; n < awt.Count; n++)
+                                    {
+                                        float time = (float)(awt[n].GetProp<FloatProperty>("Time")?.Value);
+                                        preLoadData.Add((itrk, n, time));
+                                    }
+
+                                }
+                                else if (itrk.ClassName == "SFXInterpTrackMovieBink")
+                                {
+                                    var awt = itrk.GetProperty<ArrayProperty<StructProperty>>("m_aTrackKeys");
+                                    for (int n = 0; n < awt.Count; n++)
+                                    {
+                                        float time = (float)(awt[n].GetProp<FloatProperty>("fTime")?.Value);
+                                        preLoadData.Add((itrk, n, time));
+                                    }
+                                }
+                            }   
+                        }
+                    }
+                }
+            }
+            var SortedPreLoadData = preLoadData.OrderBy(f => f.Item3);
+            preProp.Clear();
+            foreach (var pld in SortedPreLoadData)
+            {
+                var props = new PropertyCollection();
+                props.Add(new ObjectProperty(pld.Item1, "pObject"));
+                props.Add(new IntProperty(pld.Item2, "nKeyIndex"));
+                props.Add(new FloatProperty(pld.Item3, "fTime"));
+                var plEventProp = new StructProperty("BioResourcePreloadItem", props);
+                preProp.Add(plEventProp);
+            }
+            
+            interp.WriteProperty(preProp);
+        }
+
         public static void ParseMapNames(PackageEditorWindow pewpf)
         {
             if (pewpf.SelectedItem.Entry is not ExportEntry gmObj)
