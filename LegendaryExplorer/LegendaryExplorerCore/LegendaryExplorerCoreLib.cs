@@ -9,6 +9,7 @@ using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.ObjectInfo;
 using Serilog;
+using Serilog.Core;
 
 namespace LegendaryExplorerCore
 {
@@ -82,7 +83,10 @@ namespace LegendaryExplorerCore
         public static void InitLib(TaskScheduler uiSyncContext, Action<string> packageSavingFailed = null, ILogger logger = null, MEGame[] objectDBsToLoad = null, bool usePropertyDBLazyLoad = false)
         {
             if (initialized) return;
-            LECLog.logger = logger;
+            if (logger != Logger.None)
+            {
+                Log.Logger = logger;
+            }
             SYNCHRONIZATION_CONTEXT ??= uiSyncContext;
             LECLog.Information(@"Initializing LegendaryExplorerCore library");
             MEPackageHandler.Initialize();

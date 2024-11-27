@@ -247,15 +247,17 @@ namespace LegendaryExplorerCore.Coalesced
 		/// </summary>
 		/// <param name="asset"></param>
 		/// <param name="keyName"></param>
-        public void RemoveAllNamedEntries(string keyName = null)
+        public int RemoveAllNamedEntries(string keyName = null)
         {
             if (keyName != null)
             {
-                _properties.RemoveAll(x => x.Key == keyName);
+                return _properties.RemoveAll(x => x.Key == keyName);
             }
             else
             {
+                var count = _properties.Count;
                 _properties.Clear();
+                return count;
             }
         }
     }

@@ -124,9 +124,7 @@ namespace LegendaryExplorerCore.Coalesced.Config
                         }
                         break;
                     case CoalesceParseAction.RemoveProperty: // Type 1
-                        LECLog.Debug($@"ConfigMerge::MergeEntry - Removing entire property {incomingProperty.Name} from {targetSection.Name}",
-                            shouldLog: DebugConfigMerge);
-
+                        LECLog.Debug($@"ConfigMerge::MergeEntry - Removing entire property {incomingProperty.Name} from {targetSection.Name}", shouldLog: DebugConfigMerge);
                         targetSection.RemoveAllNamedEntries(incomingProperty.Name);
                         hasChanged = true;
                         break;
@@ -137,15 +135,19 @@ namespace LegendaryExplorerCore.Coalesced.Config
                             {
                                 for (int i = values.Count - 1; i >= 0; i--)
                                 {
-                                    if (values[i].Value == prop.Value)
+                                    var value = values[i];
+                                    if (value.Value == prop.Value)
                                     {
-                                        if (values[i].ParseAction == CoalesceParseAction.Remove)
+                                        // Remove as we have match
+                                        values.RemoveAt(i);
+
+                                        if (value.ParseAction == CoalesceParseAction.Remove)
                                         {
                                             LECLog.Debug($@"ConfigMerge::MergeEntry - Not adding duplicate subtraction {incomingProperty.Name}->{prop.Value} on {targetSection.Name}", shouldLog: DebugConfigMerge);
                                             shouldAddEntry = false;
                                             break;
                                         }
-                                        if (values[i].ParseAction is CoalesceParseAction.Add or CoalesceParseAction.AddUnique or CoalesceParseAction.New)
+                                        if (value.ParseAction is CoalesceParseAction.Add or CoalesceParseAction.AddUnique or CoalesceParseAction.New)
                                         {
                                             LECLog.Debug($@"ConfigMerge::MergeEntry - Removing value {incomingProperty.Name}->{prop.Value} from {targetSection.Name}", shouldLog: DebugConfigMerge);
                                             hasChanged = true;

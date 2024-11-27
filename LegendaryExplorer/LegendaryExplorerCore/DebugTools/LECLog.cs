@@ -10,8 +10,6 @@ namespace LegendaryExplorerCore.DebugTools
 {
     public static class LECLog
     {
-        internal static ILogger logger;
-
         /// <summary>
         /// If debug messages should be logged. Defaults to false.
         /// </summary>
@@ -20,22 +18,22 @@ namespace LegendaryExplorerCore.DebugTools
 
         public static void Information(string message)
         {
-            logger?.Information($"{Prefix}{message}");
+            Log.Logger.Information($"{Prefix}{message}");
         }
         public static void Warning(string message)
         {
-            logger?.Warning($"{Prefix}{message}");
+            Log.Logger.Warning($"{Prefix}{message}");
         }
         public static void Error(string message)
         {
-            logger?.Error($"{Prefix}{message}");
+            Log.Logger.Error($"{Prefix}{message}");
         }
 
         public static void Debug(string message, bool shouldLog = true)
         {
             if (shouldLog && LogDebug)
             {
-                logger?.Debug($"{Prefix}{message}");
+                Log.Logger.Debug($"{Prefix}{message}");
             }
         }
 
