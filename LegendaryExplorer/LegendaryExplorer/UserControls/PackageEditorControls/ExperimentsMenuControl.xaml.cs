@@ -401,6 +401,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             new CustomFilesManagerWindow().Show();
         }
 
+        private void GenerateTextureToInstancesMap_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.GenerateTextureToInstancesMap(GetPEWindow());
+        }
+
         private void ImportStaticLighting_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.ImportStaticLighting(GetPEWindow());
@@ -1481,6 +1486,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         {
             PackageEditorExperimentsM.BuildAllObjectsGameDB(MEGame.ME3, GetPEWindow());
         }
+
         #endregion
 
         // PLEASE MOVE YOUR EXPERIMENT HANDLER INTO YOUR SECTION ABOVE

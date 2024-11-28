@@ -37,6 +37,8 @@ using LegendaryExplorerCore.UnrealScript.Analysis.Visitors;
 using LegendaryExplorerCore.UnrealScript.Language.Tree;
 using LegendaryExplorer.Tools.AssetViewer;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
+using LegendaryExplorerCore.Gammtek.Extensions;
+using LegendaryExplorerCore.Pathing;
 using LegendaryExplorerCore.UDK;
 
 //using ImageMagick;
@@ -2257,6 +2259,18 @@ defaultproperties
                 outP.Save();
                 pe.IsBusy = false;
             });
+        }
+
+        public static void GenerateTextureToInstancesMap(PackageEditorWindow pe)
+        {
+            if (pe.Pcc == null)
+                return;
+
+            if (pe.Pcc.GetLevel() == null)
+                return;
+            var cache = TieredPackageCache.GetGlobalPackageCache(pe.Pcc.Game);
+            LevelTools.CalculateTextureToInstancesMap(pe.Pcc, cache);
+            MessageBox.Show("Done.");
         }
 
         public static void MScanner(PackageEditorWindow pe)
