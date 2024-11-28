@@ -83,7 +83,7 @@ namespace LegendaryExplorerCore
         public static void InitLib(TaskScheduler uiSyncContext, Action<string> packageSavingFailed = null, ILogger logger = null, MEGame[] objectDBsToLoad = null, bool usePropertyDBLazyLoad = false)
         {
             if (initialized) return;
-            if (logger != Logger.None)
+            if (logger != Logger.None && logger != null)
             {
                 Log.Logger = logger;
             }
