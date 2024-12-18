@@ -256,6 +256,7 @@ namespace LegendaryExplorer.Tools.PackageEditor
         public ICommand ExportAllPropsCommand { get; set; }
         public ICommand ApplyBulkPropEditsCommand { get; set; }
         public ICommand ViewReferenceGraphCommand { get; set; }
+        public ICommand AddStreamingKismetCommand { get; set; }
 
         private void LoadCommands()
         {
@@ -329,6 +330,8 @@ namespace LegendaryExplorer.Tools.PackageEditor
 
             //do not change lambda to method group here! causes runtime error
             ForceReloadPackageCommand = new GenericCommand(() => ExperimentsMenu.ForceReloadPackageWithoutSharing(), () => ShowExperiments && ExperimentsMenu.CanForceReload());
+
+            AddStreamingKismetCommand = new GenericCommand(() => ExperimentsMenu.AddStreamingKismet_Click());
 
             NavigateForwardCommand = new GenericCommand(NavigateToNextEntry, () => CurrentView == CurrentViewMode.Tree && ForwardsEntries != null && ForwardsEntries.Any());
             NavigateBackCommand = new GenericCommand(NavigateToPreviousEntry, () => CurrentView == CurrentViewMode.Tree && BackwardsEntries.Any());
