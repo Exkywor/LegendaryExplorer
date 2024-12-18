@@ -52,10 +52,13 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         }
 
         public ICommand ForceReloadPackageCommand { get; set; }
+        public ICommand AddStreamingKismetCommand { get; set; }
 
         private void LoadCommands()
         {
             ForceReloadPackageCommand = new GenericCommand(ForceReloadPackageWithoutSharing, CanForceReload);
+
+            AddStreamingKismetCommand = new GenericCommand(AddStreamingKismet_Click);
         }
 
         private void ExperimentsMenuControl_Loaded(object sender, RoutedEventArgs e)
@@ -1839,7 +1842,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsO.AddPrefabToLevel(GetPEWindow());
         }
 
-        private void AddStreamingKismet_Click(object sender, RoutedEventArgs e)
+        internal void AddStreamingKismet_Click()
         {
             PackageEditorExperimentsO.AddStreamingKismetExperiment(GetPEWindow());
         }
