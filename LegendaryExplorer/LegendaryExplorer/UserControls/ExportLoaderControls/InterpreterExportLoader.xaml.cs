@@ -1478,8 +1478,15 @@ namespace LegendaryExplorer.UserControls.ExportLoaderControls
                     }
                     else if (sp.StructType is "SettingsPropertyPropertyMetaData")
                     {
-                        parsedValue =
-                            $"ID: {sp.GetProp<IntProperty>("Id").Value}, Name: {sp.GetProp<NameProperty>("Name").Value.Instanced} | {sp.GetProp<EnumProperty>(@"MappingType").Value.Instanced}";
+                        parsedValue = $"ID: {sp.GetProp<IntProperty>("Id").Value}, Name: {sp.GetProp<NameProperty>("Name").Value.Instanced} | {sp.GetProp<EnumProperty>(@"MappingType").Value.Instanced}";
+                    }
+                    else if (sp.StructType is "ArmorTypes")
+                    {
+                        parsedValue = $"{sp.GetProp<EnumProperty>("ArmorType").Value}, {sp.GetProp<ArrayProperty<StructProperty>>("Variations").Count} mesh variations";
+                    }
+                    else if (sp.StructType is "ModelVariation")
+                    {
+                        parsedValue = $"{sp.GetProp<IntProperty>("NumVariations").Value} material variants | {sp.GetProp<IntProperty>("MaterialsPerVariation").Value} materials per variant";
                     }
                     else
                     {
