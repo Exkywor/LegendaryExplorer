@@ -112,6 +112,11 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
 
         public void DecompressAnimationData()
         {
+            if (CompressedAnimationData == null)
+            {
+                // 12/24/2024 - Nothing to decompress - Mgamerz
+                return;
+            }
             var ms = new MemoryStream(CompressedAnimationData);
             RawAnimationData = new List<AnimTrack>();
 
