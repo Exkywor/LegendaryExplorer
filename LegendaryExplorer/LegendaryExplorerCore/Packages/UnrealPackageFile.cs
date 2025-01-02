@@ -84,12 +84,12 @@ namespace LegendaryExplorerCore.Packages
         /// <summary>
         /// For concurrency when rebuilding the lookup table
         /// </summary>
-        private object _packageSyncObj = new object();
+        private readonly object _packageSyncObj = new(); //TODO NET9: use System.Threading.Lock
 
         /// <summary>
         /// For concurrency when accessing FindExport/Import/Entry, and the table needs regenerated. This prevents multi-threading use from searching a currently rebuilding lookup table
         /// </summary>
-        private object _findEntrySyncObj = new object();
+        private readonly object _findEntrySyncObj = new(); //TODO NET9: use System.Threading.Lock
 
         public bool IsCompressed => Flags.Has(UnrealFlags.EPackageFlags.Compressed);
 

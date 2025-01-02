@@ -83,7 +83,7 @@ namespace LegendaryExplorerCore.Packages
         /// <summary>
         /// Present only on persistent level packages. List of sublevel files that are also part of this map
         /// </summary>
-        public readonly List<string> AdditionalPackagesToCook = new();
+        public readonly List<string> AdditionalPackagesToCook = [];
 
         /// <summary>
         /// Passthrough to UnrealPackageFile's IsModified
@@ -120,7 +120,7 @@ namespace LegendaryExplorerCore.Packages
         /// <summary>
         /// Metadata that is serialized to the end of the package file and contains useful information for tooling
         /// </summary>
-        public LECLData LECLTagData { get; } = new LECLData();
+        public LECLData LECLTagData { get; } = new();
 
         public byte[] getHeader()
         {

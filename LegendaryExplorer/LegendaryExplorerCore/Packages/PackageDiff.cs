@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using LegendaryExplorerCore.Gammtek.Collections;
 using LegendaryExplorerCore.Gammtek.IO;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Unreal;
@@ -22,7 +23,15 @@ namespace LegendaryExplorerCore.Packages
 
         public readonly List<EntryDiff> ChangedEntries = [];
 
-        private PackageDiff(){}
+        public readonly Diff<EPackageFlags> PackageFlagsDiff;
+        public readonly Diff<Guid> PackageGuidDiff;
+
+        //These are only applicable if neither package is a UDK package
+        public readonly Diff<List<string>> AdditionalPackagesToCookDiff;
+        public readonly Diff<bool> SavedByLECDiff;
+        public readonly Diff<bool> SavedByMEMDiff;
+        public readonly Diff<bool?> IsPostLoadDiff;
+        public readonly Diff<List<string>> ImportHintFilesDiff;
 
         public class EntryDiff(IEntry a, IEntry b) : IDiff<IEntry>
         {
@@ -63,7 +72,7 @@ namespace LegendaryExplorerCore.Packages
             public readonly Diff<string> ArchetypeDiff;
             public readonly Diff<EObjectFlags> ObjectFlagsDiff;
             public readonly Diff<EExportFlags> ExportFlagsDiff;
-            //public readonly Diff<Guid> PackageGuidDiff;
+            public readonly Diff<Guid> PackageGuidDiff;
             public readonly Diff<EPackageFlags> PackageFlagsDiff;
             public readonly Diff<int> NetIndexDiff;
 
@@ -84,7 +93,7 @@ namespace LegendaryExplorerCore.Packages
                 ArchetypeDiff = CreateEntryDiff(a.Archetype, b.Archetype);
                 ObjectFlagsDiff = new Diff<EObjectFlags>(a.ObjectFlags, b.ObjectFlags);
                 ExportFlagsDiff = new Diff<EExportFlags>(a.ExportFlags, b.ExportFlags);
-                //PackageGuidDiff = new Diff<Guid>(a.PackageGUID, b.PackageGUID);
+                PackageGuidDiff = new Diff<Guid>(a.PackageGUID, b.PackageGUID);
                 PackageFlagsDiff = new Diff<EPackageFlags>(a.PackageFlags, b.PackageFlags);
                 NetIndexDiff = new Diff<int>(a.NetIndex, b.NetIndex);
 
@@ -226,13 +235,10 @@ namespace LegendaryExplorerCore.Packages
             }
         }
 
-        public static PackageDiff Create(IMEPackage packageA, IMEPackage packageB)
+        private PackageDiff(IMEPackage packageA, IMEPackage packageB)
         {
-            var packageDiff = new PackageDiff
-            {
-                PackageA = packageA,
-                PackageB = packageB
-            };
+            PackageA = packageA;
+            PackageB = packageB;
 
             List<string> aNameList = packageA.Names.ToList();
 
@@ -248,7 +254,7 @@ namespace LegendaryExplorerCore.Packages
                         (IEntry entryA, List<int> children) = node;
                         if (packageB.FindEntry(entryA.InstancedFullPath) is not IEntry entryB)
                         {
-                            packageDiff.AOnlyEntries.AddRange(packageATree.FlattenTreeOf(entryA));
+                            AOnlyEntries.AddRange(packageATree.FlattenTreeOf(entryA));
                             return;
                         }
                         if (entryA is ExportEntry exportA)
@@ -257,20 +263,20 @@ namespace LegendaryExplorerCore.Packages
                             {
                                 if (!exportA.ClassName.CaseInsensitiveEquals(exportB.ClassName))
                                 {
-                                    packageDiff.ChangedEntries.Add(new EntryDiff(entryA, entryB));
+                                    ChangedEntries.Add(new EntryDiff(entryA, entryB));
                                 }
                                 else
                                 {
                                     var exportDiff = new ExportDiff(exportA, exportB);
                                     if (exportDiff.IsDifferent)
                                     {
-                                        packageDiff.ChangedEntries.Add(exportDiff);
+                                        ChangedEntries.Add(exportDiff);
                                     }
                                 }
                             }
                             else
                             {
-                                packageDiff.ChangedEntries.Add(new EntryDiff(entryA, entryB));
+                                ChangedEntries.Add(new EntryDiff(entryA, entryB));
                             }
                         }
                         else
@@ -281,19 +287,19 @@ namespace LegendaryExplorerCore.Packages
                                 var importDiff = new ImportDiff(importA, importB);
                                 if (importDiff.IsDifferent)
                                 {
-                                    packageDiff.ChangedEntries.Add(importDiff);
+                                    ChangedEntries.Add(importDiff);
                                 }
                             }
                             else
                             {
-                                packageDiff.ChangedEntries.Add(new EntryDiff(entryA, entryB));
+                                ChangedEntries.Add(new EntryDiff(entryA, entryB));
                             }
                         }
                         foreach (IEntry child in entryB.GetChildren())
                         {
                             if (packageA.FindEntry(child.InstancedFullPath) is null)
                             {
-                                packageDiff.BOnlyEntries.AddRange(packageBTree.FlattenTreeOf(child));
+                                BOnlyEntries.AddRange(packageBTree.FlattenTreeOf(child));
                             }
                         }
                         foreach (int uIndex in children)
@@ -313,7 +319,7 @@ namespace LegendaryExplorerCore.Packages
             {
                 if (packageA.FindEntry(root.Data.InstancedFullPath) is null)
                 {
-                    packageDiff.BOnlyEntries.AddRange(packageBTree.FlattenTreeOf(root.Data));
+                    BOnlyEntries.AddRange(packageBTree.FlattenTreeOf(root.Data));
                 }
             }
 
@@ -323,15 +329,30 @@ namespace LegendaryExplorerCore.Packages
             {
                 if (!aNames.Remove(name))
                 {
-                    packageDiff.BOnlyNames.Add(name);
+                    BOnlyNames.Add(name);
                 }
             }
             foreach (string name in aNames)
             {
-                packageDiff.AOnlyNames.Add(name);
+                AOnlyNames.Add(name);
             }
 
-            return packageDiff;
+            PackageFlagsDiff = new Diff<EPackageFlags>(packageA.Flags, packageB.Flags);
+            PackageGuidDiff = new Diff<Guid>(packageA.PackageGuid, packageB.PackageGuid);
+
+            if (packageA is MEPackage mePackageA && packageB is MEPackage mePackageB)
+            {
+                AdditionalPackagesToCookDiff = new Diff<List<string>>(mePackageA.AdditionalPackagesToCook, mePackageB.AdditionalPackagesToCook, new ListComparer<string>(StringComparer.Ordinal));
+                SavedByLECDiff = new Diff<bool>(mePackageA.LECLTagData.WasSavedWithLEC, mePackageB.LECLTagData.WasSavedWithLEC);
+                SavedByMEMDiff = new Diff<bool>(mePackageA.LECLTagData.WasSavedWithMEM, mePackageB.LECLTagData.WasSavedWithMEM);
+                IsPostLoadDiff = new Diff<bool?>(mePackageA.LECLTagData.IsPostLoadFile, mePackageB.LECLTagData.IsPostLoadFile);
+                ImportHintFilesDiff = new Diff<List<string>>(mePackageA.LECLTagData.ImportHintFiles, mePackageB.LECLTagData.ImportHintFiles, new ListComparer<string>(StringComparer.Ordinal));
+            }
+        }
+
+        public static PackageDiff Create(IMEPackage packageA, IMEPackage packageB)
+        {
+            return new PackageDiff(packageA, packageB);
         }
 
         private static Diff<string> CreateEntryDiff(IEntry a, IEntry b)

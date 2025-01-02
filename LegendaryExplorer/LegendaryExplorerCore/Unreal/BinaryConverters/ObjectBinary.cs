@@ -603,14 +603,9 @@ namespace LegendaryExplorerCore.Unreal.BinaryConverters
         }
     }
 
-    public sealed class GenericObjectBinary : ObjectBinary
+    public sealed class GenericObjectBinary(byte[] buff) : ObjectBinary
     {
-        private byte[] data;
-
-        public GenericObjectBinary(byte[] buff)
-        {
-            data = buff;
-        }
+        private byte[] data = buff;
 
         //should never be called
         protected override void Serialize(SerializingContainer sc)
