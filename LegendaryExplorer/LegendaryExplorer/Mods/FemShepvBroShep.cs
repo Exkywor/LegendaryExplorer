@@ -1108,5 +1108,53 @@ namespace LegendaryExplorer.Mods
                 "DLC_MOD_FSvBSLE_Audio", "DLC_MOD_FSvBSLE_Audio", 29067, 29067, "5B200F00", "5B200F00", @$"", @$"")
             },
         };
+
+        public static readonly List<string> Files = [
+            "BioD_Cit002_000Global.pcc",
+            "BioD_Cit002_700Exit.pcc",
+            "BioD_Cit002_700Exit_LOC_INT.pcc",
+            "BioD_Cit003.pcc",
+            "BioD_Cit003_110Atrium_H_LOC_INT.pcc",
+            "BioD_Cit003_150AtriumConvo.pcc",
+            "BioD_Cit003_150AtriumConvo_LOC_INT.pcc",
+            "BioD_Cit003_200HallEnter_LOC_INT.pcc",
+            "BioD_Cit003_300TopMen_LOC_INT.pcc",
+            "BioD_Cit003_400Tubes_LOC_INT.pcc",
+            "BioD_Cit003_410Tubes_H_LOC_INT.pcc",
+            "BioD_Cit003_450Ladder_LOC_INT.pcc",
+            "BioD_Cit003_580MechDoor_LOC_INT.pcc",
+            "BioD_Cit003_600MechEvent_LOC_INT.pcc",
+            "BioD_Cit003_700FinalFloor_LOC_INT.pcc",
+            "BioD_Cit003_710Final_H_LOC_INT.pcc",
+            "BioD_Cit003_800FinalBldg_LOC_INT.pcc",
+            "BioD_Cit003_815Final_RR2.pcc",
+            "BioD_Cit003_850FinalBldg_fl2_LOC_INT.pcc",
+            "BioD_Cit003_900Trap.pcc",
+            "BioD_Cit003_900Trap_LOC_INT.pcc",
+            "BioD_Cit004_100Exterior_LOC_INT.pcc",
+            "BioD_Cit004_210CICIntro.pcc",
+            "BioD_Cit004_210CICIntro_LOC_INT.pcc",
+            "BioD_Cit004_220CIC_LOC_INT.pcc",
+            "BioD_Cit004_250Elevator.pcc",
+            "BioD_Cit004_250Elevator_LOC_INT.pcc",
+            "BioD_Cit004_260CloneIntro_LOC_INT.pcc",
+            "BioD_Cit004_270ShuttleBay1_LOC_INT.pcc",
+            "BioD_Cit004_272MaleClone.pcc",
+            "BioD_Cit004_273FemClone.pcc",
+            "BioD_Cit004_290FightScene.pcc",
+            "BioD_Cit004_290FightScene_LOC_INT.pcc",
+            "BioD_Cit004_295BrooksEnd_LOC_INT.pcc",
+            "BioP_Cit003.pcc",
+            "BioP_Cit004.pcc"
+            ];
+
+        public static readonly List<string> Files_Clean = [
+            "BioD_Cit002_700Exit.pcc",
+            "BioD_Cit003_815Final_RR2.pcc",
+            "BioD_Cit003.pcc",
+            "BioD_Cit004_210CICIntro.pcc",
+            "BioD_Cit004_272MaleClone.pcc",
+            "BioD_Cit004_273FemClone.pcc",
+            ];
     }
 }
