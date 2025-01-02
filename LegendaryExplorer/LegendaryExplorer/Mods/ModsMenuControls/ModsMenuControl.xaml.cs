@@ -1,6 +1,11 @@
-﻿using LegendaryExplorer.Mods;
+﻿using LegendaryExplorer.Misc.ExperimentsTools;
 using LegendaryExplorer.Tools.PackageEditor;
 using LegendaryExplorer.Tools.Sequence_Editor;
+using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Unreal.BinaryConverters;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -17,7 +22,9 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
             InitializeComponent();
         }
 
-        private void LoadCommands() { }
+        private void LoadCommands()
+        {
+        }
 
         public PackageEditorWindow GetPEWindow()
         {
@@ -31,6 +38,8 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
 
         // EXPERIMENTS: EXKYWOR------------------------------------------------------------
         #region Exkywor's experiments
+
+
         private void EmilyReturns_Click(object sender, RoutedEventArgs e)
         {
             if (Window.GetWindow(this) is PackageEditorWindow pew)
@@ -47,6 +56,23 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
 
             MessageBox.Show($"File successfully patched.");
         }
+
+        private void FemShepvBroshep_CleanFiles_Click(object sender, RoutedEventArgs e)
+        {
+            List<string> paths = new();
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                paths = SharedMethods.CopyCleanFiles(FemShepvBroShep.Files,
+                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\DLC_MOD_FSvBSLE\\CookedPCConsole\\",
+                    MEGame.LE3, true);
+                SharedMethods.CopyCleanFiles(FemShepvBroShep.Files_Clean,
+                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\DLC_MOD_FSvBSLE\\CookedPCConsole\\Clean\\",
+                    MEGame.LE3, true);
+            }
+
+            MessageBox.Show(string.Join("\n ", paths));
+        }
+
         private void BatchFemShepvBroshep_Click(object sender, RoutedEventArgs e)
         {
             if (Window.GetWindow(this) is PackageEditorWindow)

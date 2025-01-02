@@ -1,5 +1,7 @@
 ﻿using LegendaryExplorer.Dialogs;
+using LegendaryExplorerCore.GameFilesystem;
 using LegendaryExplorerCore.Helpers;
+using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
@@ -9,7 +11,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace LegendaryExplorer.Misc.ExperimentsTools
@@ -360,6 +361,27 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
         {
             return MessageBoxResult.Yes == MessageBox.Show(msg, caption, MessageBoxButton.YesNo);
         }
+
+        /// <summary>
+        /// Copies the highest mounted version of the listed fileNames into the destPath.
+        /// </summary>
+        /// <param name="fileNames">List of names of files to copy.</param>
+        /// <param name="destPath">Path to copy files to.</param>
+        /// <param name="game">ME game.</param>
+        /// <param name="overwrite">Whether to overwrite files or not.</param>
+        /// <returns>Paths of the copied files.</returns>
+        public static List<string> CopyCleanFiles(List<string> fileNames, string destPath, MEGame game, bool overwrite = true)
+        {
+            List<string> paths = new();
+            foreach (string fileName in fileNames)
+            {
+                if (!MELoadedFiles.GetFilesLoadedInGame(game, true).TryGetValue(fileName, out string filePath)) continue;
+                paths.Add(filePath);
+                File.Copy(filePath, $"{destPath}{fileName}", overwrite);
+            }
+
+            return paths;
+        }
         #endregion
     }
-}
+} 
