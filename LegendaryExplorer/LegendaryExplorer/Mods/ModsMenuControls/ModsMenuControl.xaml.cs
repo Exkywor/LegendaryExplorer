@@ -92,6 +92,21 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
 
             MessageBox.Show($"File successfully patched.");
         }
+        private void FemShepvBroshep_V_CleanFiles_Click(object sender, RoutedEventArgs e)
+        {
+            List<string> paths = new();
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                paths = SharedMethods.CopyCleanFiles(FemShepvBroShep_V.Files,
+                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE - Vanilla VS\\DLC_MOD_FSvBSLE_V\\CookedPCConsole\\",
+                    MEGame.LE3, true);
+                SharedMethods.CopyCleanFiles(FemShepvBroShep_V.Files_Clean,
+                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE - Vanilla VS\\DLC_MOD_FSvBSLE_V\\CookedPCConsole\\Clean\\",
+                    MEGame.LE3, true);
+            }
+
+            MessageBox.Show(string.Join("\n ", paths));
+        }
         private void BatchFemShepvBroshep_V_Click(object sender, RoutedEventArgs e)
         {
             if (Window.GetWindow(this) is PackageEditorWindow)

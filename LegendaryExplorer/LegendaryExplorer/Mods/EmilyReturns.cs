@@ -85,20 +85,20 @@ namespace LegendaryExplorer.Mods
             // 676202 -> 71172316 | "For the Alliance News Network..."
             DialogueNodeExtended node846851 = GetNode(news_annConv, 846851);
             ReplaceLineAndAudio(pcc, node846851, "71172316", TlkAudioMap[71172316], FXA_news_ann_reporter_F_Control, FXA_news_ann_reporter_M_Control);
-            WriteNode(node846851, news_ann);
+            WriteNode(news_ann, node846851);
 
             DialogueNodeExtended nodeE40 = GetNodeByIndex(news_annConv, 40, false);
             ChangeNodeLink(pcc.Game, nodeE40, 37, 40, "", 676227, EReplyCategory.REPLY_CATEGORY_DEFAULT);
-            WriteNode(nodeE40, news_ann);
+            WriteNode(news_ann, nodeE40);
 
             DialogueNodeExtended nodeE43 = GetNodeByIndex(news_annConv, 43, false);
             RemoveNodeLink(nodeE43, 40);
-            WriteNode(nodeE43, news_ann);
+            WriteNode(news_ann, nodeE43);
 
             // 677865 -> 71172317 | "Stay tuned..."
             DialogueNodeExtended node848980 = GetNode(news_annConv, 848980);
             ReplaceLineAndAudio(pcc, node848980, "71172317", TlkAudioMap[71172317], FXA_news_ann_Owner_F_Control, FXA_news_ann_Owner_M_Control);
-            WriteNode(node848980, news_ann);
+            WriteNode(news_ann, node848980);
         }
 
         private static void BioD_CitHub(IMEPackage pcc)
@@ -336,13 +336,13 @@ namespace LegendaryExplorer.Mods
             // 670834 -> 71172310 | "Lose the piece..."
             DialogueNodeExtended node824810 = GetNode(inter2_iConv, 828410);
             ReplaceLineAndAudioAndFXA(pcc, node824810, "71172310", TlkAudioMap[71172310], FXA_inter2_i_Player_F_Control, FXA_inter2_i_Player_M_Control);
-            WriteNode(node824810, inter2_i);
+            WriteNode(inter2_i, node824810);
 
             // 670819 -> 71172309 | "Thanks, Commander"
             DialogueNodeExtended node828396 = GetNode(inter2_iConv, 828396);
             ReplaceLineAndAudioAndFXA(pcc, node828396, "71172309", TlkAudioMap[71172309], FXA_inter2_i_nor_crew_male1_F_Control, FXA_inter2_i_nor_crew_male1_M_Control);
             UpdateNodeLength(node828396, 1.5499983f);
-            WriteNode(node828396, inter2_i);
+            WriteNode(inter2_i, node828396);
         }
 
         private static void BioD_Nor_420StarCargoConv_LOC_INT(IMEPackage pcc)
@@ -368,22 +368,22 @@ namespace LegendaryExplorer.Mods
             // 666410 -> 71172310 | "How's your new assignment..."
             DialogueNodeExtended node804301 = GetNode(rel1Conv, 804301);
             ReplaceLineAndAudioAndFXA(pcc, node804301, "71172311", TlkAudioMap[71172311], FXA_rel1_Player_F_Control, FXA_rel1_Player_M_Control);
-            WriteNode(node804301, rel1);
+            WriteNode(rel1, node804301);
 
             // 695915 -> 71172312 | "There it is..."
             DialogueNodeExtended node695915 = GetNode(rel2Conv, 948979);
             ReplaceLineAndAudioAndFXA(pcc, node695915, "71172312", TlkAudioMap[71172312], FXA_rel2_Owner_F_Control, FXA_rel2_Owner_M_Control);
-            WriteNode(node695915, rel2);
+            WriteNode(rel2, node695915);
 
             // 666410 -> 71172313 | "Not right now"
             DialogueNodeExtended node954574 = GetNode(kickoffConv, 954574);
             ReplaceLineAndAudioAndFXA(pcc, node954574, "71172313", TlkAudioMap[71172313], FXA_kickoff_Player_F_Control, FXA_kickoff_Player_M_Control);
-            WriteNode(node954574, kickoff);
+            WriteNode(kickoff, node954574);
 
             // 699110 -> 71172314 | "I need you to leave...."
             DialogueNodeExtended node954576 = GetNode(kickoffConv, 954576);
             ReplaceLineAndAudioAndFXA(pcc, node954576, "71172314", TlkAudioMap[71172314], FXA_kickoff_Player_F_Control, FXA_kickoff_Player_M_Control);
-            WriteNode(node954576, kickoff);
+            WriteNode(kickoff, node954576);
         }
 
         private static void BioD_End001_435CommRoom_LOC_INT(IMEPackage pcc)
@@ -399,7 +399,7 @@ namespace LegendaryExplorer.Mods
             // 704981 -> 71172343 | "Ms. Wong"
             DialogueNodeExtended node979399 = GetNode(vid_terminalConv, 979399);
             ReplaceLineAndAudioAndFXA(pcc, node979399, "71172343", TlkAudioMap[71172343], FXA_vid_terminal_Player_F_Control, FXA_vid_terminal_Player_M_Control);
-            WriteNode(node979399, vid_terminal);
+            WriteNode(vid_terminal, node979399);
         }
 
         private static void BioD_End001_436CRAllers_LOC_INT(IMEPackage pcc)
