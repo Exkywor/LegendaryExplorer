@@ -156,9 +156,9 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
         /// <summary>
         /// Writes a DialogueNodeExtended to a conversation.
         /// </summary>
-        /// <param name="node">Node to write.</param>
         /// <param name="conversation">Conversation to write the node to.</param>
-        public static void WriteNode(DialogueNodeExtended node, ExportEntry conversation)
+        /// <param name="node">Node to write.</param>
+        public static void WriteNode(ExportEntry conversation, DialogueNodeExtended node)
         {
             if (node.IsReply)
             {
@@ -183,7 +183,7 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
         {
             foreach (DialogueNodeExtended node in nodes)
             {
-                WriteNode(node, conversation);
+                WriteNode(conversation, node);
             }
         }
 
@@ -540,7 +540,7 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
         /// <param name="firesCond">True if the plot is a conditional, false if a boolean.</param>
         /// <param name="condOrBool">Conditional or Boolean to set.</param>
         /// <param name="condParam">Parameter to set.</param>
-        public static void WriteNodePlotCheck(DialogueNodeExtended node, bool firesCond, int condOrBool, int condParam)
+        public static void ChangeNodePlotCheck(DialogueNodeExtended node, bool firesCond, int condOrBool, int condParam)
         {
             StructProperty props = node.NodeProp;
 
@@ -550,6 +550,42 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
             nConditionalFunc.Value = condOrBool;
             IntProperty nConditionalParam = props.GetProp<IntProperty>("nConditionalParam");
             nConditionalParam.Value = condParam;
+        }
+
+        /// <summary>
+        /// Writes the given Conditional or Boolean and the Parameter to the node.
+        /// DOES WRITE it to the conversation export.
+        /// </summary>
+        /// <param name="exp">Conversation to write the node to.</param>
+        /// <param name="node">Node to operate on..</param>
+        /// <param name="firesCond">True if the plot is a conditional, false if a boolean.</param>
+        /// <param name="condOrBool">Conditional or Boolean to set.</param>
+        /// <param name="condParam">Parameter to set.</param>
+        public static void ChangeAndWriteNodePlotCheck(ExportEntry exp, DialogueNodeExtended node, bool firesCond, int condOrBool, int condParam)
+        {
+            ChangeNodePlotCheck(node, firesCond, condOrBool, condParam);
+            WriteNode(exp, node);
+        }
+
+        /// <summary>
+        /// Batch writes the given Conditional or Boolean and the Parameter to the nodes.
+        /// DOES WRITE the nodes.
+        /// </summary>
+        /// <param name="exp">Conversation to write the node to.</param>
+        /// <param name="firesCond">True if the plot is a conditional, false if a boolean.</param>
+        /// <param name="condOrBool">Conditional or Boolean to set.</param>
+        /// <param name="condParam">Parameter to set.</param>
+        /// <param name="nodes">Nodes to operate on.</param>
+        public static void BatchChangeAndWriteNodesPlotCheck(ExportEntry exp, bool firesCond, int condOrBool, int condParam, params DialogueNodeExtended[] nodes)
+        {
+            BatchChangeAndWriteNodesPlotCheck(exp, firesCond, condOrBool, condParam, nodes);
+        }
+        public static void BatchChangeAndWriteNodesPlotCheck(ExportEntry exp, bool firesCond, int condOrBool, int condParam, IEnumerable<DialogueNodeExtended> nodes)
+        {
+            foreach (DialogueNodeExtended node in nodes)
+            {
+                ChangeAndWriteNodePlotCheck(exp, node, firesCond, condOrBool, condParam);
+            }
         }
 
         /// <summary>
@@ -567,8 +603,8 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
             int node2CondOrBool = node2.ConditionalOrBool;
             int node2CondParam = node2.ConditionalParam;
 
-            WriteNodePlotCheck(node1, node2FiresConditional, node2CondOrBool, node2CondParam);
-            WriteNodePlotCheck(node2, node1FiresConditional, node1CondOrBool, node1CondParam);
+            ChangeNodePlotCheck(node1, node2FiresConditional, node2CondOrBool, node2CondParam);
+            ChangeNodePlotCheck(node2, node1FiresConditional, node1CondOrBool, node1CondParam);
         }
 
         /// <summary>
@@ -638,7 +674,7 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
         public static void SwapAndWriteFirstTwoNodes(ExportEntry exp, ConversationExtended conv, DialogueNodeExtended node)
         {
             SwapFirstTwoNodes(conv, node);
-            WriteNode(node, exp);
+            WriteNode(exp, node);
         }
 
         /// <summary>
@@ -677,6 +713,37 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
             {
                 SwapAndWriteFirstTwoNodes(exp, conv, node);
             }
+        }
+
+        /// <summary>
+        /// Writes the transition information to the node.
+        /// Does not write it to the conversation export.
+        /// </summary>
+        /// <param name="node">Node to operate on..</param>
+        /// <param name="transition">Transitions to set.</param>
+        /// <param name="transitionParam">Parameter to set.</param>
+        public static void ChangeNodeTransition(DialogueNodeExtended node, int transition, int transitionParam)
+        {
+            StructProperty props = node.NodeProp;
+
+            IntProperty nStateTransition = props.GetProp<IntProperty>("nStateTransition");
+            nStateTransition.Value = transition;
+            IntProperty nStateTransitionParam = props.GetProp<IntProperty>("nStateTransitionParam");
+            nStateTransitionParam.Value = transitionParam;
+        }
+
+        /// <summary>
+        /// Writes the transition information to the node.
+        /// DOES WRITE it to the conversation export.
+        /// </summary>
+        /// <param name="exp">Conversation to write the node to.</param>
+        /// <param name="node">Node to operate on..</param>
+        /// <param name="transition">Transitions to set.</param>
+        /// <param name="transitionParam">Parameter to set.</param>
+        public static void ChangeAndWriteNodeTransition(ExportEntry exp, DialogueNodeExtended node, int transition, int transitionParam)
+        {
+            ChangeNodeTransition(node, transition, transitionParam);
+            WriteNode(exp, node);
         }
 
         /// <summary>
