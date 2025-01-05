@@ -285,5 +285,30 @@ namespace LegendaryExplorer.Mods
                 pcc.GetUExport(12766).RemoveProperty("SkeletalMesh");
             }
         }
+
+        public static readonly List<string> Files = [
+            "BioD_Cit002_000Global.pcc",
+            "BioD_Cit002_700Exit.pcc",
+            "BioD_Cit002_700Exit_LOC_INT.pcc",
+            "BioD_Cit003.pcc",
+            //"BioD_Cit003_150AtriumConvo.pcc",
+            "BioD_Cit003_815Final_RR2.pcc",
+            "BioD_Cit004_210CICIntro.pcc",
+            //"BioD_Cit004_250Elevator.pcc",
+            "BioD_Cit004_272MaleClone.pcc",
+            "BioD_Cit004_273FemClone.pcc",
+            "BioD_Cit004_290FightScene.pcc",
+            "BioP_Cit003.pcc",
+            "BioP_Cit004.pcc"
+            ];
+
+        public static readonly List<string> Files_Clean = [
+            "BioD_Cit002_700Exit.pcc",
+            "BioD_Cit003_815Final_RR2.pcc",
+            "BioD_Cit003.pcc",
+            "BioD_Cit004_210CICIntro.pcc",
+            "BioD_Cit004_272MaleClone.pcc",
+            "BioD_Cit004_273FemClone.pcc",
+            ];
     }
 }

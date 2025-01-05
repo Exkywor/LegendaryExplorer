@@ -137,49 +137,7 @@ namespace LegendaryExplorer.Mods
         {
             string path = $@"G:\My Drive\Modding\Mass Effect\mods\Counter Clone\delivery\FemShep v BroShep Duel of the Shepards LE\DLC_MOD_FSvBSLE\CookedPCConsole";
 
-            /*
-            List<string> files = [
-                "BioD_Cit002_000Global",
-                "BioD_Cit002_700Exit",
-                "BioD_Cit002_700Exit_LOC_INT",
-                "BioD_Cit003",
-                "BioD_Cit003_110Atrium_H_LOC_INT",
-                "BioD_Cit003_150AtriumConvo",
-                "BioD_Cit003_150AtriumConvo_LOC_INT",
-                "BioD_Cit003_200HallEnter_LOC_INT",
-                "BioD_Cit003_300TopMen_LOC_INT",
-                "BioD_Cit003_400Tubes_LOC_INT",
-                "BioD_Cit003_410Tubes_H_LOC_INT",
-                "BioD_Cit003_450Ladder_LOC_INT",
-                "BioD_Cit003_580MechDoor_LOC_INT",
-                "BioD_Cit003_600MechEvent_LOC_INT",
-                "BioD_Cit003_700FinalFloor_LOC_INT",
-                "BioD_Cit003_710Final_H_LOC_INT",
-                "BioD_Cit003_800FinalBldg_LOC_INT",
-                "BioD_Cit003_815Final_RR2",
-                "BioD_Cit003_850FinalBldg_fl2_LOC_INT",
-                "BioD_Cit003_900Trap",
-                "BioD_Cit003_900Trap_LOC_INT",
-                "BioD_Cit004_100Exterior_LOC_INT",
-                "BioD_Cit004_210CICIntro",
-                "BioD_Cit004_210CICIntro_LOC_INT",
-                "BioD_Cit004_220CIC_LOC_INT",
-                "BioD_Cit004_250Elevator",
-                "BioD_Cit004_250Elevator_LOC_INT",
-                "BioD_Cit004_260CloneIntro_LOC_INT",
-                "BioD_Cit004_270ShuttleBay1_LOC_INT",
-                "BioD_Cit004_272MaleClone",
-                "BioD_Cit004_273FemClone",
-                "BioD_Cit004_290FightScene",
-                "BioD_Cit004_290FightScene_LOC_INT",
-                "BioD_Cit004_295BrooksEnd_LOC_INT",
-                "BioP_Cit003",
-                "BioP_Cit004"
-                ];
-            */
             string[] files = Directory.GetFiles(path);
-
-
             foreach (string file in files)
             {
                 if (Path.GetExtension(file) != ".pcc") { continue; }
@@ -209,13 +167,20 @@ namespace LegendaryExplorer.Mods
             ConversationExtended deaddealer_mConv = GetLoadedConversation(deaddealer_m);
 
             // Swap the booleans and nodes
-            SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 11, true));
-            SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 12, true));
-            SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 13, true));
-            SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 16, true));
-            SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 19, true));
-            SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 20, true));
-            SwapAndWriteNodesPlotChecks(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 26, false), GetNodeByIndex(deaddealer_mConv, 28, false));
+            ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 19, false), true, 71173000, -1);
+            ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 21, false), true, 71173000, -1);
+            ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 23, false), true, 71173000, -1);
+            ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 25, false), true, 71173000, -1);
+            ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 26, false), true, 71173000, -1);
+            ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 29, false), true, 71173000, -1);
+
+            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 11, true));
+            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 12, true));
+            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 13, true));
+            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 16, true));
+            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 19, true));
+            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 20, true));
+            //SwapAndWriteNodesPlotChecks(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 26, false), GetNodeByIndex(deaddealer_mConv, 28, false));
 
             // Remove the vanilla copy methoddeaddealer_mConv
             KismetHelper.RemoveOutputLinks(pcc.GetUExport(774));
@@ -226,7 +191,19 @@ namespace LegendaryExplorer.Mods
 
         private static void BiOD_Cit003(IMEPackage pcc)
         {
-            SwapCheckStateOutputs(pcc.GetUExport(1270));
+            SequenceAutomations.ReplaceObject(
+                pcc,
+                pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence.Pawn_Handling.Set_Clone"),
+                CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional",
+                [
+                    new IntProperty(71173000, "m_nIndex"),
+                    new ArrayProperty<StrProperty>("m_aObjComment")
+                    {
+                        new("FSvBS: Is Not Female Player?")
+                    }]),
+                pcc.GetUExport(1270)
+                );
+            // SwapCheckStateOutputs(pcc.GetUExport(1270));
 
             SkipAndCleanSequenceElement(pcc.GetUExport(8318), null, 0);
             SkipAndCleanSequenceElement(pcc.GetUExport(8319), null, 0);
@@ -242,10 +219,21 @@ namespace LegendaryExplorer.Mods
             Cit003_lobby_planning_b_dlg(pcc, pcc.GetUExport(1), 243, 244);
         }
 
+        // NATIVE COMPATIBILITY
         private static void BioD_Cit003_150AtriumConvo(IMEPackage pcc)
         {
-            SwapCheckStateOutputs(pcc.GetUExport(168));
-            SwapCheckStateOutputs(pcc.GetUExport(167));
+            ExportEntry sequence = pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence");
+            PropertyCollection props = [
+                new IntProperty(71173000, "m_nIndex"),
+                new ArrayProperty<StrProperty>("m_aObjComment")
+                { new("FSvBS: Is Not Female Player?") }
+                ];
+
+            SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(168));
+            SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(167));
+
+            // SwapCheckStateOutputs(pcc.GetUExport(168));
+            // SwapCheckStateOutputs(pcc.GetUExport(167));
         }
 
         private static void BioD_Cit003_150AtriumConvo_LOC_INT(IMEPackage pcc)
@@ -302,6 +290,7 @@ namespace LegendaryExplorer.Mods
             Cit003_glyph_a(pcc, pcc.GetUExport(1), 496, 497);
         }
 
+        // NATIVE COMPATIBILITY
         private static void BioD_Cit003_800FinalBldg_LOC_INT(IMEPackage pcc)
         {
             Cit003_mercs_building2_a(pcc.GetUExport(2));
@@ -309,11 +298,20 @@ namespace LegendaryExplorer.Mods
 
         private static void BioD_Cit003_815Final_RR2(IMEPackage pcc)
         {
-            InsertEventHandshake(pcc, pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence.Research_Rooms_Floor3.RR_Shepard.Shepard_Wake"),
-                pcc.GetUExport(4924), "RE_FSvBS_SetClone", "RE_FSvBS_CloneSet");
+            ExportEntry sequence = pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence.Research_Rooms_Floor3.RR_Shepard.Shepard_Wake");
+            PropertyCollection props = [
+                new IntProperty(71173000, "m_nIndex"),
+                new ArrayProperty<StrProperty>("m_aObjComment")
+                { new("FSvBS: Is Not Female Player?") }
+                ];
 
-            SwapCheckStateOutputs(pcc.GetUExport(173));
-            SwapCheckStateOutputs(pcc.GetUExport(174));
+            InsertEventHandshake(pcc, sequence, pcc.GetUExport(4924), "RE_FSvBS_SetClone", "RE_FSvBS_CloneSet");
+
+            SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(173));
+            SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(174));
+
+            // SwapCheckStateOutputs(pcc.GetUExport(173));
+            // SwapCheckStateOutputs(pcc.GetUExport(174));
             SkipAndCleanSequenceElement(pcc.GetUExport(4916), null, 0);
             SkipAndCleanSequenceElement(pcc.GetUExport(4917), null, 0);
         }
@@ -323,9 +321,23 @@ namespace LegendaryExplorer.Mods
             Cit003_glyph_a(pcc, pcc.GetUExport(2), 466, 467);
         }
 
+        // NATIVE COMPATIBILITY
         private static void BioD_Cit003_900Trap(IMEPackage pcc)
         {
-            SwapCheckStateOutputs(pcc.GetUExport(269));
+            SequenceAutomations.ReplaceObject(
+                pcc,
+                pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence.Convo"),
+                CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional",
+                [
+                    new IntProperty(71173000, "m_nIndex"),
+                    new ArrayProperty<StrProperty>("m_aObjComment")
+                    {
+                        new("FSvBS: Is Not Female Player?")
+                    }]),
+                pcc.GetUExport(269)
+                );
+
+            // SwapCheckStateOutputs(pcc.GetUExport(269));
         }
 
         private static void BioD_Cit003_900Trap_LOC_INT(IMEPackage pcc)
@@ -343,18 +355,24 @@ namespace LegendaryExplorer.Mods
         {
             ExportEntry sequence = pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence.Clone_Conversation");
 
-            ExportEntry PMCheck = CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckState",
-            [
-                new IntProperty(17662, "m_nIndex"),
+            ExportEntry CheckConditional = CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional",
+            [ new IntProperty(71173000, "m_nIndex"),
                 new ArrayProperty<StrProperty>("m_aObjComment")
                 {
-                    new("Female Player?")
-                }
-            ]);
+                    new("FSvBS: Is Not Female Player?")
+            }]);
+            //ExportEntry PMCheck = CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckState",
+            //[
+            //    new IntProperty(17662, "m_nIndex"),
+            //    new ArrayProperty<StrProperty>("m_aObjComment")
+            //    {
+            //        new("Female Player?")
+            //    }
+            //]);
             ExportEntry setObjMale = CreateSequenceObjectWithProps(pcc, "SeqAct_SetObject", []);
             ExportEntry setObjFemale = CreateSequenceObjectWithProps(pcc, "SeqAct_SetObject", []);
 
-            KismetHelper.AddObjectsToSequence(sequence, true, [PMCheck, setObjMale, setObjFemale]);
+            KismetHelper.AddObjectsToSequence(sequence, true, [CheckConditional, setObjMale, setObjFemale]);
 
             ExportEntry stuntMale = pcc.GetUExport(3470);
             ExportEntry stuntFemale = pcc.GetUExport(3474);
@@ -367,10 +385,10 @@ namespace LegendaryExplorer.Mods
 
             // Disconnect the Teleport and connect it to the plot check
             KismetHelper.RemoveOutputLinks(teleport);
-            KismetHelper.CreateOutputLink(teleport, "Out", PMCheck, 0);
+            KismetHelper.CreateOutputLink(teleport, "Out", CheckConditional, 0);
             // Connect the plot check to the set objects
-            KismetHelper.CreateOutputLink(PMCheck, "True", setObjMale, 0);
-            KismetHelper.CreateOutputLink(PMCheck, "False", setObjFemale, 0);
+            KismetHelper.CreateOutputLink(CheckConditional, "True", setObjFemale, 0);
+            KismetHelper.CreateOutputLink(CheckConditional, "False", setObjMale, 0);
             // Connec the set objects to the vars
             KismetHelper.CreateVariableLink(setObjMale, "Target", stuntEmpty);
             KismetHelper.CreateVariableLink(setObjMale, "Value", stuntMale);
@@ -399,14 +417,33 @@ namespace LegendaryExplorer.Mods
             Cit004_tubes_banter_b(pcc, pcc.GetUExport(3), 323, 324, 321, 322);
         }
 
+        // NATIVE COMPATIBILITY
         private static void BioD_Cit004_250Elevator(IMEPackage pcc)
         {
-            SwapCheckStateOutputs(pcc.GetUExport(47));
-            SwapCheckStateOutputs(pcc.GetUExport(46));
-            SwapCheckStateOutputs(pcc.GetUExport(45));
-            SwapCheckStateOutputs(pcc.GetUExport(44));
+            PropertyCollection props = [
+                new IntProperty(71173001, "m_nIndex"),
+                new ArrayProperty<StrProperty>("m_aObjComment")
+                {
+                    new("FSvBS: Is Not Male Player?")
+                }];
+
+            ExportEntry check44 = pcc.GetUExport(44);
+            ExportEntry check45 = pcc.GetUExport(45);
+            ExportEntry check46 = pcc.GetUExport(46);
+            ExportEntry check47 = pcc.GetUExport(47);
+
+            SharedMethods.AppendProperties(check44, props);
+            SharedMethods.AppendProperties(check45, props);
+            SharedMethods.AppendProperties(check46, props);
+            SharedMethods.AppendProperties(check47, props);
+
+            //SwapCheckStateOutputs(check44);
+            //SwapCheckStateOutputs(check45);
+            //SwapCheckStateOutputs(check46);
+            //SwapCheckStateOutputs(check47);
         }
 
+        // NATIVE COMPATIBILITY
         private static void BioD_Cit004_250Elevator_LOC_INT(IMEPackage pcc)
         {
             Cit004_elevator_ride_b(pcc.GetUExport(1));
@@ -437,15 +474,29 @@ namespace LegendaryExplorer.Mods
             ExportEntry mainSequence = pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence");
             InsertEventHandshake(pcc, mainSequence, pcc.GetUExport(2413), "RE_FSvBS_SetPawnClone", "RE_FSvBS_CloneSet");
 
-            SwapCheckStateOutputs(pcc.GetUExport(387));
-            SwapCheckStateOutputs(pcc.GetUExport(386));
+            PropertyCollection props = [
+                new IntProperty(71173001, "m_nIndex"),
+                new ArrayProperty<StrProperty>("m_aObjComment")
+                {
+                    new("FSvBS: Is Not Male Player?")
+                }];
+
+            ExportEntry check386 = pcc.GetUExport(386);
+            ExportEntry check387 = pcc.GetUExport(387);
+            SharedMethods.AppendProperties(check386, props);
+            SharedMethods.AppendProperties(check387, props);
+
+            //SwapCheckStateOutputs(pcc.GetUExport(387));
+            //SwapCheckStateOutputs(pcc.GetUExport(386));
         }
 
+        // NATIVE COMPATIBILITY
         private static void BioD_Cit004_290FightScene_LOC_INT(IMEPackage pcc)
         {
             Cit004_climax_choice_m(pcc.GetUExport(26));
         }
 
+        // NATIVE COMPATIBILITY
         private static void BioD_Cit004_295BrooksEnd_LOC_INT(IMEPackage pcc)
         {
             Cit004_epilogue_m(pcc.GetUExport(665));
@@ -491,20 +542,24 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_clone_male_F_Control = GetLoadedFXAControl(pcc, fxaCloneMaleFIdx);
             FaceFXAnimSetEditorControl FXA_clone_male_M_Control = GetLoadedFXAControl(pcc, fxaCloneMaleMIdx);
 
-            BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-                GetNodesByIndex(conv, true, [0, 3, 11, 14, 28, 29, 31]));
-            BatchSwapAndWriteFirstTwoNodes(convObj, conv,
-                GetNodesByIndex(conv, true, [32, 33, 34, 35, 36, 37, 38, 39, 40]));
-            BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-                GetNodesByIndex(conv, true, [43, 46, 47, 48, 49, 51, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 70]));
-            BatchSwapAndWriteFirstTwoNodes(convObj, conv,
-                GetNodesByIndex(conv, true, [74, 78, 82, 86, 90, 94, 98, 102]));
-            BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-                GetNodesByIndex(conv, true, [106, 109, 111]));
-            BatchSwapAndWriteFirstTwoNodes(convObj, conv,
-                GetNodesByIndex(conv, true, [112, 113, 114, 115, 116, 117, 118, 119, 120]));
-            BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-                GetNodesByIndex(conv, true, [124, 131, 134, 143]));
+
+            BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false,
+                [1, 4, 12, 15, 29, 31, 43, 47, 51, 53, 55, 57, 69, 82, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 126, 129, 141, 145, 152, 154, 163]));
+
+            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
+            //    GetNodesByIndex(conv, true, [0, 3, 11, 14, 28, 29, 31]));
+            //BatchSwapAndWriteFirstTwoNodes(convObj, conv,
+            //    GetNodesByIndex(conv, true, [32, 33, 34, 35, 36, 37, 38, 39, 40]));
+            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
+            //    GetNodesByIndex(conv, true, [43, 46, 47, 48, 49, 51, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 70]));
+            //BatchSwapAndWriteFirstTwoNodes(convObj, conv,
+            //    GetNodesByIndex(conv, true, [74, 78, 82, 86, 90, 94, 98, 102]));
+            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
+            //    GetNodesByIndex(conv, true, [106, 109, 111]));
+            //BatchSwapAndWriteFirstTwoNodes(convObj, conv,
+            //    GetNodesByIndex(conv, true, [112, 113, 114, 115, 116, 117, 118, 119, 120]));
+            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
+            //    GetNodesByIndex(conv, true, [124, 131, 134, 143]));
 
             // "It's time the understudy..."
             DialogueNodeExtended nodeE53 = GetNodeByIndex(conv, 53, false);
@@ -553,7 +608,8 @@ namespace LegendaryExplorer.Mods
 
             WriteNodes(convObj, nodeR3, nodeR4, nodeR13, nodeR14, nodeE49, nodeE50);
 
-            BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [11, 12, 35, 38]));
+            BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false, [47, 49, 80, 87]));
+            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [11, 12, 35, 38]));
         }
 
         private static void Cit003_mercs_tubes1_a(IMEPackage pcc, ExportEntry convObj, int fxaCloneFemFIdx, int fxaCloneFemMIdx, int fxaCloneMaleFIdx, int fxaCloneMaleMIdx)
@@ -567,7 +623,8 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_clone_male_M_Control = GetLoadedFXAControl(pcc, fxaCloneMaleMIdx);
 
             // Swap the nodes
-            BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [0, 1, 4]));
+            BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false, [1, 7, 12]));
+            // BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [0, 1, 4]));
 
             // Replace lines
             // "Eliminate them..."
@@ -583,7 +640,8 @@ namespace LegendaryExplorer.Mods
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             // Swap the nodes
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 2, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 12, false), true, 71173000, -1);
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 2, true));
         }
 
         private static void Cit003_hench_meetup_m(IMEPackage pcc, ExportEntry convObj, int fxaPlayerFIdx, int fxaPlayerMIdx)
@@ -594,7 +652,9 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_player_F_Control = GetLoadedFXAControl(pcc, fxaPlayerFIdx);
             FaceFXAnimSetEditorControl FXA_player_M_Control = GetLoadedFXAControl(pcc, fxaPlayerMIdx);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 8, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 19, false), true, -1, -1);
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 20, false), true, 71173000, -1);
+            SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 8, true));
 
             // "Eliminate them..."
             DialogueNodeExtended nodeR9 = GetNodeByIndex(conv, 9, true);
@@ -613,7 +673,8 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_clone_male_F_Control = GetLoadedFXAControl(pcc, fxaCloneMaleFIdx);
             FaceFXAnimSetEditorControl FXA_clone_male_M_Control = GetLoadedFXAControl(pcc, fxaCloneMaleMIdx);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 0, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 1, false), true, 71173000, -1);
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 0, true));
 
             // "Keep Shepard off my back..."
             DialogueNodeExtended nodeE1 = GetNodeByIndex(conv, 1, false);
@@ -627,7 +688,8 @@ namespace LegendaryExplorer.Mods
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 0, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 1, false), true, 71173000, -1);
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 0, true));
         }
 
         private static void Cit003_final_trap_m(IMEPackage pcc, ExportEntry convObj, int fxaPlayerFIdx, int fxaPlayerMIdx)
@@ -638,9 +700,10 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_player_F_Control = GetLoadedFXAControl(pcc, fxaPlayerFIdx);
             FaceFXAnimSetEditorControl FXA_player_M_Control = GetLoadedFXAControl(pcc, fxaPlayerMIdx);
 
-            BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-                GetNodesByIndex(conv, true, [4, 7, 8, 37, 56, 60, 63, 64, 72,]));
-            SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 65, true));
+            BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false, [32, 35, 37, 68, 85, 89, 92, 94, 101]));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 95, false), true, -1, -1); // This path for some reason has a bool even though it's the only path
+            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [4, 7, 8, 37, 56, 60, 63, 64, 72,]));
+            //SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 65, true));
 
             // "Then I'm going to mount..."
             DialogueNodeExtended nodeR92 = GetNodeByIndex(conv, 92, true);
@@ -667,7 +730,8 @@ namespace LegendaryExplorer.Mods
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 1, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 2, false), true, 71173000, -1);
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 1, true));
         }
 
         private static void Cit004_shuttle_m(IMEPackage pcc, ExportEntry convObj)
@@ -679,9 +743,20 @@ namespace LegendaryExplorer.Mods
             ChangeNodeLink(pcc.Game, nodeE43, 46, 45, "We'll stop him", 779732, EReplyCategory.REPLY_CATEGORY_DISAGREE);
             ChangeNodeLink(pcc.Game, nodeE43, 37, 46, "We'lll stop her", 779731, EReplyCategory.REPLY_CATEGORY_DISAGREE);
 
-            WriteNode(nodeE43, convObj);
+            WriteNode(convObj, nodeE43);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 26, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 14, false), true, -1, -1);
+            ChangeAndWriteNodeTransition(convObj, GetNodeByIndex(conv, 14, false), 7051, -1);
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 15, false), true, 71173000, -1);
+            ChangeAndWriteNodeTransition(convObj, GetNodeByIndex(conv, 15, false), 7050, -1);
+            SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 13, true));
+
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 27, false), true, -1, -1);
+            ChangeAndWriteNodeTransition(convObj, GetNodeByIndex(conv, 27, false), 7051, -1);
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 35, false), true, 71173000, -1);
+            ChangeAndWriteNodeTransition(convObj, GetNodeByIndex(conv, 35, false), 7050, -1);
+
+            SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 26, true));
         }
 
         private static void Cit004_cic_intro_m(IMEPackage pcc, ExportEntry convObj, int fxaCloneFemFIdx, int fxaCloneFemMIdx, int fxaCloneMaleFIdx, int fxaCloneMaleMIdx)
@@ -695,18 +770,21 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_clone_male_M_Control = GetLoadedFXAControl(pcc, fxaCloneMaleMIdx);
 
             // Swap start nodes
-            ArrayProperty<IntProperty> m_StartingList = convObj.GetProperty<ArrayProperty<IntProperty>>("m_StartingList");
-            m_StartingList[0].Value = 2;
-            m_StartingList[1].Value = 0;
-            convObj.WriteProperty(m_StartingList);
+            //ArrayProperty<IntProperty> m_StartingList = convObj.GetProperty<ArrayProperty<IntProperty>>("m_StartingList");
+            //m_StartingList[0].Value = 2;
+            //m_StartingList[1].Value = 0;
+            //convObj.WriteProperty(m_StartingList);
 
             // Swap the bools
-            DialogueNodeExtended nodeE0 = GetNodeByIndex(conv, 0, false);
-            DialogueNodeExtended nodeE2 = GetNodeByIndex(conv, 2, false);
-            SwapNodesPlotChecks(nodeE0, nodeE2);
-            WriteNodes(convObj, nodeE0, nodeE2);
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 0, false), true, 71173001, -1); // If Not Male
+            //DialogueNodeExtended nodeE0 = GetNodeByIndex(conv, 0, false);
+            //DialogueNodeExtended nodeE2 = GetNodeByIndex(conv, 2, false);
+            //SwapNodesPlotChecks(nodeE0, nodeE2);
+            //WriteNodes(convObj, nodeE0, nodeE2);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
+
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 5, false), true, 71173001, -1); // If Not Male
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
 
             // "... Where?"
             DialogueNodeExtended nodeE1 = GetNodeByIndex(conv, 1, false);
@@ -809,6 +887,7 @@ namespace LegendaryExplorer.Mods
             // "Hey, what'd..."
             DialogueNodeExtended nodeE19 = GetNodeByIndex(conv, 19, false);
             DialogueNodeExtended nodeE20 = GetNodeByIndex(conv, 20, false);
+            ChangeNodePlotCheck(nodeE19, true, 71173001, -1);
             ReplaceLineAndAudio(pcc, nodeE20, "71174556", TlkAudioMap[56], FXA_merc_F_Control, FXA_merc_M_Control);
             ReplaceLineAndAudio(pcc, nodeE19, "71174557", TlkAudioMap[57], FXA_merc_F_Control, FXA_merc_M_Control);
 
@@ -820,24 +899,24 @@ namespace LegendaryExplorer.Mods
 
             WriteNodes(convObj, nodeE19, nodeE20, nodeE22, nodeE23);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
+            // SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
         }
 
         private static void Cit004_elevator_ride_b(ExportEntry convObj)
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 21, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 38, false), true, 71173001, -1);
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 21, true));
         }
 
         private static void Cit004_elevator_d(IMEPackage pcc, ExportEntry convObj)
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 1, true));
-            SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 2, true));
-            DialogueNodeExtended R9 = GetNodeByIndex(conv, 9, true);
-            WriteNodePlotCheck(R9, true, 11, -1);
-            WriteNode(R9, convObj);
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 3, false), true, 71173001, -1);
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 1, true));
+            // SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 2, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 9, true), true, 71173000, -1);
 
             // Reroute dialogue between clone and Shepard
             DialogueNodeExtended nodeE6 = GetNodeByIndex(conv, 6, false);
@@ -865,32 +944,50 @@ namespace LegendaryExplorer.Mods
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             // Swap start nodes
-            ArrayProperty<IntProperty> m_StartingList = convObj.GetProperty<ArrayProperty<IntProperty>>("m_StartingList");
-            m_StartingList[0].Value = 2;
-            m_StartingList[1].Value = 0;
-            convObj.WriteProperty(m_StartingList);
+            //ArrayProperty<IntProperty> m_StartingList = convObj.GetProperty<ArrayProperty<IntProperty>>("m_StartingList");
+            //m_StartingList[0].Value = 2;
+            //m_StartingList[1].Value = 0;
+            //convObj.WriteProperty(m_StartingList);
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 0, false), true, 71173001, -1);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 11, true));
+            BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173001, -1, GetNodesByIndex(conv, false, [5, 12]));
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 11, true));
+
+            // Reroute grunts between clone and Shepard
+            DialogueNodeExtended nodeE0 = GetNodeByIndex(conv, 0, false);
+            DialogueNodeExtended nodeE2 = GetNodeByIndex(conv, 2, false);
+            ChangeNodeLink(MEGame.LE3, nodeE0, 0, 2);
+            ChangeNodeLink(MEGame.LE3, nodeE2, 2, 0);
+            DialogueNodeExtended nodeR0 = GetNodeByIndex(conv, 0, true);
+            DialogueNodeExtended nodeR2 = GetNodeByIndex(conv, 2, true);
+            ChangeNodeLink(MEGame.LE3, nodeR0, 1, 3);
+            ChangeNodeLink(MEGame.LE3, nodeR2, 3, 1);
+
+            WriteNodes(convObj, [nodeE0, nodeE2, nodeR0, nodeR2]);
         }
 
         private static void Cit004_climax_choice_m(ExportEntry convObj)
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
 
-            DialogueNodeExtended E1 = GetNodeByIndex(conv, 1, false);
-            WriteNodePlotCheck(E1, true, 12, -1);
-            WriteNode(E1, convObj);
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 1, false), true, 71173001, -1);
+            //DialogueNodeExtended E1 = GetNodeByIndex(conv, 1, false);
+            //ChangeNodePlotCheck(E1, true, 12, -1);
+            //WriteNode(convObj, E1);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 17, true));
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 18, true));
+
+            BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173001, -1, GetNodesByIndex(conv, false, [18, 20]));
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 17, true));
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 18, true));
         }
 
         private static void Cit004_epilogue_m(ExportEntry convObj)
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
 
-            SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 15, true));
+            ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 18, false), true, 71173001, -1);
+            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 15, true));
         }
 
         private static void Edit_BioD_Cit004_27XClone(IMEPackage pcc, int tint0Idx, int tint1Idx, int copyActor0Idx, int copyActor1Idx, int pawnObjIdx, int levelIsLiveIdx, int clonePawnIdx, bool isFemale)
