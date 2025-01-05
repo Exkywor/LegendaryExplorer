@@ -15,6 +15,7 @@
         <MenuItem Header="Get Clean FemShep v BroShep (LE) files" Click="FemShepvBroshep_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS (LE)."/>
         <MenuItem Header="Batch FemShep v BroShep (LE)" Click="BatchFemShepvBroshep_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep mod."/>
         <MenuItem Header="FemShep v BroShep Vanilla VS (LE)" Click="FemShepvBroshep_V_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep Vanilla VS mod, if it's used."/>
+        <MenuItem Header="Get Clean FemShep v BroShep  Vanilla VS (LE) files" Click="FemShepvBroshep_V_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS Vanilla VS (LE)."/>
         <MenuItem Header="Batch FemShep v BroShep Vanilla VS (LE)" Click="BatchFemShepvBroshep_V_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep Vanilla VS mod."/>
     </MenuItem>
 </MenuItem>
