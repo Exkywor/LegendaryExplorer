@@ -382,6 +382,22 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
 
             return paths;
         }
+
+        /// <summary>
+        /// Append the property collection to the export, without deleting its existing props.
+        /// In case the prop exists, it replaces it.
+        /// </summary>
+        /// <param name="exp">Exp to write to.</param>
+        /// <param name="props">Props to append.</param>
+        public static void AppendProperties(ExportEntry exp, PropertyCollection props)
+        {
+            PropertyCollection expProps = exp.GetProperties();
+            foreach (Property prop in props)
+            {
+                expProps.AddOrReplaceProp(prop);
+            }
+            exp.WriteProperties(expProps);
+        }
         #endregion
     }
 } 

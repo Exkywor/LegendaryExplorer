@@ -149,6 +149,50 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
         }
 
         /// <summary>
+        /// Replaces the oldNode with the newNode, changing all links that connect to it, and its own output links.
+        /// DOES NOT change VarLinks.
+        /// </summary>
+        /// <param name="sequence"></param>
+        /// <param name="newObj"></param>
+        /// <param name="oldObj"></param>
+        public static void ReplaceObject(IMEPackage pcc, ExportEntry sequence, ExportEntry newObj, ExportEntry oldObj, int[] skipOutIdxs = null)
+        {
+            List<ExportEntry> sequenceExports = sequence.GetProperty<ArrayProperty<ObjectProperty>>("SequenceObjects")
+                .Select(obj => pcc.GetUExport(obj.Value)).ToList();
+            KismetHelper.AddObjectsToSequence(sequence, true, newObj);
+
+            // Change any connections to the old node to the new one
+            List<ExportEntry> connectionsToNode = KismetHelper.FindOutputConnectionsToNode(oldObj, sequenceExports);
+            foreach (ExportEntry connection in connectionsToNode)
+            {
+                KismetHelper.RemoveOutputLinks(connection);
+                KismetHelper.CreateOutputLink(connection, "Out", newObj, 0);
+            }
+
+            // Move all the outputs of the oldNode to the outputs of the newNode
+            List<List<OutputLink>> outboundLinks = KismetHelper.GetOutputLinksOfNode(oldObj);
+            List<string> outboundLinkNames = KismetHelper.GetOutputLinkNames(oldObj);
+            List<(int, int)> linked = new();
+            for (int i = 0; i < outboundLinks.Count; i++)
+            {
+                if (skipOutIdxs != null && skipOutIdxs.Contains(i)) { continue; }
+
+                for (int j = 0; j < outboundLinks[i].Count; j++)
+                {
+                    OutputLink link = outboundLinks[i][j];
+
+                    if (linked.Exists(el => link.LinkedOp.UIndex == el.Item1 && link.InputLinkIdx == el.Item2)) { continue; }
+                    KismetHelper.CreateOutputLink(newObj, outboundLinkNames[i], (ExportEntry)link.LinkedOp, link.InputLinkIdx);
+                    linked.Add((link.LinkedOp.UIndex, link.InputLinkIdx));
+
+                }
+            }
+
+            // Disconnect the old node
+            SkipAndCleanSequenceElement(oldObj, null, 0);
+        }
+
+        /// <summary>
         /// Skips a sequence element, and removes its output and variable links to completely disconnect it.
         /// </summary>
         /// <param name="seqObj">The sequence object to skip</param>
