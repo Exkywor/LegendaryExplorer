@@ -452,7 +452,7 @@ namespace LegendaryExplorer.Mods
 
         private static void BioD_End001_420HubStreet1(IMEPackage pcc)
         {
-            string path = $@"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\delivery\Emily Returns\Patches\TEB\BioD_End001_420HubStreet1.pcc";
+            string path = $@"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\project\files for automatic patching\BioD_End001_420HubStreet1.pcc";
             string seqPath = "TheWorld.PersistentLevel.Main_Sequence";
             using MEPackage patchedPCC = (MEPackage)MEPackageHandler.OpenMEPackage(path);
 
