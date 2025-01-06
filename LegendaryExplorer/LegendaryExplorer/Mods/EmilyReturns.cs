@@ -9,6 +9,7 @@ using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Unreal;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
 using static LegendaryExplorer.Misc.ExperimentsTools.PackageAutomations;
@@ -42,6 +43,9 @@ namespace LegendaryExplorer.Mods
                 case "BioD_Nor_100CabinConv":
                     BioD_Nor_100CabinConv(pcc);
                     break;
+                case "BioD_Nor_300_LOC_INT":
+                    BioD_Nor_300_LOC_INT(pcc);
+                    break;
                 case "BioD_Nor_310LiaraOfficeCon":
                     BioD_Nor_310LiaraOfficeCon(pcc);
                     break;
@@ -66,8 +70,21 @@ namespace LegendaryExplorer.Mods
                 default:
                     break;
             }
+        }
 
-            MessageBox.Show($"File successfully patched.");
+        public static void BatchPatch()
+        {
+            string path = $@"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\delivery\Emily Returns\DLC_MOD_EmilyReturns\CookedPCConsole";
+            string[] files = Directory.GetFiles(path);
+
+
+            foreach (string file in files)
+            {
+                if (Path.GetExtension(file) != ".pcc") { continue; }
+                using MEPackage pcc = (MEPackage)MEPackageHandler.OpenMEPackage(file);
+                Patch(pcc);
+                pcc.Save();
+            }
         }
 
         private static void BioA_CitHub_Presidium_Global_LOC_INT(IMEPackage pcc)
@@ -182,6 +199,11 @@ namespace LegendaryExplorer.Mods
             // Replace the conversation object
             ReplaceObjectWithEventHandshake(pcc, allers_char_moment_r4,
                 pcc.GetUExport(8571), "ConvPlay_nor_emily_relationship4_d", "ConvEnd_nor_emily_relationship4_d");
+        }
+
+        private static void BioD_Nor_300_LOC_INT(IMEPackage pcc)
+        {
+            // The file doesn't need anything done. It's a copy of the Liara LOC_INT, with an added conditional
         }
 
         private static void BioD_Nor_310LiaraOfficeCon(IMEPackage pcc)
@@ -514,6 +536,44 @@ namespace LegendaryExplorer.Mods
                 "DLC_MOD_EmilyReturnsP_Audio", "DLC_MOD_EmilyReturnsP_Audio", 20542, 22597, "D0B70000", "356A0100",
                 @$"{XMLPath}\BioD_End001_436CRAllers\00961434_f.xml", @$"{XMLPath}\BioD_End001_436CRAllers\00961434_m.xml")
             },
+        };
+
+        public static readonly List<string> Files = [
+            "BioA_CitHub_Presidium_Global_LOC_INT.pcc",
+            "BioD_CitHub.pcc",
+            "BioD_CitHub_Dock.pcc",
+            "BioD_Nor.pcc",
+            "BioD_Nor_100CabinConv.pcc",
+            "BioD_Nor_300_LOC_INT.pcc",
+            "BioD_Nor_405Engineering.pcc",
+            "BioD_Nor_420StarCargo_LOC_INT.pcc",
+            "BioD_Nor_420StarCargoConv_LOC_INT.pcc",
+            ];
+
+        public static readonly Dictionary<string, List<string>> Files_Patches = new()
+        {
+            {"AllersG", ["BioD_End001_435CommRoom_LOC_INT.pcc", "BioD_End001_436CRAllers_LOC_INT.pcc"]},
+            {"Dreams", ["BioD_Nor.pcc"]},
+            {"EGM", ["SFXGUI_Images_EGMShared.pcc"]},
+            {"LE3DP", ["BioD_CitHub.pcc", "BioD_CitHub_Dock.pcc"]},
+            {"LE3RE", ["BioD_Nor_100CabinConv.pcc"]},
+            {"LE3REB", ["BioD_Nor_100CabinConv.pcc"]},
+            {"PV", ["BioD_CitHub.pcc", "BioD_CitHubPV.pcc", "BioD_End001_435CommRoom_LOC_INT.pcc", "BioD_End001_436CRAllers_LOC_INT.pcc", "SFXImages_ProjectVariety.pcc", "SFXImages_PV.pcc"]},
+            {"PV2", ["BiOD_CitHub_Dock.pcc"]},
+            {"TEB", ["BioD_End001_420HubStreet1.pcc"]}
+        };
+
+        public static readonly Dictionary<string, string> ModPaths = new()
+        {
+            {"AllersG", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Allers Goodbye\\DLC_MOD_AllersG\\CookedPCConsole\\"},
+            {"Dreams", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Dreams Remade\\DLC_MOD_RD\\CookedPCConsole\\"},
+            {"EGM", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Expanded Galaxy Mod (LE)\\DLC_MOD_EGM\\CookedPCConsole\\"},
+            {"LE3DP", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\LE3 Diversification Project\\DLC_MOD_CITProject\\CookedPCConsole\\"},
+            {"LE3RE", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Mass Effect 3 LE Re-Sculpted\\DLC_MOD_ME3Resculpted\\CookedPCConsole\\"},
+            {"LE3REB", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Mass Effct 3 LE Re-Sculpted Buff Version\\DLC_MOD_ME3ReSculptedBuff\\CookedPCConsole\\"},
+            {"PV", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety\\CookedPCConsole\\"},
+            {"PV2", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety2\\CookedPCConsole\\"},
+            {"TEB", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Take Earth Back\\DLC_MOD_TEB\\CookedPCConsole\\"}
         };
     }
 }
