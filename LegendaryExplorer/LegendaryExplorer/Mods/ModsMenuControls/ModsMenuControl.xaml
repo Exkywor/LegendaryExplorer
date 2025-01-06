@@ -11,11 +11,14 @@
     <MenuItem Header=" &gt;&gt; FOR PERSONAL USE ONLY &lt;&lt;" IsEnabled="False"/>
     <MenuItem Header="Personal Mods">
         <MenuItem Header="Emily Returns" Click="EmilyReturns_Click" ToolTip="Applies the changes required for this file to work with the Emily Returns mod, if it's used."/>
+        <MenuItem Header="Batch Emily Returns " Click="BatchEmilyReturns_Click" ToolTip="Applies the changes required for files to work with the Emily Returns mod."/>
         <MenuItem Header="FemShep v BroShep (LE)" Click="FemShepvBroshep_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep mod, if it's used."/>
-        <MenuItem Header="Get Clean FemShep v BroShep (LE) files" Click="FemShepvBroshep_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS (LE)."/>
         <MenuItem Header="Batch FemShep v BroShep (LE)" Click="BatchFemShepvBroshep_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep mod."/>
         <MenuItem Header="FemShep v BroShep Vanilla VS (LE)" Click="FemShepvBroshep_V_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep Vanilla VS mod, if it's used."/>
-        <MenuItem Header="Get Clean FemShep v BroShep  Vanilla VS (LE) files" Click="FemShepvBroshep_V_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS Vanilla VS (LE)."/>
         <MenuItem Header="Batch FemShep v BroShep Vanilla VS (LE)" Click="BatchFemShepvBroshep_V_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep Vanilla VS mod."/>
+        <MenuItem Header="Get Clean Emily Returns files" Click="EmilyReturns_CleanFiles_Click" ToolTip="Get the clean basegame files for Emily Returns."/>
+        <MenuItem Header="Get Clean Emily Returns Patch files" Click="EmilyReturns_CleanPatchFiles_Click" ToolTip="Get the clean basegame files for Emily Returns Patches."/>
+        <MenuItem Header="Get Clean FemShep v BroShep (LE) files" Click="FemShepvBroshep_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS (LE)."/>
+        <MenuItem Header="Get Clean FemShep v BroShep  Vanilla VS (LE) files" Click="FemShepvBroshep_V_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS Vanilla VS (LE)."/>
     </MenuItem>
 </MenuItem>

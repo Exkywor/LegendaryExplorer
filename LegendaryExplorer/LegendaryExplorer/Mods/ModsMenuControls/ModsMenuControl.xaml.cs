@@ -46,7 +46,20 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
             {
                 EmilyReturns.Patch(pew.Pcc);
             }
+            MessageBox.Show($"Files successfully patched.");
         }
+
+
+        private void BatchEmilyReturns_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                EmilyReturns.BatchPatch();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
         private void FemShepvBroshep_Click(object sender, RoutedEventArgs e)
         {
             if (Window.GetWindow(this) is PackageEditorWindow pew)
@@ -92,6 +105,53 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
 
             MessageBox.Show($"File successfully patched.");
         }
+
+        private void BatchFemShepvBroshep_V_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                FemShepvBroShep_V.BatchPatch();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+        private void EmilyReturns_CleanFiles_Click(object sender, RoutedEventArgs e)
+        {
+            List<string> paths = new();
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                paths = SharedMethods.CopyCleanFiles(EmilyReturns.Files,
+                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Emily Returns\\delivery\\Emily Returns\\DLC_MOD_EmilyReturns\\CookedPCConsole\\",
+                    MEGame.LE3, true);
+            }
+
+            MessageBox.Show(string.Join("\n ", paths));
+        }
+
+        private void EmilyReturns_CleanPatchFiles_Click(object sender, RoutedEventArgs e)
+        {
+            List<string> paths = new();
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                foreach (var (modName, files) in EmilyReturns.Files_Patches)
+                {
+                    string destPath = !modName.Equals("PV2")
+                        ? $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Emily Returns\\delivery\\Emily Returns\\Patches\\{modName}\\"
+                        : $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Emily Returns\\delivery\\Emily Returns\\Patches\\PV\\";
+
+                    foreach (string fileName in files)
+                    {
+                        string filePath = $"{EmilyReturns.ModPaths[modName]}{fileName}";
+                        File.Copy(filePath, $"{destPath}{fileName}", true);
+                        paths.Add(filePath);
+                    }
+                }
+            }
+
+            MessageBox.Show(string.Join("\n ", paths));
+        }
+
         private void FemShepvBroshep_V_CleanFiles_Click(object sender, RoutedEventArgs e)
         {
             List<string> paths = new();
@@ -106,15 +166,6 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
             }
 
             MessageBox.Show(string.Join("\n ", paths));
-        }
-        private void BatchFemShepvBroshep_V_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow)
-            {
-                FemShepvBroShep_V.BatchPatch();
-            }
-
-            MessageBox.Show($"Files successfully patched.");
         }
         #endregion
 
