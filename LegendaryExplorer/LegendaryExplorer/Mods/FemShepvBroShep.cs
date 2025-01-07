@@ -174,14 +174,6 @@ namespace LegendaryExplorer.Mods
             ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 26, false), true, 71173000, -1);
             ChangeAndWriteNodePlotCheck(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 29, false), true, 71173000, -1);
 
-            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 11, true));
-            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 12, true));
-            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 13, true));
-            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 16, true));
-            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 19, true));
-            //SwapAndWriteFirstTwoNodesAndPlots(deaddealer_m, deaddealer_mConv, GetNodeByIndex(deaddealer_mConv, 20, true));
-            //SwapAndWriteNodesPlotChecks(deaddealer_m, GetNodeByIndex(deaddealer_mConv, 26, false), GetNodeByIndex(deaddealer_mConv, 28, false));
-
             // Remove the vanilla copy methoddeaddealer_mConv
             KismetHelper.RemoveOutputLinks(pcc.GetUExport(774));
             KismetHelper.RemoveOutputLinks(pcc.GetUExport(775));
@@ -203,7 +195,6 @@ namespace LegendaryExplorer.Mods
                     }]),
                 pcc.GetUExport(1270)
                 );
-            // SwapCheckStateOutputs(pcc.GetUExport(1270));
 
             SkipAndCleanSequenceElement(pcc.GetUExport(8318), null, 0);
             SkipAndCleanSequenceElement(pcc.GetUExport(8319), null, 0);
@@ -231,9 +222,6 @@ namespace LegendaryExplorer.Mods
 
             SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(168));
             SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(167));
-
-            // SwapCheckStateOutputs(pcc.GetUExport(168));
-            // SwapCheckStateOutputs(pcc.GetUExport(167));
         }
 
         private static void BioD_Cit003_150AtriumConvo_LOC_INT(IMEPackage pcc)
@@ -310,8 +298,6 @@ namespace LegendaryExplorer.Mods
             SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(173));
             SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(174));
 
-            // SwapCheckStateOutputs(pcc.GetUExport(173));
-            // SwapCheckStateOutputs(pcc.GetUExport(174));
             SkipAndCleanSequenceElement(pcc.GetUExport(4916), null, 0);
             SkipAndCleanSequenceElement(pcc.GetUExport(4917), null, 0);
         }
@@ -336,8 +322,6 @@ namespace LegendaryExplorer.Mods
                     }]),
                 pcc.GetUExport(269)
                 );
-
-            // SwapCheckStateOutputs(pcc.GetUExport(269));
         }
 
         private static void BioD_Cit003_900Trap_LOC_INT(IMEPackage pcc)
@@ -361,14 +345,7 @@ namespace LegendaryExplorer.Mods
                 {
                     new("FSvBS: Is Not Female Player?")
             }]);
-            //ExportEntry PMCheck = CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckState",
-            //[
-            //    new IntProperty(17662, "m_nIndex"),
-            //    new ArrayProperty<StrProperty>("m_aObjComment")
-            //    {
-            //        new("Female Player?")
-            //    }
-            //]);
+
             ExportEntry setObjMale = CreateSequenceObjectWithProps(pcc, "SeqAct_SetObject", []);
             ExportEntry setObjFemale = CreateSequenceObjectWithProps(pcc, "SeqAct_SetObject", []);
 
@@ -436,11 +413,6 @@ namespace LegendaryExplorer.Mods
             SharedMethods.AppendProperties(check45, props);
             SharedMethods.AppendProperties(check46, props);
             SharedMethods.AppendProperties(check47, props);
-
-            //SwapCheckStateOutputs(check44);
-            //SwapCheckStateOutputs(check45);
-            //SwapCheckStateOutputs(check46);
-            //SwapCheckStateOutputs(check47);
         }
 
         // NATIVE COMPATIBILITY
@@ -485,9 +457,6 @@ namespace LegendaryExplorer.Mods
             ExportEntry check387 = pcc.GetUExport(387);
             SharedMethods.AppendProperties(check386, props);
             SharedMethods.AppendProperties(check387, props);
-
-            //SwapCheckStateOutputs(pcc.GetUExport(387));
-            //SwapCheckStateOutputs(pcc.GetUExport(386));
         }
 
         // NATIVE COMPATIBILITY
@@ -546,21 +515,6 @@ namespace LegendaryExplorer.Mods
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false,
                 [1, 4, 12, 15, 29, 31, 43, 47, 51, 53, 55, 57, 69, 82, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 126, 129, 141, 145, 152, 154, 163]));
 
-            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-            //    GetNodesByIndex(conv, true, [0, 3, 11, 14, 28, 29, 31]));
-            //BatchSwapAndWriteFirstTwoNodes(convObj, conv,
-            //    GetNodesByIndex(conv, true, [32, 33, 34, 35, 36, 37, 38, 39, 40]));
-            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-            //    GetNodesByIndex(conv, true, [43, 46, 47, 48, 49, 51, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 70]));
-            //BatchSwapAndWriteFirstTwoNodes(convObj, conv,
-            //    GetNodesByIndex(conv, true, [74, 78, 82, 86, 90, 94, 98, 102]));
-            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-            //    GetNodesByIndex(conv, true, [106, 109, 111]));
-            //BatchSwapAndWriteFirstTwoNodes(convObj, conv,
-            //    GetNodesByIndex(conv, true, [112, 113, 114, 115, 116, 117, 118, 119, 120]));
-            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv,
-            //    GetNodesByIndex(conv, true, [124, 131, 134, 143]));
-
             // "It's time the understudy..."
             DialogueNodeExtended nodeE53 = GetNodeByIndex(conv, 53, false);
             DialogueNodeExtended nodeE54 = GetNodeByIndex(conv, 54, false);
@@ -609,7 +563,6 @@ namespace LegendaryExplorer.Mods
             WriteNodes(convObj, nodeR3, nodeR4, nodeR13, nodeR14, nodeE49, nodeE50);
 
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false, [47, 49, 80, 87]));
-            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [11, 12, 35, 38]));
         }
 
         private static void Cit003_mercs_tubes1_a(IMEPackage pcc, ExportEntry convObj, int fxaCloneFemFIdx, int fxaCloneFemMIdx, int fxaCloneMaleFIdx, int fxaCloneMaleMIdx)
@@ -624,7 +577,6 @@ namespace LegendaryExplorer.Mods
 
             // Swap the nodes
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false, [1, 7, 12]));
-            // BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [0, 1, 4]));
 
             // Replace lines
             // "Eliminate them..."
@@ -641,7 +593,6 @@ namespace LegendaryExplorer.Mods
 
             // Swap the nodes
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 12, false), true, 71173000, -1);
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 2, true));
         }
 
         private static void Cit003_hench_meetup_m(IMEPackage pcc, ExportEntry convObj, int fxaPlayerFIdx, int fxaPlayerMIdx)
@@ -674,7 +625,6 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_clone_male_M_Control = GetLoadedFXAControl(pcc, fxaCloneMaleMIdx);
 
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 1, false), true, 71173000, -1);
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 0, true));
 
             // "Keep Shepard off my back..."
             DialogueNodeExtended nodeE1 = GetNodeByIndex(conv, 1, false);
@@ -689,7 +639,6 @@ namespace LegendaryExplorer.Mods
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 1, false), true, 71173000, -1);
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 0, true));
         }
 
         private static void Cit003_final_trap_m(IMEPackage pcc, ExportEntry convObj, int fxaPlayerFIdx, int fxaPlayerMIdx)
@@ -702,8 +651,6 @@ namespace LegendaryExplorer.Mods
 
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false, [32, 35, 37, 68, 85, 89, 92, 94, 101]));
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 95, false), true, -1, -1); // This path for some reason has a bool even though it's the only path
-            //BatchSwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodesByIndex(conv, true, [4, 7, 8, 37, 56, 60, 63, 64, 72,]));
-            //SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 65, true));
 
             // "Then I'm going to mount..."
             DialogueNodeExtended nodeR92 = GetNodeByIndex(conv, 92, true);
@@ -731,7 +678,6 @@ namespace LegendaryExplorer.Mods
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 2, false), true, 71173000, -1);
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 1, true));
         }
 
         private static void Cit004_shuttle_m(IMEPackage pcc, ExportEntry convObj)
@@ -769,22 +715,9 @@ namespace LegendaryExplorer.Mods
             FaceFXAnimSetEditorControl FXA_clone_male_F_Control = GetLoadedFXAControl(pcc, fxaCloneMaleFIdx);
             FaceFXAnimSetEditorControl FXA_clone_male_M_Control = GetLoadedFXAControl(pcc, fxaCloneMaleMIdx);
 
-            // Swap start nodes
-            //ArrayProperty<IntProperty> m_StartingList = convObj.GetProperty<ArrayProperty<IntProperty>>("m_StartingList");
-            //m_StartingList[0].Value = 2;
-            //m_StartingList[1].Value = 0;
-            //convObj.WriteProperty(m_StartingList);
-
             // Swap the bools
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 0, false), true, 71173001, -1); // If Not Male
-            //DialogueNodeExtended nodeE0 = GetNodeByIndex(conv, 0, false);
-            //DialogueNodeExtended nodeE2 = GetNodeByIndex(conv, 2, false);
-            //SwapNodesPlotChecks(nodeE0, nodeE2);
-            //WriteNodes(convObj, nodeE0, nodeE2);
-
-
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 5, false), true, 71173001, -1); // If Not Male
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
 
             // "... Where?"
             DialogueNodeExtended nodeE1 = GetNodeByIndex(conv, 1, false);
@@ -799,27 +732,6 @@ namespace LegendaryExplorer.Mods
             ReplaceLineAndAudioAndFXA(pcc, nodeE10, "71174544", TlkAudioMap[44], FXA_clone_female_F_Control, FXA_clone_female_M_Control);
 
             WriteNodes(convObj, [nodeE1, nodeE3, nodeE7, nodeE10]);
-
-            // NOT NEEDED
-            // Get the clone gesture tracks to remove the extra gesture
-            /*MatineeHelper.TryGetInterpGroup(nodeE7.Interpdata, "Clone", out ExportEntry E7Clone);
-            MatineeHelper.TryGetInterpTrack(E7Clone, "BioEvtSysTrackGesture", out ExportEntry E7CloneGesture);
-            MatineeHelper.TryGetInterpGroup(nodeE10.Interpdata, "Clone", out ExportEntry E10Clone);
-            MatineeHelper.TryGetInterpTrack(E10Clone, "BioEvtSysTrackGesture", out ExportEntry E10CloneGesture);
-
-            // Remove nodeE7 extra gesture
-            ArrayProperty<StructProperty> m_aGestures = E7CloneGesture.GetProperty<ArrayProperty<StructProperty>>("m_aGestures");
-            ArrayProperty<StructProperty> m_aTrackKeys = E7CloneGesture.GetProperty<ArrayProperty<StructProperty>>("m_aTrackKeys");
-            m_aGestures.RemoveAt(1);
-            m_aTrackKeys.RemoveAt(1);
-            E7CloneGesture.WriteProperties([m_aGestures, m_aTrackKeys]);
-            // Remove nodeE10 extra gesture
-            m_aGestures = E10CloneGesture.GetProperty<ArrayProperty<StructProperty>>("m_aGestures");
-            m_aTrackKeys = E10CloneGesture.GetProperty<ArrayProperty<StructProperty>>("m_aTrackKeys");
-            m_aGestures.RemoveAt(1);
-            m_aTrackKeys.RemoveAt(1);
-            E10CloneGesture.WriteProperties([m_aGestures, m_aTrackKeys]);
-            */
 
             // Swap Brook's line about Shepard
             DialogueNodeExtended nodeR7 = GetNodeByIndex(conv, 7, true);
@@ -898,8 +810,6 @@ namespace LegendaryExplorer.Mods
             ReplaceLineAndAudio(pcc, nodeE23, "71174559", TlkAudioMap[59], FXA_mercLieu_F_Control, FXA_mercLieu_M_Control);
 
             WriteNodes(convObj, nodeE19, nodeE20, nodeE22, nodeE23);
-
-            // SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
         }
 
         private static void Cit004_elevator_ride_b(ExportEntry convObj)
@@ -907,15 +817,12 @@ namespace LegendaryExplorer.Mods
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 38, false), true, 71173001, -1);
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 21, true));
         }
 
         private static void Cit004_elevator_d(IMEPackage pcc, ExportEntry convObj)
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 3, false), true, 71173001, -1);
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 1, true));
-            // SwapAndWriteFirstTwoNodes(convObj, conv, GetNodeByIndex(conv, 2, true));
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 9, true), true, 71173000, -1);
 
             // Reroute dialogue between clone and Shepard
@@ -943,16 +850,9 @@ namespace LegendaryExplorer.Mods
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
 
-            // Swap start nodes
-            //ArrayProperty<IntProperty> m_StartingList = convObj.GetProperty<ArrayProperty<IntProperty>>("m_StartingList");
-            //m_StartingList[0].Value = 2;
-            //m_StartingList[1].Value = 0;
-            //convObj.WriteProperty(m_StartingList);
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 0, false), true, 71173001, -1);
 
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173001, -1, GetNodesByIndex(conv, false, [5, 12]));
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 4, true));
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 11, true));
 
             // Reroute grunts between clone and Shepard
             DialogueNodeExtended nodeE0 = GetNodeByIndex(conv, 0, false);
@@ -972,14 +872,8 @@ namespace LegendaryExplorer.Mods
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 1, false), true, 71173001, -1);
-            //DialogueNodeExtended E1 = GetNodeByIndex(conv, 1, false);
-            //ChangeNodePlotCheck(E1, true, 12, -1);
-            //WriteNode(convObj, E1);
-
 
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173001, -1, GetNodesByIndex(conv, false, [18, 20]));
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 17, true));
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 18, true));
         }
 
         private static void Cit004_epilogue_m(ExportEntry convObj)
@@ -987,7 +881,6 @@ namespace LegendaryExplorer.Mods
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 18, false), true, 71173001, -1);
-            //SwapAndWriteFirstTwoNodesAndPlots(convObj, conv, GetNodeByIndex(conv, 15, true));
         }
 
         private static void Edit_BioD_Cit004_27XClone(IMEPackage pcc, int tint0Idx, int tint1Idx, int copyActor0Idx, int copyActor1Idx, int pawnObjIdx, int levelIsLiveIdx, int clonePawnIdx, bool isFemale)
