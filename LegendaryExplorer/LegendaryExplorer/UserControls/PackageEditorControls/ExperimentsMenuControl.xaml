@@ -137,6 +137,7 @@
         <MenuItem Header="Dump Class source code" Click="DumpClassSource_Click"/>
         <MenuItem Header="Regenerate BrushComponent's CachedPhysBrush Data from AggGeom" Click="RegenCachedPhysBrushData_Click"/>
         <MenuItem Header="JSON serialize" Click="JSONSerialize_Click"/>
+        <MenuItem Header="Compile Asset T3Ds into this file (will not work for map T3Ds)" Click="CompileT3Ds_Click"/>
     </MenuItem>
     <MenuItem Header="Kinkojiro's 101 ways to cause an aneurysm">
         <MenuItem Header="Convert to ME3 (retain instances)" Click="ConvertFileToME3"/>

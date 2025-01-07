@@ -211,12 +211,6 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                 }
             };
             table.AddType(clientType);
-            table.PushScope(clientType.Name);
-                foreach (VariableDeclaration clientClassVarDecl in clientType.VariableDeclarations)
-                {
-                    table.AddSymbol(clientClassVarDecl.Name, clientClassVarDecl);
-                }
-            table.PopScope();
             var staticMeshType = new Class("StaticMesh", objectClass, objectClass, intrinsicClassFlags | EClassFlags.SafeReplace | EClassFlags.CollapseCategories)
             {
                 VariableDeclarations =
@@ -235,10 +229,6 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
             };
             table.AddType(staticMeshType);
             table.PushScope(staticMeshType.Name);
-                foreach (VariableDeclaration stmVarDecl in staticMeshType.VariableDeclarations)
-                {
-                    table.AddSymbol(stmVarDecl.Name, stmVarDecl);
-                }
                 var fracturedStaticMeshType = new Class("FracturedStaticMesh", staticMeshType, objectClass, intrinsicClassFlags | EClassFlags.SafeReplace | EClassFlags.CollapseCategories)
                 {
                     VariableDeclarations =
@@ -279,12 +269,6 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                     }
                 };
                 table.AddType(fracturedStaticMeshType);
-                table.PushScope(fracturedStaticMeshType.Name); 
-                    foreach (VariableDeclaration fracturedStmVarDecl in fracturedStaticMeshType.VariableDeclarations)
-                    {
-                        table.AddSymbol(fracturedStmVarDecl.Name, fracturedStmVarDecl);
-                    }
-                table.PopScope();
             table.PopScope();
             var shadowMap1DType = new Class("ShadowMap1D", objectClass, objectClass, intrinsicClassFlags);
             table.AddType(shadowMap1DType);
@@ -301,12 +285,6 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                     }
                 };
                 table.AddType(levelType);
-                table.PushScope(levelType.Name); 
-                    foreach (VariableDeclaration levelVarDecl in levelType.VariableDeclarations)
-                    {
-                        table.AddSymbol(levelVarDecl.Name, levelVarDecl);
-                    }
-                table.PopScope();
                 var pendingLevel = new Class("PendingLevel", levelBase, objectClass, intrinsicClassFlags | EClassFlags.Abstract);
                 table.AddType(pendingLevel);
                 table.PushScope(pendingLevel.Name); table.PopScope();
@@ -933,6 +911,30 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                     PushScope(codecBinkType.Name); PopScope();
                     break;
                 }
+
+                #region T3D parsing hacks
+
+                case "Material":
+                {
+                    var matClass = ((Class)node);
+                    if (!matClass.VariableDeclarations.Any(varDecl => varDecl.Name is "ReferencedTextureGuids"))
+                    {
+                        matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(TypeDict["Guid"]), EPropertyFlags.Transient | EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "ReferencedTextureGuids")
+                        {
+                            Outer = node
+                        });
+                    }
+                    if (!matClass.VariableDeclarations.Any(varDecl => varDecl.Name is "EditorComments"))
+                    {
+                        matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(TypeDict["Object"]), EPropertyFlags.Transient | EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "EditorComments")
+                        {
+                            Outer = node
+                        });
+                    }
+                    break;
+                }
+
+                    #endregion
             }
 
             if (node is Class c && c.Flags.Has(EClassFlags.Intrinsic))

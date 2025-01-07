@@ -77,8 +77,7 @@ namespace LegendaryExplorerCore.Packages
             var ms = new EndianWriter { Endian = file.Endian };
             if (prePropBinary == null)
             {
-                Span<byte> span = stackalloc byte[4];
-                span.Clear();
+                ReadOnlySpan<byte> span = [0, 0, 0, 0];
                 ms.Write(span);
             }
             else

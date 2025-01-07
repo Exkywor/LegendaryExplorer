@@ -19,6 +19,7 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
         private ExportEntry Default__Archetype;
         private bool ShouldStripTransients;
         private bool IsStructDefaults;
+        private bool IsFromT3D;
 
         private readonly UnrealScriptOptionsPackage usop;
 
@@ -120,9 +121,40 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
             export.WriteProperties(props);
         }
 
+        /// <summary>
+        /// Creates a new Export from the <see cref="Subobject"/>, as well as any children.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="parent">Parent Entry. If null, Export will be at root</param>
+        /// <param name="pcc"></param>
+        /// <param name="usop"></param>
+        /// <param name="fromT3D"></param>
+        public static ExportEntry CompileNewObject(Subobject obj, IEntry parent, IMEPackage pcc, UnrealScriptOptionsPackage usop, bool fromT3D = false)
+        {
+            var export = new ExportEntry(pcc, parent, NameReference.FromInstancedString(obj.NameDeclaration));
+            pcc.AddExport(export);
+            export.SuperClass = null;
+            export.Class = EntryImporter.EnsureClassIsInFile(pcc, obj.Class.Name, new RelinkerOptionsPackage(), usop.GamePathOverride);
+            if (parent is ExportEntry parentExport && parentExport.ExportFlags.Has(EExportFlags.ForcedExport))
+            {
+                export.ExportFlags |= EExportFlags.ForcedExport;
+            }
+            var compiler = new ScriptPropertiesCompiler(pcc, usop)
+            {
+                Default__Export = export,
+                ShouldStripTransients = true,
+                IsFromT3D = fromT3D
+            };
+
+            var props = compiler.ConvertStatementsToPropertyCollection(obj.Statements, export, []);
+
+            export.WritePropsAndDefaultBinary(props, 0, obj.Class.IsComponent);
+            return export;
+        }
+
         private PropertyCollection ConvertStatementsToPropertyCollection(List<Statement> statements, ExportEntry export, Dictionary<NameReference, ExportEntry> subObjectDict)
         {
-            List<ExportEntry> existingSubObjects = subObjectDict is null ? null : export.GetChildren<ExportEntry>().ToList();
+            List<ExportEntry> existingSubObjects = IsFromT3D || subObjectDict is null ? null : export.GetChildren<ExportEntry>().ToList();
             var props = new PropertyCollection();
             var subObjectsToFinish = new List<(Subobject, ExportEntry, int)>();
             foreach (Statement statement in statements)
@@ -135,14 +167,31 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
                             throw new Exception("Subobjects not permitted!");
                         }
                         var subObjName = NameReference.FromInstancedString(subObj.NameDeclaration);
-                        existingSubObjects.TryRemove(exp => exp.ObjectName == subObjName, out ExportEntry existingSubObject);
+                        ExportEntry existingSubObject = null;
+                        existingSubObjects?.TryRemove(exp => exp.ObjectName == subObjName, out existingSubObject);
                         int netIndex = existingSubObject?.NetIndex ?? 0;
                         CreateSubObject(subObj, export, ref existingSubObject, usop);
                         subObjectDict[subObjName] = existingSubObject;
                         subObjectsToFinish.Add(subObj, existingSubObject, netIndex);
                         break;
                     case AssignStatement assignStatement:
+                        if (IsFromT3D && ((SymbolReference)assignStatement.Target).Node is VariableDeclaration { IsTransient: true })
+                        {
+                            break;
+                        }
                         Property prop = ConvertToProperty(assignStatement, subObjectDict);
+                        if (IsFromT3D)
+                        {
+                            if (prop.Name.Name == "ObjectArchetype" && prop is ObjectProperty archetypeProp)
+                            {
+                                export.Archetype = archetypeProp.ResolveToEntry(Pcc);
+                                break;
+                            }
+                            if (prop.Name.Name == "Name")
+                            {
+                                break;
+                            }
+                        }
                         props.AddOrReplaceProp(prop);
                         break;
                     default:
@@ -158,7 +207,7 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
                     WriteSubObjectData(subobject, subExport, netIndex, subObjectDict);
                 }
 
-                if (existingSubObjects.Any())
+                if (existingSubObjects is not null && existingSubObjects.Any())
                 {
                     EntryPruner.TrashEntriesAndDescendants(existingSubObjects);
                 }
@@ -185,7 +234,6 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
             subExport.SuperClass = null;
             subExport.Class = classEntry;
             subExport.ObjectName = objName;
-            subExport.Class = classEntry;
             if (Default__Export.ExportFlags.Has(EExportFlags.ForcedExport))
             {
                 subExport.ExportFlags |= EExportFlags.ForcedExport;
@@ -267,7 +315,7 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
             int staticArrayIndex = 0;
             if (nameRef is ArraySymbolRef staticArrayRef)
             {
-                staticArrayIndex = ((IntegerLiteral)staticArrayRef.Index).Value;
+                staticArrayIndex = (int)((IntegerLiteral)staticArrayRef.Index).Value;
                 nameRef = (SymbolReference)staticArrayRef.Array;
             }
 
@@ -308,7 +356,24 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
                             }
                             else
                             {
-                                entry = Pcc.FindEntry(objectLiteral.Name.Value, objectLiteral.Class.Name) ?? usop?.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value);
+                                if (IsFromT3D)
+                                {
+                                    if (subObjectDict is not null && subObjectDict.TryGetValue(NameReference.FromInstancedString(objectLiteral.Name.Value), out ExportEntry subObj))
+                                    {
+                                        entry = subObj;
+                                    }
+                                    else
+                                    {
+                                        entry = usop?.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value, objectLiteral.Class.Name) 
+                                                ?? Pcc.GetEntryOrAddImport(objectLiteral.Name.Value, objectLiteral.Class.Name,
+                                                    //Hack. need some way of determining package file of a class
+                                                    "Engine");
+                                    }
+                                }
+                                else
+                                {
+                                    entry = Pcc.FindEntry(objectLiteral.Name.Value, objectLiteral.Class.Name) ?? usop?.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value, objectLiteral.Class.Name);
+                                }
                             }
                             break;
                         default:
@@ -338,7 +403,25 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
                             else
                             {
                                 var objectLiteral = (ObjectLiteral)csf.OuterSymbol;
-                                objUIndex = Pcc.FindEntry(objectLiteral.Name.Value, objectLiteral.Class.Name)?.UIndex ?? usop.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value)?.UIndex ?? 0;
+
+                                if (IsFromT3D)
+                                {
+                                    if (subObjectDict is not null && subObjectDict.TryGetValue(NameReference.FromInstancedString(objectLiteral.Name.Value), out ExportEntry subObj))
+                                    {
+                                        objUIndex = subObj.UIndex;
+                                    }
+                                    else
+                                    {
+                                        objUIndex = usop?.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value, objectLiteral.Class.Name)?.UIndex
+                                                ?? Pcc.GetEntryOrAddImport(objectLiteral.Name.Value, objectLiteral.Class.Name,
+                                                    //Hack. need some way of determining package file of a class
+                                                    "Engine").UIndex;
+                                    }
+                                }
+                                else
+                                {
+                                    objUIndex = Pcc.FindEntry(objectLiteral.Name.Value, objectLiteral.Class.Name)?.UIndex ?? usop.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value, objectLiteral.Class.Name)?.UIndex ?? 0;
+                                }
                             }
                             literal = csf.InnerSymbol;
                         }
@@ -428,7 +511,7 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
                             prop = new ByteProperty((byte)((IntegerLiteral)literal).Value, propName);
                             break;
                         case EPropertyType.Int:
-                            prop = new IntProperty(((IntegerLiteral)literal).Value, propName);
+                            prop = new IntProperty((int)((IntegerLiteral)literal).Value, propName);
                             break;
                         case EPropertyType.Bool:
                             prop = new BoolProperty(((BooleanLiteral)literal).Value, propName);
@@ -458,57 +541,7 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
         private void WriteSubObjectData(Subobject subObject, ExportEntry subExport, int netIndex, Dictionary<NameReference, ExportEntry> parentSubObjectDict)
         {
             PropertyCollection props = ConvertStatementsToPropertyCollection(subObject.Statements, subExport, new(parentSubObjectDict));
-            var binary = ObjectBinary.Create(subExport.ClassName, subExport.Game, props);
-
-            //this code should probably be somewhere else, perhaps integrated into ObjectBinary.Create somehow?
-            if (binary is BioDynamicAnimSet dynAnimSet && props.GetProp<ArrayProperty<ObjectProperty>>("Sequences") is { } sequences)
-            {
-                var setName = props.GetProp<NameProperty>("m_nmOrigSetName");
-                foreach (ObjectProperty objProp in sequences)
-                {
-                    switch (objProp.ResolveToEntry(Pcc))
-                    {
-                        case ExportEntry exportEntry when exportEntry.GetProperty<NameProperty>("SequenceName") is { } seqNameProperty:
-                            dynAnimSet.SequenceNamesToUnkMap.Add(seqNameProperty.Value, 1);
-                            break;
-                        case IEntry entry:
-                            if (setName is null)
-                            {
-                                throw new Exception($"{nameof(BioDynamicAnimSet)} must have m_nmOrigSetName property defined!");
-                            }
-                            dynAnimSet.SequenceNamesToUnkMap.Add(entry.ObjectName.Instanced[(setName.Value.Instanced.Length + 1)..], 1);
-                            break;
-                    }
-                }
-            }
-
-            if (subExport.ClassName is "DominantDirectionalLightComponent" or "DominantSpotLightComponent")
-            {
-                Span<byte> preProps = stackalloc byte[20];
-                const int templateOwnerClass = 0; //todo: When is this not 0?
-
-                EndianBitConverter.WriteAsBytes(0, preProps, Pcc.Endian);
-                EndianBitConverter.WriteAsBytes(templateOwnerClass, preProps[4..], Pcc.Endian);
-                EndianBitConverter.WriteAsBytes(Pcc.FindNameOrAdd(subExport.ObjectName.Name), preProps[8..], Pcc.Endian);
-                EndianBitConverter.WriteAsBytes(subExport.ObjectName.Number, preProps[12..], Pcc.Endian);
-                EndianBitConverter.WriteAsBytes(netIndex, preProps[16..], Pcc.Endian);
-                subExport.WritePrePropsAndPropertiesAndBinary(preProps.ToArray(), props, binary);
-            }
-            else if (subObject.Class.IsComponent)
-            {
-                Span<byte> preProps = stackalloc byte[16];
-                const int templateOwnerClass = 0; //todo: When is this not 0?
-
-                EndianBitConverter.WriteAsBytes(templateOwnerClass, preProps, Pcc.Endian);
-                EndianBitConverter.WriteAsBytes(Pcc.FindNameOrAdd(subExport.ObjectName.Name), preProps[4..], Pcc.Endian);
-                EndianBitConverter.WriteAsBytes(subExport.ObjectName.Number, preProps[8..], Pcc.Endian);
-                EndianBitConverter.WriteAsBytes(netIndex, preProps[12..], Pcc.Endian);
-                subExport.WritePrePropsAndPropertiesAndBinary(preProps.ToArray(), props, binary);
-            }
-            else
-            {
-                subExport.WritePropertiesAndBinary(props, binary);
-            }
+            subExport.WritePropsAndDefaultBinary(props, netIndex, subObject.Class.IsComponent);
         }
 
         private IEntry GetClassDefaultObject(IEntry classEntry)

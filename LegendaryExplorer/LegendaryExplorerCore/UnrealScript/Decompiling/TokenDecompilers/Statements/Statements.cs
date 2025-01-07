@@ -236,7 +236,7 @@ namespace LegendaryExplorerCore.UnrealScript.Decompiling
 
             if (ReturnType is Enumeration enm && expr is IntegerLiteral {Value: >= 0} intLit && intLit.Value < enm.Values.Count)
             {
-                expr = new CompositeSymbolRef(new SymbolReference(enm, enm.Name), new SymbolReference(null, enm.Values[intLit.Value].Name));
+                expr = new CompositeSymbolRef(new SymbolReference(enm, enm.Name), new SymbolReference(null, enm.Values[(int)intLit.Value].Name));
             }
             var statement = new ReturnStatement(expr);
             StatementLocations.Add(StartPositions.Pop(), statement);
