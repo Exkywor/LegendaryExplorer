@@ -1081,6 +1081,10 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         {
             PackageEditorExperimentsS.JSONSerialize(GetPEWindow());
         }
+        private void CompileT3Ds_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsS.CompileT3Ds(GetPEWindow());
+        }
 
         #endregion
 

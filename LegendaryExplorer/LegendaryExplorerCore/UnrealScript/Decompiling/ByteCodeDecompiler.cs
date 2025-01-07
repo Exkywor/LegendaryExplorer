@@ -565,7 +565,7 @@ namespace LegendaryExplorerCore.UnrealScript.Decompiling
                         {
                             if (caseStatement.Value is IntegerLiteral {Value: >= 0} intLit && intLit.Value < valuesCount)
                             {
-                                EnumValue enumValue = enm.Values[intLit.Value];
+                                EnumValue enumValue = enm.Values[(int)intLit.Value];
                                 caseStatement.Value = new SymbolReference(enumValue, enumValue.Name);
                             }
                         }

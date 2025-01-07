@@ -1376,7 +1376,12 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
 
         public bool VisitNode(IntegerLiteral node)
         {
-            int i = node.Value;
+            //last minute sanity check. Hopefully will have been caught by the parser before this
+            if (node.Value is < int.MinValue or > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException($"Integer literal too large: {node.Value}");
+            }
+            int i = (int)node.Value;
             if (node.NumType != Keywords.INT && i is >= 0 and < 265)
             {
                 WriteOpCode(OpCodes.ByteConst);
@@ -1434,7 +1439,9 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
             }
             else
             {
-                IEntry entry = ResolveObject($"{ContainingClass.InstancedFullPath}.{node.Name.Value}", node.Class.Name) ?? ResolveObject(node.Name.Value, node.Class.Name) ?? USOP.MissingObjectResolver?.Invoke(Pcc, node.Name.Value);
+                IEntry entry = ResolveObject($"{ContainingClass.InstancedFullPath}.{node.Name.Value}", node.Class.Name) 
+                               ?? ResolveObject(node.Name.Value, node.Class.Name) 
+                               ?? USOP.MissingObjectResolver?.Invoke(Pcc, node.Name.Value, node.Class.Name);
                 if (entry is null)
                 {
                     throw new Exception($"Line {CompilationUnit.Tokens.LineLookup.GetLineFromCharIndex(node.StartPos)}: Could not find '{node.Name.Value}' in {Pcc.FilePath}!");

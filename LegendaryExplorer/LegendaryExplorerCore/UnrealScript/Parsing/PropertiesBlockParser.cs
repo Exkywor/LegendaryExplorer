@@ -24,6 +24,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
         private readonly ObjectType Outer;
         private readonly UnrealScriptOptionsPackage usop;
         private bool InSubOject;
+        private bool IsT3D;
 
         public static void Parse(DefaultPropertiesBlock propsBlock, IMEPackage pcc, SymbolTable symbols, MessageLog log, bool isInDefaultsTree, UnrealScriptOptionsPackage usop)
         {
@@ -54,6 +55,15 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             return parser.ParseBulkProps();
         }
 
+        public static Subobject ParseT3D(TokenStream tokens, IMEPackage pcc, SymbolTable symbols, MessageLog log, UnrealScriptOptionsPackage usop)
+        {
+            var parser = new PropertiesBlockParser(tokens, pcc, symbols, log, false, usop)
+            {
+                IsT3D = true
+            };
+            return parser.ParseObjectDeclaration();
+        }
+
         private PropertiesBlockParser(IMEPackage pcc, SymbolTable symbols, MessageLog log, bool isInDefaultsTree, UnrealScriptOptionsPackage usop)
         {
             this.usop = usop;
@@ -72,7 +82,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             ExpressionScopes.Push(outer);
         }
 
-        private PropertiesBlockParser(TokenStream tokens, IMEPackage pcc, SymbolTable symbols, MessageLog log, bool isInDefaultsTree,UnrealScriptOptionsPackage usop) : this(pcc, symbols, log, isInDefaultsTree, usop)
+        private PropertiesBlockParser(TokenStream tokens, IMEPackage pcc, SymbolTable symbols, MessageLog log, bool isInDefaultsTree, UnrealScriptOptionsPackage usop) : this(pcc, symbols, log, isInDefaultsTree, usop)
         {
             Tokens = tokens;
             IsStructDefaults = false;
@@ -284,15 +294,33 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                 throw ParseError($"{classNameToken} is not the name of a class!", classNameToken);
             }
 
+            if (objectClass.OuterClass is Class outerClass && SubObjectClasses.Count > 0 && !SubObjectClasses.Peek().SameAsOrSubClassOf(outerClass))
+            {
+                TypeError($"A '{objectClass.Name}' must be declared within a '{outerClass.Name}', not a '{SubObjectClasses.Peek().Name}'!", classNameToken);
+            }
+
             if (!Matches("Name", EF.Keyword) || !Matches(TokenType.Assign, EF.Operator))
             {
                 throw ParseError("Expected 'Name=' after Class reference!", CurrentPosition);
             }
 
-            var nameToken = Consume(TokenType.NameLiteral) ?? throw ParseError("Expected full path of Object!", CurrentPosition);
-            string objectName = nameToken.Value;
-
+            string objectName;
+            if (IsT3D)
+            {
+                objectName = "";
+                //not really accurate, should only allow a subset of token types but this won't have false _negatives_ at least
+                while (PrevToken.EndPos == CurrentToken.StartPos) //loop until whitespace
+                {
+                    objectName += CurrentToken.Value;
+                    Tokens.Advance();
+                }
+            }
+            else
+            {
+                objectName = Consume(TokenType.NameLiteral)?.Value ?? throw ParseError("Expected full path of Object!", CurrentPosition);
+            }
             var statements = new List<Statement>();
+            SubObjectClasses.Push(objectClass);
             ExpressionScopes.Push(objectClass);
             Symbols.PushScope(objectName);
             try
@@ -301,13 +329,25 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                 {
                     if (CurrentIs("BEGIN") && NextIs("Object"))
                     {
-                        throw ParseError("SubObject declarations are not allowed in this context!", startPos);
+                        if (!IsT3D)
+                        {
+                            throw ParseError("SubObject declarations are not allowed in this context!", startPos);
+                        }
+                        statements.Add(ParseObjectDeclaration());
                     }
-                    if (CurrentIs("END") && NextIs("Object"))
+                    else if (CurrentIs("END") && NextIs("Object"))
                     {
                         break;
                     }
-                    statements.Add(ParseNonStructAssignment() ?? throw ParseError("Object declaration has no end!", startPos));
+                    else
+                    {
+                        AssignStatement assignStatement = ParseNonStructAssignment() ?? throw ParseError("Object declaration has no end!", startPos);
+                        if (IsT3D && assignStatement.Target.ResolveType() is ErrorType)
+                        {
+                            continue;
+                        }
+                        statements.Add(assignStatement);
+                    }
                 }
             }
             finally
@@ -315,6 +355,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
 
                 Symbols.PopScope();
                 ExpressionScopes.Pop();
+                SubObjectClasses.Pop();
             }
             //END
             CurrentToken.SyntaxType = EF.Keyword;
@@ -323,7 +364,75 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             CurrentToken.SyntaxType = EF.Keyword;
             Tokens.Advance();
 
+            //T3D support: condense dynamic array by-index assignments into a single DynamicArrayLiteral assignment
+            if (IsT3D)
+            {
+                for (int i = 0; i < statements.Count; i++)
+                {
+                    Statement statement = statements[i];
+                    if (statement is AssignStatement { Target: ArraySymbolRef { IsDynamic: true, Array: SymbolReference { Node: {} arrayDecl } target } } firstAssignStatement)
+                    {
+                        int startIndex = i;
+                        var values = new List<Expression>();
+                        long arrIndex = -1;
+                        int dynArrayLitEndPos = firstAssignStatement.EndPos;
+                        var dynamicArrayType = (DynamicArrayType)target.ResolveType();
+                        var elementType = dynamicArrayType.ElementType;
+                        while (statement is AssignStatement
+                               {
+                                   Target: ArraySymbolRef
+                                   {
+                                       IsDynamic: true,
+                                       Index: IntegerLiteral { Value: long valIndex } intLit,
+                                       Array: SymbolReference { Node: {} arrayRef } 
+                                   }
+                               } assignStatement &&
+                               arrayRef == arrayDecl)
+                        {
+                            if (valIndex < arrIndex)
+                            {
+                                TypeError($"Dynamic array assignments must be unique and sequential.)", intLit);
+                            }
+                            for (; arrIndex + 1 < valIndex ; arrIndex++)
+                            {
+                                values.Add(elementType switch {
+                                    ClassType => new NoneLiteral(),
+                                    Class => new NoneLiteral(),
+                                    DelegateType => new NoneLiteral(),
+                                    Enumeration => new NoneLiteral(),
+                                    Struct @struct => new StructLiteral(@struct, []),
+                                    ObjectType => new NoneLiteral(),
+                                    _ => elementType.PropertyType switch {
+                                        EPropertyType.Byte => new IntegerLiteral(0),
+                                        EPropertyType.Int => new IntegerLiteral(0),
+                                        EPropertyType.Bool => new BooleanLiteral(false),
+                                        EPropertyType.Float => new FloatLiteral(0f),
+                                        EPropertyType.Name => new NameLiteral("None"),
+                                        EPropertyType.String => new StringLiteral(""),
+                                        EPropertyType.StringRef => new StringRefLiteral(0),
+                                        _ => throw new ArgumentOutOfRangeException()
+                                    }
+                                });
+                            }
+                            arrIndex = valIndex;
+                            values.Add(assignStatement.Value);
+                            i++;
+                            statement = statements[i];
+                        }
+                        statements[startIndex] = new AssignStatement(target,
+                            new DynamicArrayLiteral(dynamicArrayType, values, firstAssignStatement.Value.StartPos, dynArrayLitEndPos),
+                            firstAssignStatement.StartPos, dynArrayLitEndPos);
+                        statements.RemoveRange(startIndex + 1, i - (startIndex + 1));
+                        i = startIndex;
+                    }
+                }
+            }
+
             var subObj = new Subobject(objectName, objectClass, statements, false, startPos, PrevToken.EndPos);
+            foreach (Statement statement in statements)
+            {
+                statement.Outer = subObj;
+            }
             return subObj;
         }
 
@@ -353,34 +462,49 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                     TypeError("Cannot assign to a transient property in a SubObject!", propName);
                 }
                 VariableType targetType = target.ResolveType();
-                if (Matches(TokenType.LeftSqrBracket))
+                if (Matches(TokenType.LeftSqrBracket) || (IsT3D && Matches(TokenType.LeftParenth)))
                 {
+                    var endTokenType = PrevToken.Type is TokenType.LeftSqrBracket ? TokenType.RightSqrBracket : TokenType.RightParenth;
                     Expression expression = ParseLiteral();
                     if (expression is not IntegerLiteral intLit)
                     {
                         throw ParseError("Expected an integer index!", expression?.StartPos ?? CurrentPosition, expression?.EndPos ?? -1);
                     }
 
-                    if (targetType is not StaticArrayType arrType)
+                    if (targetType is StaticArrayType arrType)
                     {
-                        TypeError("Cannot index a property that is not a static array!", intLit);
+                        if (intLit.Value >= arrType.Length)
+                        {
+                            TypeError($"'{propName}' only has {arrType.Length} elements!", intLit);
+                        }
+                        else if (intLit.Value < 0)
+                        {
+                            TypeError("Index cannot be a negative number!", intLit);
+                        }
+                        else
+                        {
+                            targetType = arrType.ElementType;
+                        }
                     }
-                    else if (intLit.Value >= arrType.Length)
+                    else if (IsT3D && targetType is DynamicArrayType dynArrType)
                     {
-                        TypeError($"'{propName}' only has {arrType.Length} elements!", intLit);
-                    }
-                    else if (intLit.Value < 0)
-                    {
-                        TypeError("Index cannot be a negative number!", intLit);
+                        if (intLit.Value < 0)
+                        {
+                            TypeError("Index cannot be a negative number!", intLit);
+                        }
+                        else
+                        {
+                            targetType = dynArrType.ElementType;
+                        }
                     }
                     else
                     {
-                        targetType = arrType.ElementType;
+                        TypeError($"Cannot index a property that is not {(IsT3D ? "an" : "a static")} array!", intLit);
                     }
 
-                    if (Consume(TokenType.RightSqrBracket) is not { } closeBracket)
+                    if (Consume(endTokenType) is not { } closeBracket)
                     {
-                        throw ParseError("Expected a ']'!", CurrentPosition);
+                        throw ParseError($"Expected a {(endTokenType is TokenType.RightSqrBracket ? ']' : ')')}!", CurrentPosition);
                     }
                     target = new ArraySymbolRef(target, intLit, target.StartPos, closeBracket.EndPos);
                 }
@@ -409,7 +533,15 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                 {
                     throw ParseError($"A '{{' is used to start a struct. Expected a {targetType.DisplayName()} literal!", CurrentPosition);
                 }
+                if (IsT3D && !Matches(TokenType.LeftParenth))
+                {
+                    throw ParseError("In T3D format, a struct literal with a '{' must have a '(' after it.");
+                }
                 literal = FinishStructLiteral(targetStruct);
+                if (IsT3D && !Matches(TokenType.RightBracket))
+                {
+                    throw ParseError("This struct literal was begun with '{(', so it must end with ')}'.");
+                }
             }
             else if (Matches(TokenType.LeftParenth))
             {
@@ -418,11 +550,22 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                     case DynamicArrayType dynamicArrayType:
                         literal = FinishDynamicArrayLiteral(dynamicArrayType);
                         break;
-                    case Struct:
-                        ParseError("Use '{' for struct literals, not '('.", CurrentPosition);
-                        goto default;
+                    case Struct targetStruct:
+                        if (!IsT3D)
+                        {
+                            ParseError("Use '{' for struct literals, not '('.", CurrentPosition);
+                            goto default;
+                        }
+                        literal = FinishStructLiteral(targetStruct);
+                        break;
                     default:
-                        throw ParseError($"A '(' is used to start a dynamic array literal. Expected a {targetType.DisplayName()} literal!", CurrentPosition);
+                        if (IsT3D && targetType.PropertyType is EPropertyType.String && Matches(TokenType.RightParenth))
+                        {
+                            //I guess () is supposed to be empty string??? whyyyy Epic, whyyyyy
+                            literal = new StringLiteral("");
+                            break;
+                        }
+                        throw ParseError($"A '(' is used to start a {(IsT3D ? "struct or " : "")}dynamic array literal. Expected a {targetType.DisplayName()} literal!", CurrentPosition);
                 }
             }
             else
@@ -438,6 +581,16 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                         if (Consume(TokenType.NameLiteral) is { } objName)
                         {
                             literal = ParseObjectLiteral(token, objName, false);
+                        }
+                        else if (IsT3D && targetType.PropertyType is EPropertyType.Name)
+                        {
+                            literal = new NameLiteral(token.Value, token.StartPos, token.EndPos);
+                        }
+                        else if (IsT3D && targetType is Enumeration enm && enm.Values.FirstOrDefault(val => val.Name.CaseInsensitiveEquals(token.Value)) is EnumValue enumValue)
+                        {
+                            token.SyntaxType = EF.Enum;
+                            Tokens.AddDefinitionLink(enm, token);
+                            literal = NewSymbolReference(enumValue, token, false);
                         }
                         else
                         {
@@ -470,7 +623,10 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                     }
                 }
             }
-
+            if (IsT3D && targetType is ErrorType)
+            {
+                return literal;
+            }
             VerifyLiteral(targetType, ref literal);
             return literal;
         }
@@ -479,8 +635,8 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
         {
             ScriptToken openingBracket = PrevToken;
             var statements = new List<AssignStatement>();
-
-            if (!Matches(TokenType.RightBracket))
+            var endTokenType = IsT3D ? TokenType.RightParenth : TokenType.RightBracket;
+            if (!Matches(endTokenType))
             {
                 ExpressionScopes.Push(targetStruct);
                 try
@@ -492,9 +648,9 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                         statement = ParseAssignment(true);
                         statements.Add(statement);
                     }
-                    if (!Matches(TokenType.RightBracket))
+                    if (!Matches(endTokenType))
                     {
-                        throw ParseError("Expected struct literal to end with a '}'!", openingBracket.StartPos, CurrentPosition);
+                        throw ParseError($"Expected struct literal to end with a '{(IsT3D ? ')' : '}')}'!", openingBracket.StartPos, CurrentPosition);
                     }
                 }
                 finally
@@ -696,6 +852,13 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
 
                             break;
                         case EPropertyType.Name:
+                            if (IsT3D && literal is StringLiteral stringNameLiteral)
+                            {
+                                literal = new NameLiteral(stringNameLiteral.Value, stringNameLiteral.StartPos, stringNameLiteral.EndPos)
+                                {
+                                    Outer = stringNameLiteral.Outer
+                                };
+                            }
                             if (literal is not NameLiteral)
                             {
                                 TypeError($"Expected a {NAME} literal!", literal);
@@ -728,7 +891,11 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             {
                 if (objectLiteral.Class is not ClassType && Pcc.FindEntry(objectLiteral.Name.Value, objectLiteral.Class.Name) is null)
                 {
-                    if (usop.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value) is null)
+                    if (IsT3D)
+                    {
+                        return;
+                    }
+                    if (usop.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value, objectLiteral.Class.Name) is null)
                     {
                         TypeError($"Could not find '{objectLiteral.Name.Value}' in this file!", objectLiteral);
                     }
@@ -746,11 +913,11 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             }
             else
             {
-                TypeError($"{scopeObject.GetScope()} has no member named '{token.Value}'!", token);
-                symbol = new VariableType("ERROR");
+                if (!IsT3D) TypeError($"{scopeObject.GetScope()} has no member named '{token.Value}'!", token);
+                symbol = new ErrorType();
             }
 
-            if (!inStruct && token.Value.CaseInsensitiveEquals("Name") || token.Value.CaseInsensitiveEquals("ObjectArchetype "))
+            if (!inStruct && !IsT3D && (token.Value.CaseInsensitiveEquals("Name") || token.Value.CaseInsensitiveEquals("ObjectArchetype")))
             {
                 TypeError($"Cannot set '{token.Value}' property!", token);
             }
@@ -785,7 +952,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                 }
                 //TODO: better error message
                 TypeError($"{specificScope} has no member named '{token.Value}'!", token);
-                symbol = new VariableType("ERROR");
+                symbol = new ErrorType();
             }
 
             return NewSymbolReference(symbol, token, false);

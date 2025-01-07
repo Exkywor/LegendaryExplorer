@@ -386,7 +386,11 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             ScriptToken token = CurrentToken;
             if (Matches(TokenType.IntegerNumber))
             {
-                int val = int.Parse(token.Value, CultureInfo.InvariantCulture);
+                if (!long.TryParse(token.Value, CultureInfo.InvariantCulture, out long val))
+                {
+                    TypeError($"Integer value {token.Value} is too large! Must be within the range [{int.MinValue}, {int.MaxValue}]", token);
+                    val = 0;
+                }
                 return new IntegerLiteral(val, token.StartPos, token.EndPos) { NumType = INT };
             }
 
@@ -622,6 +626,10 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                         TypeError("Malformed constant value!", CurrentPosition);
                         break;
                 }
+            }
+            if (literal is IntegerLiteral { Value: < int.MinValue or > int.MaxValue } intLit)
+            {
+                TypeError($"Integer value {intLit.Value} is too large! Must be within the range [{int.MinValue}, {int.MaxValue}]", intLit);
             }
 
             return literal;

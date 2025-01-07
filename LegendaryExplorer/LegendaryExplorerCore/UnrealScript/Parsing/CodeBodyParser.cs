@@ -287,7 +287,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                     else
                     {
                         TypeError($"{Self.Name} has no member named '{varToken.Value}'!", varToken);
-                        symbols.Add(NewSymbolReference(new VariableType("Error"), varToken, false));
+                        symbols.Add(NewSymbolReference(new ErrorType(), varToken, false));
                     }
                     if (Matches(TokenType.SemiColon))
                     {
@@ -1268,6 +1268,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             {
                 return null;
             }
+            CheckIntegerLiteralRange(expr);
             while (IsOperator(out bool isRightShift, out TokenType opType))
             {
                 CurrentToken.SyntaxType = EF.Operator;
@@ -1520,6 +1521,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                 if (expr is IntegerLiteral intLit)
                 {
                     intLit.NumType = INT;
+                    CheckIntegerLiteralRange(intLit);
                 }
                 VariableType exprType = expr.ResolveType();
                 if (exprType != SymbolTable.IntType)
@@ -1559,6 +1561,14 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             }
 
             return expr;
+        }
+
+        private void CheckIntegerLiteralRange(Expression expr)
+        {
+            if (expr is IntegerLiteral { Value: < int.MinValue or > int.MaxValue } intLit)
+            {
+                TypeError($"Integer value {intLit.Value} is too large! Must be within the range [{int.MinValue}, {int.MaxValue}]", intLit);
+            }
         }
 
         private static void AddConversion(VariableType destType, ref Expression expr)
@@ -2843,7 +2853,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
                 {
                     //TODO: better error message
                     TypeError($"{specificScope} has no member named '{token.Value}'!", token);
-                    symbol = new VariableType("ERROR");
+                    symbol = new ErrorType();
                 }
             }
 
@@ -2855,7 +2865,7 @@ namespace LegendaryExplorerCore.UnrealScript.Parsing
             if (isStructScope && symbol.Outer is not Struct)
             {
                 TypeError($"{specificScope} has no member named '{token.Value}'!", token);
-                symbol = new VariableType("ERROR");
+                symbol = new ErrorType();
             }
 
             if (symbol is Function func)

@@ -69,6 +69,8 @@ namespace LegendaryExplorerCore.UnrealScript.Language.Tree
         string IHasFileReference.Name => Name;
     }
 
+    public class ErrorType() : VariableType("ERROR");
+
     public static class VariableTypeExtensions
     {
         public static string DisplayName(this VariableType type)

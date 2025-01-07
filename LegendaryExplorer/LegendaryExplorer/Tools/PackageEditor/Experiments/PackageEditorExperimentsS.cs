@@ -2971,7 +2971,7 @@ import java.util.*;"
                 return packagePath;
 
                 //a real resolver might want to pull in donors, or at least keep track of which exports had been stubbed
-                static IEntry MissingObjectResolver(IMEPackage pcc, string instancedPath)
+                static IEntry MissingObjectResolver(IMEPackage pcc, string instancedPath, string className)
                 {
                     ExportEntry export = null;
                     foreach (string name in instancedPath.Split('.'))
@@ -3097,6 +3097,79 @@ import java.util.*;"
             mat.JsonSerialize(fs);
             //var mat = Material.JsonDeserialize(fs, pcc);
             //export.WriteBinary(mat);
+        }
+
+        public static void CompileT3Ds(PackageEditorWindow pew)
+        {
+            var folderPicker = new CommonOpenFileDialog
+            {
+                IsFolderPicker = true,
+                EnsurePathExists = true,
+                Title = "Select folder with .t3d files"
+            };
+            if (folderPicker.ShowDialog(pew) is not CommonFileDialogResult.Ok) return;
+            string classFolder = folderPicker.FileName;
+
+            var pcc = pew.Pcc;
+            if (pcc is null)
+            {
+                MessageBox.Show(pew, "Must have an open package.");
+                return;
+            }
+            pew.SetBusy("Compiling .t3d files");
+            Task.Run(() =>
+            {
+                using var cache = new PackageCache();
+                var usop = new UnrealScriptOptionsPackage
+                {
+                    MissingObjectResolver = MissingObjectResolver,
+                    Cache = cache
+                };
+                return CompileFolder(classFolder, null);
+
+                MessageLog CompileFolder(string folder, IEntry parent)
+                {
+                    foreach (string t3dFilePath in Directory.EnumerateFiles(folder, "*.t3d", SearchOption.TopDirectoryOnly))
+                    {
+                        string source = File.ReadAllText(t3dFilePath);
+                        MessageLog log = UnrealScriptCompiler.CompileT3D(source, pcc, parent, usop);
+                        if (log.HasErrors)
+                        {
+                            log.LogError($"Failed to compile {t3dFilePath}");
+                            return log;
+                        }
+                    }
+                    foreach (string subFolder in Directory.EnumerateDirectories(folder))
+                    {
+                        var packageExport = ExportCreator.CreatePackageExport(pcc, Path.GetFileName(subFolder), parent);
+                        MessageLog log = CompileFolder(subFolder, packageExport);
+                        if (log is not null && log.HasErrors)
+                        {
+                            return log;
+                        }
+                    }
+                    return null;
+                }
+
+                IEntry MissingObjectResolver(IMEPackage sourcepackage, string instancedfullpath, string classname)
+                {
+                    //could be used to resolve texture references
+                    return null;
+                }
+
+            }).ContinueWithOnUIThread(prevTask =>
+            {
+                pew.EndBusy();
+                switch (prevTask.Result)
+                {
+                    case MessageLog log:
+                        new ListDialog(log.AllErrors.Select(msg => msg.ToString()), "Errors occured while compiling .t3d files", "", pew).Show();
+                        break;
+                    default:
+                        MessageBox.Show("Success!");
+                        break;
+                }
+            });
         }
     }
 }

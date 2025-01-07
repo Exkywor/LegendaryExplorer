@@ -625,6 +625,62 @@ namespace LegendaryExplorerCore.Packages
             }
             return false;
         }
+        public static void WritePropsAndDefaultBinary(this ExportEntry export, PropertyCollection props, int netIndex, bool isComponent)
+        {
+            IMEPackage pcc = export.FileRef;
+            var binary = ObjectBinary.Create(export.ClassName, export.Game, props);
+
+            //this code should probably be somewhere else, perhaps integrated into ObjectBinary.Create somehow?
+            if (binary is BioDynamicAnimSet dynAnimSet && props.GetProp<ArrayProperty<ObjectProperty>>("Sequences") is { } sequences)
+            {
+                var setName = props.GetProp<NameProperty>("m_nmOrigSetName");
+                foreach (ObjectProperty objProp in sequences)
+                {
+                    switch (objProp.ResolveToEntry(pcc))
+                    {
+                        case ExportEntry exportEntry when exportEntry.GetProperty<NameProperty>("SequenceName") is { } seqNameProperty:
+                            dynAnimSet.SequenceNamesToUnkMap.Add(seqNameProperty.Value, 1);
+                            break;
+                        case IEntry entry:
+                            if (setName is null)
+                            {
+                                throw new Exception($"{nameof(BioDynamicAnimSet)} must have m_nmOrigSetName property defined!");
+                            }
+                            dynAnimSet.SequenceNamesToUnkMap.Add(entry.ObjectName.Instanced[(setName.Value.Instanced.Length + 1)..], 1);
+                            break;
+                    }
+                }
+            }
+
+            if (export.ClassName is "DominantDirectionalLightComponent" or "DominantSpotLightComponent")
+            {
+                Span<byte> preProps = stackalloc byte[20];
+                const int templateOwnerClass = 0; //todo: When is this not 0?
+
+                EndianBitConverter.WriteAsBytes(0, preProps, pcc.Endian);
+                EndianBitConverter.WriteAsBytes(templateOwnerClass, preProps[4..], pcc.Endian);
+                EndianBitConverter.WriteAsBytes(pcc.FindNameOrAdd(export.ObjectName.Name), preProps[8..], pcc.Endian);
+                EndianBitConverter.WriteAsBytes(export.ObjectName.Number, preProps[12..], pcc.Endian);
+                EndianBitConverter.WriteAsBytes(netIndex, preProps[16..], pcc.Endian);
+                export.WritePrePropsAndPropertiesAndBinary(preProps.ToArray(), props, binary);
+            }
+            else if (isComponent)
+            {
+                Span<byte> preProps = stackalloc byte[16];
+                const int templateOwnerClass = 0; //todo: When is this not 0?
+
+                EndianBitConverter.WriteAsBytes(templateOwnerClass, preProps, pcc.Endian);
+                EndianBitConverter.WriteAsBytes(pcc.FindNameOrAdd(export.ObjectName.Name), preProps[4..], pcc.Endian);
+                EndianBitConverter.WriteAsBytes(export.ObjectName.Number, preProps[8..], pcc.Endian);
+                EndianBitConverter.WriteAsBytes(netIndex, preProps[12..], pcc.Endian);
+                export.WritePrePropsAndPropertiesAndBinary(preProps.ToArray(), props, binary);
+            }
+            else
+            {
+                export.WritePropertiesAndBinary(props, binary);
+                export.NetIndex = netIndex;
+            }
+        }
     }
 
     public static class IEntryExtensions

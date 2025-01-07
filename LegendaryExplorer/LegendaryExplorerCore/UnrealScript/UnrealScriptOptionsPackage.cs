@@ -27,10 +27,12 @@ namespace LegendaryExplorerCore.UnrealScript
         /// </summary>
         public Func<string, PackageCache, IMEPackage> CustomFileResolver { get; set; }
 
+        public delegate IEntry ObjectResolutionDelegate(IMEPackage sourcePackage, string instancedFullPath, string className);
+
         /// <summary>
-        /// Delegate that can be used to look up missing objects when compiling classes and a referenced object is not found in the local file. [Source package, IFP to import/export]
+        /// Delegate that can be used to look up missing objects when compiling classes and a referenced object is not found in the local file. [Source package, IFP to import/export, Class name]
         /// </summary>
-        public Func<IMEPackage, string, IEntry> MissingObjectResolver { get; set; }
+        public ObjectResolutionDelegate MissingObjectResolver { get; set; }
 
         /// <summary>
         /// Invoked to fetch a VTable for a class from a donor object. Used to align VTables typically across games. [IFP to VTable list]

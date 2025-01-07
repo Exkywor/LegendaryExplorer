@@ -95,6 +95,6 @@ namespace LegendaryExplorerCore.UnrealScript.Language.Tree
         }
 
         public abstract bool AcceptVisitor(IASTVisitor visitor);
-        public virtual IEnumerable<ASTNode> ChildNodes => Enumerable.Empty<ASTNode>();
+        public virtual IEnumerable<ASTNode> ChildNodes => [];
     }
 }

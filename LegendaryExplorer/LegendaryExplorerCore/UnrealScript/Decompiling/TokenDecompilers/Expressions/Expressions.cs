@@ -604,12 +604,12 @@ namespace LegendaryExplorerCore.UnrealScript.Decompiling
                 {
                     case IntegerLiteral {Value: >= 0} intLit when intLit.Value < enm.Values.Count:
                         a = symRef;
-                        b = new SymbolReference(enm.Values[intLit.Value], enm.Values[intLit.Value].Name);
+                        b = new SymbolReference(enm.Values[(int)intLit.Value], enm.Values[(int)intLit.Value].Name);
                         return true;
                     case ConditionalExpression {TrueExpression: IntegerLiteral { Value: >= 0 } trueLit, FalseExpression: IntegerLiteral { Value: >= 0 } falseLit} condExpr:
                         a = symRef;
-                        condExpr.TrueExpression = new SymbolReference(enm.Values[trueLit.Value], enm.Values[trueLit.Value].Name);
-                        condExpr.FalseExpression = new SymbolReference(enm.Values[falseLit.Value], enm.Values[falseLit.Value].Name);
+                        condExpr.TrueExpression = new SymbolReference(enm.Values[(int)trueLit.Value], enm.Values[(int)trueLit.Value].Name);
+                        condExpr.FalseExpression = new SymbolReference(enm.Values[(int)falseLit.Value], enm.Values[(int)falseLit.Value].Name);
                         return true;
                 }
             }

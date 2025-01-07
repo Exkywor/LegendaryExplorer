@@ -216,6 +216,51 @@ namespace LegendaryExplorerCore.UnrealScript
             return log;
         }
 
+        public static MessageLog CompileT3D(string src, IMEPackage pcc, IEntry parentEntry, UnrealScriptOptionsPackage usop)
+        {
+            var log = new MessageLog();
+            TokenStream tokens = Lexer.Lex(src, log);
+            if (log.HasLexErrors)
+            {
+                return log;
+            }
+            var lib = new FileLib(pcc);
+            if (!lib.Initialize(usop))
+            {
+                return lib.InitializationLog;
+            }
+            SymbolTable symbols = lib.GetSymbolTable();
+            symbols.RevertToObjectStack();
+            Subobject subobject;
+            try
+            {
+                subobject = PropertiesBlockParser.ParseT3D(tokens, pcc, symbols, log, usop);
+            }
+            catch (ParseException)
+            {
+                log.LogError("Parse failed!");
+                return log;
+            }
+            catch (Exception e)
+            {
+                log.LogError($"Parse failed! Exception: {e}");
+                return log;
+            }
+            if (log.HasErrors) return log;
+
+            try
+            {
+                var newExport = ScriptPropertiesCompiler.CompileNewObject(subobject, parentEntry, pcc, usop, true);
+            }
+            catch (Exception e)
+            {
+                log.LogError($"Exception: {e}");
+                return log;
+            }
+
+            return log;
+        }
+
         public static string DecompileBulkProps(IMEPackage pcc, out MessageLog log, UnrealScriptOptionsPackage usop)
         {
             var fileLib = new FileLib(pcc);
