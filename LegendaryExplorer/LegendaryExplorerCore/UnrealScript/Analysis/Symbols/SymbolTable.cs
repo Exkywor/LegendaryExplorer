@@ -911,30 +911,6 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                     PushScope(codecBinkType.Name); PopScope();
                     break;
                 }
-
-                #region T3D parsing hacks
-
-                case "Material":
-                {
-                    var matClass = ((Class)node);
-                    if (!matClass.VariableDeclarations.Any(varDecl => varDecl.Name is "ReferencedTextureGuids"))
-                    {
-                        matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(TypeDict["Guid"]), EPropertyFlags.Transient | EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "ReferencedTextureGuids")
-                        {
-                            Outer = node
-                        });
-                    }
-                    if (!matClass.VariableDeclarations.Any(varDecl => varDecl.Name is "EditorComments"))
-                    {
-                        matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(TypeDict["Object"]), EPropertyFlags.Transient | EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "EditorComments")
-                        {
-                            Outer = node
-                        });
-                    }
-                    break;
-                }
-
-                    #endregion
             }
 
             if (node is Class c && c.Flags.Has(EClassFlags.Intrinsic))
