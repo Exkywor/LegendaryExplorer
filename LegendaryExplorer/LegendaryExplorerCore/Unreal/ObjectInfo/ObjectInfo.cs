@@ -1922,6 +1922,9 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
                         new PropertyInfo(PropertyType.FloatProperty)),
                 }
             };
+
+            // Useful additions
+            _classes["Material"].properties.Add(new KeyValuePair<NameReference, PropertyInfo>("EditorComments", new PropertyInfo(PropertyType.ArrayProperty, "MaterialExpressionComment"))); // Useful for metadata
         }
     }
 

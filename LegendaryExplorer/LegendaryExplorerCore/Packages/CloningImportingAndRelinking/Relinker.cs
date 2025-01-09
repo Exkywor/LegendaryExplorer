@@ -144,6 +144,25 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
         /// When relinking only objects within the same package, setting this to true will force imports to be considered for relink. This is useful for repointing import references to different objects.
         /// </summary>
         public bool ForceSamePackageImportRelink { get; set; }
+
+        /// <summary>
+        /// Provides a way to override relinkUIndex() behavior. If not provided, the default implementation is used.
+        /// </summary>
+        /// <param name="importingPcc">Pcc being imported from</param>
+        /// <param name="relinkingExport">The export in the destination being relinked</param>
+        /// <param name="uIndex">The source package uIndex. It should be changed to the destination package uIndex by the end of the call.</param>
+        /// <param name="propertyName">Name of the item being relinked (for messages)</param>
+        /// <param name="prefix">Prefix to put on the relink message (if any)</param>
+        /// <param name="rop">Custom ROP object, same as the one this method is attached to</param>
+        /// <param name="result">The resulting relink message if an issue occurred</param>
+        /// <returns>True if the custom relink was used, false if it was not and the default relink logic will be used</returns>
+        public delegate bool CustomRelinkUIndexDelegate(IMEPackage importingPcc, ExportEntry relinkingExport, ref int uIndex,
+            string propertyName, string prefix, RelinkerOptionsPackage rop, out EntryStringPair result);
+
+        /// <summary>
+        /// Provides a way to override relinkUIndex() behavior. If not provided, the default implementation is used.
+        /// </summary>
+        public CustomRelinkUIndexDelegate CustomRelinkUIndex { get; set; }
     }
 
     public static class Relinker
@@ -853,6 +872,16 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
         /// <returns></returns>
         private static EntryStringPair relinkUIndex(IMEPackage importingPCC, ExportEntry relinkingExport, ref int uIndex, string propertyName, string prefix, RelinkerOptionsPackage rop)
         {
+            // 01/08/2025 - Add support for ROP to provide a custom relink so the caller can determine how an object should relink.
+            // This (originally) is to allow ignoring the default porting behavior
+            if (rop.CustomRelinkUIndex != null)
+            {
+                if (rop.CustomRelinkUIndex(importingPCC, relinkingExport, ref uIndex, propertyName, prefix, rop, out var relinkMessage))
+                {
+                    return relinkMessage;
+                }
+            }
+
             if (uIndex == 0)
             {
                 return null; //do not relink 0
