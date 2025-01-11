@@ -68,6 +68,12 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
             }
         }
 
+        /// <summary>
+        /// Lock for loading property database
+        /// </summary>
+        [JsonIgnore]
+        private object syncObj = new object();
+
         protected GameObjectInfo()
         {
             _classes = new CaseInsensitiveDictionary<ClassInfo>();
@@ -78,39 +84,42 @@ namespace LegendaryExplorerCore.Unreal.ObjectInfo
 
         public void LoadData(string jsonTextOverride = null)
         {
-            if (!IsLoaded)
+            lock (syncObj)
             {
-                try
+                if (!IsLoaded)
                 {
-                    LECLog.Information($@"Loading property db for {Game}");
-                    var infoText = jsonTextOverride ?? ObjectInfoLoader.LoadEmbeddedJSONText(Game);
-                    if (infoText != null)
+                    try
                     {
-                        // Yes, it's ME1ObjectInfo. It is not abstract.
-                        var blob = JsonConvert.DeserializeObject<ME1ObjectInfo>(infoText);
-                        _sequenceObjects = blob._sequenceObjects;
-                        _classes = blob._classes;
-                        _structs = blob._structs;
-                        _enums = blob._enums;
-
-                        AddCustomAndNativeClasses();
-                        foreach ((string className, ClassInfo classInfo) in _classes)
+                        LECLog.Information($@"Loading property db for {Game}");
+                        var infoText = jsonTextOverride ?? ObjectInfoLoader.LoadEmbeddedJSONText(Game);
+                        if (infoText != null)
                         {
-                            classInfo.ClassName = className;
-                        }
+                            // Yes, it's ME1ObjectInfo. It is not abstract.
+                            var blob = JsonConvert.DeserializeObject<ME1ObjectInfo>(infoText);
+                            _sequenceObjects = blob._sequenceObjects;
+                            _classes = blob._classes;
+                            _structs = blob._structs;
+                            _enums = blob._enums;
 
-                        foreach ((string className, ClassInfo classInfo) in _structs)
-                        {
-                            classInfo.ClassName = className;
-                        }
+                            AddCustomAndNativeClasses();
+                            foreach ((string className, ClassInfo classInfo) in _classes)
+                            {
+                                classInfo.ClassName = className;
+                            }
 
-                        IsLoaded = true;
+                            foreach ((string className, ClassInfo classInfo) in _structs)
+                            {
+                                classInfo.ClassName = className;
+                            }
+
+                            IsLoaded = true;
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    LECLog.Information($@"Property database load failed for {Game}: {ex.Message}");
-                    return;
+                    catch (Exception ex)
+                    {
+                        LECLog.Information($@"Property database load failed for {Game}: {ex.Message}");
+                        return;
+                    }
                 }
             }
         }
