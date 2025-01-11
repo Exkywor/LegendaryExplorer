@@ -19,7 +19,7 @@ namespace LegendaryExplorerCore
         {
             Instance = new LegendaryExplorerCoreLibSettings();
             GameFilesystem.ME1Directory.ReloadDefaultGamePath();
-            LECLog.Information($"ME1 Default Path set to {GameFilesystem.LE1Directory.DefaultGamePath}");
+            LECLog.Information($"ME1 Default Path set to {GameFilesystem.ME1Directory.DefaultGamePath}");
             GameFilesystem.ME2Directory.ReloadDefaultGamePath();
             LECLog.Information($"ME2 Default Path set to {GameFilesystem.ME2Directory.DefaultGamePath}");
             GameFilesystem.ME3Directory.ReloadDefaultGamePath();
