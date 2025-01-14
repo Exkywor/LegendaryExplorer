@@ -927,8 +927,14 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                 {
                     //for t3d parsing
                     var matClass = (Class)node;
-                    matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(TypeDict["Guid"]), EPropertyFlags.Transient | EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "ReferencedTextureGuids"));
-                    matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(StringType), EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "EditorComments"));
+                    if (matClass.VariableDeclarations.All(varDecl => varDecl.Name != "ReferencedTextureGuids"))
+                    {
+                        matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(TypeDict["Guid"]), EPropertyFlags.Transient | EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "ReferencedTextureGuids"));
+                    }
+                    if (matClass.VariableDeclarations.All(varDecl => varDecl.Name != "EditorComments"))
+                    {
+                        matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(StringType), EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "EditorComments"));
+                    }
                     break;
                 }
             }
