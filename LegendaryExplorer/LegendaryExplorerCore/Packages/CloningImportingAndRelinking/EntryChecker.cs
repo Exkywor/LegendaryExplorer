@@ -211,9 +211,11 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                     continue;
                 }
 
-                //find binary references
+                //find binary references - DO THIS LAST IN THE LOOP
                 try
                 {
+                    if (exp.Game == MEGame.UDK && exp.ClassName == "ShaderCache")
+                        continue; // ShaderCache parsing is not working //01/11/2025
                     if (!exp.IsDefaultObject && ObjectBinary.From(exp) is ObjectBinary objBin)
                     {
                         List<int> indices = objBin.GetUIndexes(exp.FileRef.Game);
@@ -486,7 +488,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
 
             /// <summary>
             /// This should technically be a memory path, for game consistency...
-        /// </summary>
+            /// </summary>
             public readonly string InstancedFullPath = entry.InstancedFullPath;
 
             public readonly string ClassName = entry.ClassName;
