@@ -461,18 +461,50 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
         }
 
         /// <summary>
-        /// Returns a list of duplicate indexes in a package file. Trash exports are ignored.
+        /// Key class for comparing two entries
+        /// </summary>
+        /// <param name="entry"></param>
+        class ObjectComparer(IEntry entry)
+        {
+            protected bool Equals(ObjectComparer other)
+            {
+                return InstancedFullPath == other.InstancedFullPath && ClassName == other.ClassName;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is null) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != GetType()) return false;
+                return Equals((ObjectComparer)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(InstancedFullPath, ClassName);
+            }
+
+            /// <summary>
+            /// This should technically be a memory path, for game consistency...
+        /// </summary>
+            public readonly string InstancedFullPath = entry.InstancedFullPath;
+
+            public readonly string ClassName = entry.ClassName;
+        }
+
+        /// <summary>
+        /// Returns a list of duplicate named objects in a package file. Trash exports are ignored.
         /// </summary>
         /// <param name="Pcc">Package file to check against</param>
         /// <returns>A list of <see cref="EntryStringPair"/> objects that detail the second or further duplicate. If this list is empty, there are no duplicates detected.</returns>
         public static List<EntryStringPair> CheckForDuplicateIndices(IMEPackage Pcc)
         {
             var duplicates = new List<EntryStringPair>();
-            var duplicatesPackagePathIndexMapping = new Dictionary<string, List<int>>();
+            var duplicatesPackagePathIndexMapping = new Dictionary<ObjectComparer, List<int>>();
             foreach (ExportEntry exp in Pcc.Exports)
             {
-                string key = exp.InstancedFullPath;
-                if (key.StartsWith(UnrealPackageFile.TrashPackageName, StringComparison.OrdinalIgnoreCase))
+                var key = new ObjectComparer(exp);
+                if (key.InstancedFullPath.StartsWith(UnrealPackageFile.TrashPackageName, StringComparison.OrdinalIgnoreCase) && key.ClassName == "Package")
                     continue; //Do not report these as requiring re-indexing.
                 if (!duplicatesPackagePathIndexMapping.TryGetValue(key, out List<int> indexList))
                 {
@@ -481,8 +513,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                 }
                 else
                 {
-                    duplicates.Add(new EntryStringPair(exp,
-                        $"{exp.UIndex} {exp.InstancedFullPath} has duplicate index (index value {exp.indexValue})"));
+                    duplicates.Add(new EntryStringPair(exp, $"{exp.UIndex} {exp.InstancedFullPath} has duplicate index (index value {exp.indexValue})"));
                 }
 
                 indexList.Add(exp.UIndex);
@@ -491,8 +522,8 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
             // IMPORTS TOO
             foreach (ImportEntry imp in Pcc.Imports)
             {
-                string key = imp.InstancedFullPath;
-                if (key.StartsWith(UnrealPackageFile.TrashPackageName, StringComparison.OrdinalIgnoreCase))
+                var key = new ObjectComparer(imp);
+                if (key.InstancedFullPath.StartsWith(UnrealPackageFile.TrashPackageName, StringComparison.OrdinalIgnoreCase) && key.ClassName == "Package")
                     continue; //Do not report these as requiring re-indexing.
                 if (!duplicatesPackagePathIndexMapping.TryGetValue(key, out List<int> indexList))
                 {
