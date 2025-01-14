@@ -2659,10 +2659,11 @@ namespace LegendaryExplorer.Tools.PackageEditor
             ReferenceCheckPackage rcp = new ReferenceCheckPackage();
             EntryChecker.CheckReferences(rcp, Pcc, LECLocalizationShim.NonLocalizedStringConverter);
 
-            if (rcp.GetSignificantIssues().Any())
+            var issues = rcp.GetBlockingErrors().Concat(rcp.GetSignificantIssues()).ToList();
+            if (issues.Any())
             {
-                MessageBox.Show($"{rcp.GetSignificantIssues().Count} object reference issues were found.", "Reference issues found");
-                var lw = new ListDialog(rcp.GetSignificantIssues().ToList(), $"Reference issues in {Pcc.FilePath}",
+                MessageBox.Show($"{issues.Count} object reference issues were found.", "Reference issues found");
+                var lw = new ListDialog(issues.ToList(), $"Reference issues in {Pcc.FilePath}",
                         "The following items have referencing issues. Note that this is a best-effort check and may not be 100% accurate.",
                         this)
                 { DoubleClickEntryHandler = entryDoubleClick };

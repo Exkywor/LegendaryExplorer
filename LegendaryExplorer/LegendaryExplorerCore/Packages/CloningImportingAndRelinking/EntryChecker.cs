@@ -134,7 +134,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
 
                 if (exp.Game == MEGame.UDK && exp.Parent is ImportEntry)
                 {
-                    item.AddBlockingError("UDK does not support exports under imports in non-cooked packages - UDK will crash loading this package file!", exp);
+                    item.AddBlockingError($"UDK does not support exports under imports in non-cooked packages - UDK will crash loading this package file!  Entry: {exp.InstancedFullPath}", exp);
                 }
 
                 var prefix = localizationDelegate(LECLocalizationShim.string_interp_warningGenericExportPrefix, relativePath ?? fName, exp.UIndex, exp.ObjectName.Name, exp.ClassName);
@@ -264,7 +264,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
 
                 if (imp.Game == MEGame.UDK && imp.Parent is ExportEntry)
                 {
-                    item.AddBlockingError("UDK does not support imports under exports in non-cooked packages - UDK will crash loading this package file!", imp);
+                    item.AddBlockingError($"UDK does not support imports under exports in non-cooked packages - UDK will crash loading this package file! Entry: {imp.InstancedFullPath}", imp);
                 }
 
                 // Values check
@@ -329,7 +329,7 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                 {
                     // Nested if to make this a bit more readable
                     if (entry.FileRef.GetEntry(op.Value) != null &&
-                        (entry.FileRef.GetEntry(op.Value).ObjectName.ToString().CaseInsensitiveEquals(@"Trash") 
+                        (entry.FileRef.GetEntry(op.Value).ObjectName.ToString().CaseInsensitiveEquals(@"Trash")
                          || entry.FileRef.GetEntry(op.Value).ObjectName.ToString().CaseInsensitiveEquals(UnrealPackageFile.TrashPackageName)))
                     {
                         item.AddSignificantIssue(localizationDelegate(LECLocalizationShim.string_interp_nested_warningTrashedExportReference,
@@ -453,7 +453,8 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                 {
                     item.AddSignificantIssue(localizationDelegate(LECLocalizationShim.string_interp_warningDelegatePropertyIsOutsideOfExportTable, prefix, dp.Name.Name), entry);
                 }
-            } else if (property is NameProperty np)
+            }
+            else if (property is NameProperty np)
             {
                 if (np.Value.Name == "") // Failed to resolve
                 {
