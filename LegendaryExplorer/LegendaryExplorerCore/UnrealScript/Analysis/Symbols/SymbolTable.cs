@@ -107,89 +107,89 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
             switch (game)
             {
                 case >= MEGame.ME3:
-                    packageType = new Class("Package", objectClass, objectClass, intrinsicClassFlags);
+                    packageType = new Class("Package", objectClass, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(packageType);
                     break;
                 case MEGame.ME1:
-                    table.AddType(new Class("ObjectRedirector", objectClass, objectClass, intrinsicClassFlags));
+                    table.AddType(new Class("ObjectRedirector", objectClass, objectClass, intrinsicClassFlags) { Package = "Core" });
                     break;
             }
 
             //script type intrinsics
-            var fieldType = new Class("Field", objectClass, objectClass, intrinsicClassFlags | EClassFlags.Abstract);
+            var fieldType = new Class("Field", objectClass, objectClass, intrinsicClassFlags | EClassFlags.Abstract) { Package = "Core" };
             table.AddType(fieldType);
             table.PushScope(fieldType.Name);
-                var structType = new Class(STRUCT, fieldType, objectClass, intrinsicClassFlags);
+                var structType = new Class(STRUCT, fieldType, objectClass, intrinsicClassFlags) { Package = "Core" };
                 table.AddType(structType);
                 table.PushScope(structType.Name);
-                    var stateType = new Class(STATE, structType, objectClass, intrinsicClassFlags);
+                    var stateType = new Class(STATE, structType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(stateType);
                     table.PushScope(stateType.Name);
-                        var classType = new Class(CLASS, stateType, packageType, intrinsicClassFlags);
+                        var classType = new Class(CLASS, stateType, packageType, intrinsicClassFlags) { Package = "Core" };
                         table.AddType(classType);
                         table.PushScope(classType.Name); table.PopScope();
                     table.PopScope();
-                    var scriptStructType = new Class("ScriptStruct", structType, objectClass, intrinsicClassFlags);
+                    var scriptStructType = new Class("ScriptStruct", structType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(scriptStructType);
                     table.PushScope(scriptStructType.Name); table.PopScope();
-                    var functionType = new Class(FUNCTION, structType, stateType, intrinsicClassFlags);
+                    var functionType = new Class(FUNCTION, structType, stateType, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(functionType);
                     table.PushScope(functionType.Name); table.PopScope();
                 table.PopScope();
-                var enumType = new Class(ENUM, fieldType, structType, intrinsicClassFlags);
+                var enumType = new Class(ENUM, fieldType, structType, intrinsicClassFlags) { Package = "Core" };
                 table.AddType(enumType);
                 table.PushScope(enumType.Name); table.PopScope();
-                var constType = new Class(CONST, fieldType, structType, intrinsicClassFlags);
+                var constType = new Class(CONST, fieldType, structType, intrinsicClassFlags) { Package = "Core" };
                 table.AddType(constType);
                 table.PushScope(enumType.Name); table.PopScope();
 
                 //property intrinsics
-                var propertyType = new Class("Property", fieldType, objectClass, intrinsicClassFlags);
+                var propertyType = new Class("Property", fieldType, objectClass, intrinsicClassFlags) { Package = "Core" };
                 table.AddType(propertyType);
                 table.PushScope(propertyType.Name);
-                    var bytePropertyType = new Class("ByteProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var bytePropertyType = new Class("ByteProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(bytePropertyType);
                     table.PushScope(bytePropertyType.Name); table.PopScope();
-                    var intPropertyType = new Class("IntProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var intPropertyType = new Class("IntProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(intPropertyType);
                     table.PushScope(intPropertyType.Name); table.PopScope();
-                    var boolPropertyType = new Class("BoolProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var boolPropertyType = new Class("BoolProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(boolPropertyType);
                     table.PushScope(boolPropertyType.Name); table.PopScope();
-                    var floatPropertyType = new Class("FloatProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var floatPropertyType = new Class("FloatProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(floatPropertyType);
                     table.PushScope(floatPropertyType.Name); table.PopScope();
-                    var objectPropertyType = new Class("ObjectProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var objectPropertyType = new Class("ObjectProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(objectPropertyType);
                     table.PushScope(objectPropertyType.Name); table.PopScope();
-                    var componentPropertyType = new Class("ComponentProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var componentPropertyType = new Class("ComponentProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(componentPropertyType);
                     table.PushScope(componentPropertyType.Name); table.PopScope();
-                    var classPropertyType = new Class("ClassProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var classPropertyType = new Class("ClassProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(classPropertyType);
                     table.PushScope(classPropertyType.Name); table.PopScope();
-                    var interfacePropertyType = new Class("InterfaceProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var interfacePropertyType = new Class("InterfaceProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(interfacePropertyType);
                     table.PushScope(interfacePropertyType.Name); table.PopScope();
-                    var namePropertyType = new Class("NameProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var namePropertyType = new Class("NameProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(namePropertyType);
                     table.PushScope(namePropertyType.Name); table.PopScope();
-                    var strPropertyType = new Class("StrProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var strPropertyType = new Class("StrProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(strPropertyType);
                     table.PushScope(strPropertyType.Name); table.PopScope();
-                    var arrayPropertyType = new Class("ArrayProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var arrayPropertyType = new Class("ArrayProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(arrayPropertyType);
                     table.PushScope(arrayPropertyType.Name); table.PopScope();
-                    var mapPropertyType = new Class("MapProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var mapPropertyType = new Class("MapProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(mapPropertyType);
                     table.PushScope(mapPropertyType.Name); table.PopScope();
-                    var structPropertyType = new Class("StructProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var structPropertyType = new Class("StructProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(structPropertyType);
                     table.PushScope(structPropertyType.Name); table.PopScope();
-                    var delegatePropertyType = new Class("DelegateProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var delegatePropertyType = new Class("DelegateProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(delegatePropertyType);
                     table.PushScope(delegatePropertyType.Name); table.PopScope();
-                    var stringRefPropertyType = new Class("StringRefProperty", propertyType, objectClass, intrinsicClassFlags);
+                    var stringRefPropertyType = new Class("StringRefProperty", propertyType, objectClass, intrinsicClassFlags) { Package = "Core" };
                     table.AddType(stringRefPropertyType);
                     table.PushScope(stringRefPropertyType.Name); table.PopScope();
                 table.PopScope();
@@ -201,6 +201,7 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
 
             var clientType = new Class("Client", objectClass, objectClass, intrinsicClassFlags | EClassFlags.Abstract | EClassFlags.Config)
             {
+                Package = "Engine",
                 ConfigName = "Engine",
                 VariableDeclarations =
                 {
@@ -213,6 +214,7 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
             table.AddType(clientType);
             var staticMeshType = new Class("StaticMesh", objectClass, objectClass, intrinsicClassFlags | EClassFlags.SafeReplace | EClassFlags.CollapseCategories)
             {
+                Package = "Engine",
                 VariableDeclarations =
                 {
                     new VariableDeclaration(BoolType, default, "UseSimpleRigidBodyCollision"),
@@ -231,6 +233,7 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
             table.PushScope(staticMeshType.Name);
                 var fracturedStaticMeshType = new Class("FracturedStaticMesh", staticMeshType, objectClass, intrinsicClassFlags | EClassFlags.SafeReplace | EClassFlags.CollapseCategories)
                 {
+                    Package = "Engine",
                     VariableDeclarations =
                     {
                         new VariableDeclaration(staticMeshType, default, "SourceStaticMesh"),
@@ -270,14 +273,15 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                 };
                 table.AddType(fracturedStaticMeshType);
             table.PopScope();
-            var shadowMap1DType = new Class("ShadowMap1D", objectClass, objectClass, intrinsicClassFlags);
+            var shadowMap1DType = new Class("ShadowMap1D", objectClass, objectClass, intrinsicClassFlags) { Package = "Engine" };
             table.AddType(shadowMap1DType);
             table.PushScope(shadowMap1DType.Name); table.PopScope();
-            var levelBase = new Class("LevelBase", objectClass, objectClass, intrinsicClassFlags | EClassFlags.Abstract);
+            var levelBase = new Class("LevelBase", objectClass, objectClass, intrinsicClassFlags | EClassFlags.Abstract) { Package = "Engine" };
             table.AddType(levelBase);
             table.PushScope(levelBase.Name);
                 var levelType = new Class("Level", levelBase, objectClass, intrinsicClassFlags)
                 {
+                    Package = "Engine",
                     VariableDeclarations =
                     {
                         new VariableDeclaration(FloatType, default, "LightmapTotalSize"),
@@ -285,20 +289,20 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                     }
                 };
                 table.AddType(levelType);
-                var pendingLevel = new Class("PendingLevel", levelBase, objectClass, intrinsicClassFlags | EClassFlags.Abstract);
+                var pendingLevel = new Class("PendingLevel", levelBase, objectClass, intrinsicClassFlags | EClassFlags.Abstract) { Package = "Engine" };
                 table.AddType(pendingLevel);
                 table.PushScope(pendingLevel.Name); table.PopScope();
             table.PopScope();
-            var modelType = new Class("Model", objectClass, objectClass, intrinsicClassFlags);
+            var modelType = new Class("Model", objectClass, objectClass, intrinsicClassFlags) { Package = "Engine" };
             table.AddType(modelType);
             table.PushScope(modelType.Name); table.PopScope();
-            var worldType = new Class("World", objectClass, objectClass, intrinsicClassFlags);
+            var worldType = new Class("World", objectClass, objectClass, intrinsicClassFlags) { Package = "Engine" };
             table.AddType(worldType);
             table.PushScope(worldType.Name); table.PopScope();
-            var polysType = new Class("Polys", objectClass, objectClass, intrinsicClassFlags);
+            var polysType = new Class("Polys", objectClass, objectClass, intrinsicClassFlags) { Package = "Engine" };
             table.AddType(polysType);
             table.PushScope(polysType.Name); table.PopScope();
-            table.AddType(new Class("ShaderCache", objectClass, objectClass, intrinsicClassFlags));
+            table.AddType(new Class("ShaderCache", objectClass, objectClass, intrinsicClassFlags) { Package = "Engine" });
             //NetConnection, ChildConnection, LightMapTexture2D, and CodecMovieBink are also intrinsic, but are added in the AddType function because they subclass the non-instrinsic class 'Player'
             #endregion
 
@@ -870,13 +874,17 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                 case "Player":
                 {
                     var objClass = TypeDict[OBJECT];
-                    var netConType = new Class("NetConnection", node, objClass, EClassFlags.Intrinsic | EClassFlags.Abstract | EClassFlags.Transient | EClassFlags.Config) { ConfigName = "Engine" };
+                    var netConType = new Class("NetConnection", node, objClass, EClassFlags.Intrinsic | EClassFlags.Abstract | EClassFlags.Transient | EClassFlags.Config)
+                    {
+                        ConfigName = "Engine",
+                        Package = "Engine"
+                    };
                     AddType(netConType);
                     PushScope(netConType.Name);
-                        var childConType = new Class("ChildConnection", netConType, objClass, EClassFlags.Intrinsic | EClassFlags.Transient | EClassFlags.Config, vars: new List<VariableDeclaration>
+                        var childConType = new Class("ChildConnection", netConType, objClass, EClassFlags.Intrinsic | EClassFlags.Transient | EClassFlags.Config, vars: [new(netConType, default, "Parent")])
                         {
-                            new(netConType, default, "Parent")
-                        }) { ConfigName = "Engine" };
+                            ConfigName = "Engine", Package = "Engine"
+                        };
                         AddType(childConType);
                         PushScope(childConType.Name);
                             AddSymbol("Parent", childConType.VariableDeclarations[0]);
@@ -889,7 +897,11 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                 case "Texture2D":
                 {
                     var objClass = TypeDict[OBJECT];
-                    var lightmapTexture2DType = new Class("LightMapTexture2D", node, objClass, EClassFlags.Intrinsic | EClassFlags.Config) { ConfigName = "Engine" };
+                    var lightmapTexture2DType = new Class("LightMapTexture2D", node, objClass, EClassFlags.Intrinsic | EClassFlags.Config)
+                    {
+                        ConfigName = "Engine",
+                        Package = "Engine"
+                    };
                     AddType(lightmapTexture2DType);
                     PushScope(lightmapTexture2DType.Name);
                     PopScope();
@@ -906,9 +918,17 @@ namespace LegendaryExplorerCore.UnrealScript.Analysis.Symbols
                 }
                 case "CodecMovie":
                 {
-                    var codecBinkType = new Class("CodecMovieBink", node, TypeDict[OBJECT], EClassFlags.Intrinsic | EClassFlags.Transient);
+                    var codecBinkType = new Class("CodecMovieBink", node, TypeDict[OBJECT], EClassFlags.Intrinsic | EClassFlags.Transient) { Package = "Engine" };
                     AddType(codecBinkType);
                     PushScope(codecBinkType.Name); PopScope();
+                    break;
+                    }
+                case "Material":
+                {
+                    //for t3d parsing
+                    var matClass = (Class)node;
+                    matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(TypeDict["Guid"]), EPropertyFlags.Transient | EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "ReferencedTextureGuids"));
+                    matClass.VariableDeclarations.Add(new VariableDeclaration(new DynamicArrayType(StringType), EPropertyFlags.BioNonShip | EPropertyFlags.EditorOnly, "EditorComments"));
                     break;
                 }
             }

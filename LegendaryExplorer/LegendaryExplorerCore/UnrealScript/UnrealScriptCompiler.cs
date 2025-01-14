@@ -412,6 +412,7 @@ namespace LegendaryExplorerCore.UnrealScript
                     log.LogError("Tried to parse a Class, but no Class was found!");
                     return (null, log);
                 }
+                cls.Package = parent?.ObjectName.Instanced ?? pcc.FileNameNoExtension;
                 if (intendedClassName is not null && !cls.Name.CaseInsensitiveEquals(intendedClassName))
                 {
                     log.LogError($"Class name was '{cls.Name}', expected '{intendedClassName}'!");

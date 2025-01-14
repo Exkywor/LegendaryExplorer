@@ -466,8 +466,9 @@ namespace LegendaryExplorerCore.UnrealScript.Lexing
                         ++CurrentIndex;
                         goto end;
                     case '\n':
-                        Log.LogLexError("String Literals can not contain line breaks!", startPos, CurrentIndex);
-                        goto end;
+                        Builder.Append(peek);
+                        Lines.Add(CurrentIndex + 1);
+                        continue;
                     default:
                         Builder.Append(peek);
                         continue;

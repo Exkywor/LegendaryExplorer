@@ -365,9 +365,7 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
                                     else
                                     {
                                         entry = usop?.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value, objectLiteral.Class.Name) 
-                                                ?? Pcc.GetEntryOrAddImport(objectLiteral.Name.Value, objectLiteral.Class.Name,
-                                                    //Hack. need some way of determining package file of a class
-                                                    "Engine");
+                                                ?? Pcc.GetEntryOrAddImport(objectLiteral.Name.Value, objectLiteral.Class.Name, ((Class)objectLiteral.Class).Package);
                                     }
                                 }
                                 else
@@ -413,9 +411,7 @@ namespace LegendaryExplorerCore.UnrealScript.Compiling
                                     else
                                     {
                                         objUIndex = usop?.MissingObjectResolver?.Invoke(Pcc, objectLiteral.Name.Value, objectLiteral.Class.Name)?.UIndex
-                                                ?? Pcc.GetEntryOrAddImport(objectLiteral.Name.Value, objectLiteral.Class.Name,
-                                                    //Hack. need some way of determining package file of a class
-                                                    "Engine").UIndex;
+                                                ?? Pcc.GetEntryOrAddImport(objectLiteral.Name.Value, objectLiteral.Class.Name, ((Class)objectLiteral.Class).Package).UIndex;
                                     }
                                 }
                                 else
