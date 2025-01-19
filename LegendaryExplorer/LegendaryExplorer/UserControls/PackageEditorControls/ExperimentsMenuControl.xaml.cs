@@ -1088,7 +1088,7 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
         }
         private void CompileT3Ds_Click(object sender, RoutedEventArgs e)
         {
-            PackageEditorExperimentsS.CompileT3DsM(GetPEWindow());
+            PackageEditorExperimentsS.CompileT3Ds(GetPEWindow());
         }
 
         #endregion
