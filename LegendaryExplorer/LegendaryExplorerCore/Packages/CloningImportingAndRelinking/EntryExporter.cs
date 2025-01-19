@@ -25,8 +25,8 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
             }
 
             // We will want to cache files in memory to greatly speed this up
-            var newCache = cache == null;
-            cache ??= new PackageCache();
+            var newCache = cache == null && customROP?.Cache == null;
+            cache ??= customROP?.Cache ?? new PackageCache();
             Dictionary<ImportEntry, ExportEntry> impToExpMap = new Dictionary<ImportEntry, ExportEntry>();
 
             // Check and resolve all imports upstream in the level
@@ -112,11 +112,11 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
         /// <param name="globalCache"></param>
         /// <param name="pc"></param>
         /// <returns></returns>
-        public static List<EntryStringPair> ExportExportToFile(ExportEntry sourceExport, string newPackagePath, out IEntry newEntry, bool? compress = null, PackageCache cache = null)
+        public static List<EntryStringPair> ExportExportToFile(ExportEntry sourceExport, string newPackagePath, out IEntry newEntry, bool? compress = null, PackageCache cache = null, RelinkerOptionsPackage customROP = null)
         {
             MEPackageHandler.CreateAndSavePackage(newPackagePath, sourceExport.Game);
             using var p = MEPackageHandler.OpenMEPackage(newPackagePath);
-            var result = ExportExportToPackage(sourceExport, p, out newEntry, cache);
+            var result = ExportExportToPackage(sourceExport, p, out newEntry, cache, customROP);
             p.Save();
             return result;
         }

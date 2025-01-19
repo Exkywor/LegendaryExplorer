@@ -3275,6 +3275,25 @@ defaultproperties
             File.WriteAllLines($@"C:\users\public\{game}-memorypaths.txt", objectsSorted);
         }
 
+        public static void ExportDecookedObject(PackageEditorWindow pe)
+        {
+            if (pe.TryGetSelectedExport(out var mexp))
+            {
+                var d = new SaveFileDialog { Filter = GameFileFilters.LESaveFileFilter };
+                if (d.ShowDialog() == true)
+                {
+                    var pfc = DecookedExporter.CookObjectToPackage(mexp);
+                    if (pfc is ExportEntry { ClassName: "Material" } exp)
+                    {
+                        exp.WriteProperty(new BoolProperty(true, "bUsedAsSpecialEngineMaterial"));
+                    }
+
+                    pfc.FileRef.Save(d.FileName);
+                    MessageBox.Show("Done");
+                }
+            }
+        }
+
         public static void OrganizeParticleSystems(PackageEditorWindow pe)
         {
             if (pe.Pcc == null)
