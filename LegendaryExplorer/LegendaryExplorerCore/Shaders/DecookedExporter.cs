@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
-using LegendaryExplorerCore.Unreal.ObjectInfo;
 
 namespace LegendaryExplorerCore.Shaders
 {
@@ -20,7 +15,20 @@ namespace LegendaryExplorerCore.Shaders
         /// <returns></returns>
         public static IEntry CookObjectToPackage(ExportEntry sourceObject, IMEPackage targetPackage = null, Action<ExportEntry> specialAction = null)
         {
-            IMEPackage result = targetPackage ?? MEPackageHandler.CreateMemoryEmptyPackage($@"{sourceObject.ObjectName.Instanced}.pcc", sourceObject.Game);
+            // Incoming memory package will not be able to reliably find decooked files.
+            string sourcePath = sourceObject.FileRef.FileNameNoExtension ?? $"{sourceObject.InstancedFullPath}.pcc";
+            bool requireLoaded = false;
+            if (targetPackage != null)
+            {
+                requireLoaded = (sourceObject.FileRef.Flags & UnrealFlags.EPackageFlags.RequireImportsAlreadyLoaded) != 0;
+            }
+            
+            IMEPackage result = targetPackage ?? MEPackageHandler.CreateMemoryEmptyPackage(sourcePath, sourceObject.Game);
+            if (!requireLoaded)
+            {
+                // Remove flag to allow import resolution code to handle decooked
+                result.setFlags(result.Flags & ~UnrealFlags.EPackageFlags.RequireImportsAlreadyLoaded);
+            }
 
             var rop = new RelinkerOptionsPackage(new PackageCache())
             {
