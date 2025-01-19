@@ -39,6 +39,7 @@ using LegendaryExplorer.Tools.AssetViewer;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Gammtek.Extensions;
 using LegendaryExplorerCore.Pathing;
+using LegendaryExplorerCore.Shaders;
 using LegendaryExplorerCore.UDK;
 
 //using ImageMagick;
