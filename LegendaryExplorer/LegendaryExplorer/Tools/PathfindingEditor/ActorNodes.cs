@@ -899,6 +899,23 @@ namespace LegendaryExplorer.Tools.PathfindingEditor
                             items.Add(name.Value);
                         }
                         items.Sort();
+                        commentText += "Visible:\n";
+                        foreach (string item in items)
+                        {
+                            commentText += $"   {item}\n";
+                        }
+                    }
+
+                    items.Clear();
+                    var loadChunkNames = state.GetProp<ArrayProperty<NameProperty>>("LoadChunkNames");
+                    if (loadChunkNames != null)
+                    {
+                        foreach (NameProperty name in loadChunkNames)
+                        {
+                            items.Add(name.Value);
+                        }
+                        items.Sort();
+                        commentText += "Loaded:\n";
                         foreach (string item in items)
                         {
                             commentText += $"   {item}\n";

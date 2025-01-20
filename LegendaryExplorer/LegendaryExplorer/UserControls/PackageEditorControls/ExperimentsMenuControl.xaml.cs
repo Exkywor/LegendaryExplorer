@@ -507,6 +507,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsM.GenerateGigaChungusClassFileForSDKGen(GetPEWindow());
         }
 
+        private void ExportDecookedObject_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsM.ExportDecookedObject(GetPEWindow());
+        }
+
         private void MScanner_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsM.MScanner(GetPEWindow());

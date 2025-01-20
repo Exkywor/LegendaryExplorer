@@ -296,7 +296,7 @@ namespace LegendaryExplorer.Packages
         /// <param name="setBusyText"></param>
         /// <param name="entryDoubleClick"></param>
         /// <param name="window"></param>
-        public static void ExtractEntryToNewPackage(ExportEntry export, Action<bool> setBusy = null, Action<string> setBusyText = null, Action<EntryStringPair> entryDoubleClick = null, Window window = null)
+        public static void ExtractEntryToNewPackage(ExportEntry export, Action<bool> setBusy = null, Action<string> setBusyText = null, Action<EntryStringPair> entryDoubleClick = null, Window window = null, RelinkerOptionsPackage customROP = null)
         {
             // This method is useful if you need to extract a portable asset easily
             // It's very slow
@@ -319,7 +319,7 @@ namespace LegendaryExplorer.Packages
             var d = new SaveFileDialog { Filter = fileFilter };
             if (d.ShowDialog() == true)
             {
-                Func<List<EntryStringPair>> PortFunc = () => EntryExporter.ExportExportToFile(export, d.FileName, out _);
+                Func<List<EntryStringPair>> PortFunc = () => EntryExporter.ExportExportToFile(export, d.FileName, out _, customROP: customROP);
                 if (File.Exists(d.FileName))
                 {
                     var portIntoExistingRes = MessageBox.Show(window, $"Export the selected export ({export.InstancedFullPath}) into the selected file ({d.FileName})? Or port into a new file, overwriting it?\n\nPress Yes to port into the existing file.\nPress No to port as a new file\nPress cancel to abort", "Port into new or existing file?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
@@ -328,7 +328,7 @@ namespace LegendaryExplorer.Packages
                         PortFunc = () =>
                         {
                             using var package = MEPackageHandler.OpenMEPackage(d.FileName);
-                            var results = EntryExporter.ExportExportToPackage(export, package, out _);
+                            var results = EntryExporter.ExportExportToPackage(export, package, out _, customROP: customROP);
                             package.Save();
                             return results;
                         };

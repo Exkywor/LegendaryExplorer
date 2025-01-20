@@ -2837,6 +2837,11 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             MessageBox.Show("The colors were sucessfully replaced", "Success", MessageBoxButton.OK);
         }
 
+        /// <summary>
+        /// Sets/unsets forced export flag on an export and all sub children
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="set"></param>
         public static void SetForcedExportFlag(ExportEntry exp, bool set)
         {
 

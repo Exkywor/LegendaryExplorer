@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.UnrealScript.Analysis.Visitors;
 
 namespace LegendaryExplorerCore.UnrealScript.Language.Tree
 {
+    [DebuggerDisplay("VariableDeclaration | {Name}, {VarType}")]
     public class VariableDeclaration : Statement, IHasFileReference
     {
         public UnrealFlags.EPropertyFlags Flags;

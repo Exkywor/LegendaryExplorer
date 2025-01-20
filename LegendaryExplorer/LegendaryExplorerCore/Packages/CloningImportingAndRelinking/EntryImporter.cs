@@ -1672,7 +1672,12 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
             {
                 // Source-style lookups
                 // Add root level package
-                filesToCheck.Add(entry.GetRootName() + ".upk");
+                filesToCheck.Add($"{entry.GetRootName()}.upk");
+            }
+            // 01/14/2024 - Support looking in package by name if our source package doesn't indicate needing it already loaded
+            else if ((package.Flags & UnrealFlags.EPackageFlags.RequireImportsAlreadyLoaded) == 0)
+            {
+                filesToCheck.Add($"{entry.GetRootName()}.{Path.GetExtension(package.FilePath)}" );
             }
 
             //add base definition files that are always loaded (Core, Engine, etc.)
