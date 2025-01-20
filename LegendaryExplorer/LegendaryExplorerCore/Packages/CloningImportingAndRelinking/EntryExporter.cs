@@ -43,10 +43,20 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
                     if (targetPackage.FindEntry(mapping.Key.InstancedFullPath) == null)
                     {
                         // port it in
-                        //Debug.WriteLine($"Porting in: {mapping.Key.InstancedFullPath}");
+                        // Debug.WriteLine($"Porting in: {mapping.Key.InstancedFullPath}");
+                        if (customROP?.CustomImportDependency != null)
+                        {
+                            if (customROP.CustomImportDependency(mapping.Value, targetPackage, customROP, out List<EntryStringPair> customResults))
+                            {
+                                issues.AddRange(customResults);
+                                continue; // Do not use default logic.
+                            }
+                        }
+
                         var parent = PortParents(mapping.Value, targetPackage, customROP: customROP);
                         customROP?.CrossPackageMap.Clear(); // Do not persist this value, we do not want double relink
-                        var relinkResults1 = EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.CloneAllDependencies, mapping.Value, targetPackage, parent, true,
+                        List<EntryStringPair> relinkResults1 = null;
+                        relinkResults1 = EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.CloneAllDependencies, mapping.Value, targetPackage, parent, true,
                             customROP ?? new RelinkerOptionsPackage() { ImportExportDependencies = true, Cache = cache }, out _);
                         issues.AddRange(relinkResults1);
                     }
@@ -130,10 +140,11 @@ namespace LegendaryExplorerCore.Packages.CloningImportingAndRelinking
         /// <returns></returns>
         public static IEntry PortParents(IEntry source, IMEPackage target, bool importAsImport = false, PackageCache cache = null, RelinkerOptionsPackage customROP = null)
         {
-            var packagename = Path.GetFileNameWithoutExtension(source.FileRef.FilePath);
+            var packagename = source.FileRef.FileNameNoExtension;
             if (packagename != null)
             {
-                if (IsGlobalNonStartupFile(packagename) && !source.FileRef.FileNameNoExtension.CaseInsensitiveEquals(target.FileNameNoExtension))
+                // 01/12/2024 - Global porting also includes BIOG_ as they are cooked seek free. Not sure how we can detect this dynamically
+                if ((IsGlobalNonStartupFile(packagename)/* || packagename.StartsWith("BIOG_", StringComparison.OrdinalIgnoreCase)*/) && !packagename.CaseInsensitiveEquals(target.FileNameNoExtension))
                 {
                     // Porting out of file
                     PrepareGlobalFileForPorting(source.FileRef, packagename);
