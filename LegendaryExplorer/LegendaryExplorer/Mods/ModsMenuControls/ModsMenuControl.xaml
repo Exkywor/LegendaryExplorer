@@ -11,7 +11,8 @@
     <MenuItem Header=" &gt;&gt; FOR PERSONAL USE ONLY &lt;&lt;" IsEnabled="False"/>
     <MenuItem Header="Personal Mods">
         <MenuItem Header="Emily Returns" Click="EmilyReturns_Click" ToolTip="Applies the changes required for this file to work with the Emily Returns mod, if it's used."/>
-        <MenuItem Header="Batch Emily Returns " Click="BatchEmilyReturns_Click" ToolTip="Applies the changes required for files to work with the Emily Returns mod."/>
+        <MenuItem Header="Batch Emily Returns" Click="BatchEmilyReturns_Click" ToolTip="Applies the changes required for files to work with the Emily Returns mod."/>
+        <MenuItem Header="Batch Emily Returns Patches" Click="BatchEmilyReturnsPatches_Click" ToolTip="Applies the changes required for the patch files to work with the Emily Returns mod."/>
         <MenuItem Header="FemShep v BroShep (LE)" Click="FemShepvBroshep_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep mod, if it's used."/>
         <MenuItem Header="Batch FemShep v BroShep (LE)" Click="BatchFemShepvBroshep_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep mod."/>
         <MenuItem Header="FemShep v BroShep Vanilla VS (LE)" Click="FemShepvBroshep_V_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep Vanilla VS mod, if it's used."/>

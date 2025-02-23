@@ -60,6 +60,16 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
             MessageBox.Show($"Files successfully patched.");
         }
 
+        private void BatchEmilyReturnsPatches_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                EmilyReturns.BatchPatchPatches();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
         private void FemShepvBroshep_Click(object sender, RoutedEventArgs e)
         {
             if (Window.GetWindow(this) is PackageEditorWindow pew)

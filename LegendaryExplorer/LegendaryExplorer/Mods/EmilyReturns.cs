@@ -1,26 +1,24 @@
-﻿using LegendaryExplorer.DialogueEditor.DialogueEditorExperiments;
-using LegendaryExplorer.Misc.ExperimentsTools;
-using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
-using LegendaryExplorer.Tools.TlkManagerNS;
+﻿using LegendaryExplorer.Misc.ExperimentsTools;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
-using System;
+using LegendaryExplorerCore.Unreal.BinaryConverters;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows;
-using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
-using static LegendaryExplorer.Misc.ExperimentsTools.PackageAutomations;
 using static LegendaryExplorer.Misc.ExperimentsTools.DialogueAutomations;
+using static LegendaryExplorer.Misc.ExperimentsTools.PackageAutomations;
 using static LegendaryExplorer.Misc.ExperimentsTools.SequenceAutomations;
-using LegendaryExplorerCore.Unreal.BinaryConverters;
+using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
 
 namespace LegendaryExplorer.Mods
 {
     public static class EmilyReturns
     {
+        private static readonly string ModPath = $@"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\delivery\Emily Returns\DLC_MOD_EmilyReturns\CookedPCConsole";
+
         public static void Patch(IMEPackage pcc)
         {
             switch (pcc.FileNameNoExtension)
@@ -67,23 +65,45 @@ namespace LegendaryExplorer.Mods
                 case "BioD_End001_436CRAllers_LOC_INT":
                     BioD_End001_436CRAllers_LOC_INT(pcc);
                     break;
+                case "SFXImages_ProjectVariety":
+                    SFXImages_ProjectVariety(pcc);
+                    break;
+                case "SFXImages_PV":
+                    SFXImages_PV(pcc);
+                    break;
+                case "SFXGUI_Images_EGMShared":
+                    SFXGUI_Images_EGMShared(pcc);
+                    break;
                 default:
                     break;
             }
         }
 
-        public static void BatchPatch()
+        public static void BatchPatch(string path = null)
         {
-            string path = $@"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\delivery\Emily Returns\DLC_MOD_EmilyReturns\CookedPCConsole";
-            string[] files = Directory.GetFiles(path);
+            if (string.IsNullOrEmpty(path)) { path = ModPath; }
 
+            string[] files = Directory.GetFiles(path);
 
             foreach (string file in files)
             {
                 if (Path.GetExtension(file) != ".pcc") { continue; }
+
                 using MEPackage pcc = (MEPackage)MEPackageHandler.OpenMEPackage(file);
                 Patch(pcc);
                 pcc.Save();
+            }
+        }
+
+        public static void BatchPatchPatches()
+        {
+            foreach (var (modName, _) in EmilyReturns.Files_Patches)
+            {
+                string destPath = !modName.Equals("PV2")
+                    ? $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Emily Returns\\delivery\\Emily Returns\\Patches\\{modName}\\"
+                    : $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Emily Returns\\delivery\\Emily Returns\\Patches\\PV\\";
+
+                BatchPatch(destPath);
             }
         }
 
@@ -370,7 +390,7 @@ namespace LegendaryExplorer.Mods
         private static void BioD_Nor_420StarCargoConv_LOC_INT(IMEPackage pcc)
         {
             // Prepare the conversation
-            ExportEntry rel1 =  pcc.GetUExport(79);
+            ExportEntry rel1 = pcc.GetUExport(79);
             ConversationExtended rel1Conv = GetLoadedConversation(rel1);
             ExportEntry rel2 = pcc.GetUExport(80);
             ConversationExtended rel2Conv = GetLoadedConversation(rel2);
@@ -411,7 +431,7 @@ namespace LegendaryExplorer.Mods
         private static void BioD_End001_435CommRoom_LOC_INT(IMEPackage pcc)
         {
             // Prepare the conversation
-            ExportEntry vid_terminal =  pcc.GetUExport(34);
+            ExportEntry vid_terminal = pcc.GetUExport(34);
             ConversationExtended vid_terminalConv = GetLoadedConversation(vid_terminal);
 
             // Prepare the FaceFX controls
@@ -484,6 +504,21 @@ namespace LegendaryExplorer.Mods
             Level levelBinary = ObjectBinary.From<Level>(persistentLevel);
             levelBinary.Actors.Add(stuntActor.UIndex);
             persistentLevel.WriteBinary(levelBinary);
+        }
+
+        private static void SFXImages_ProjectVariety(IMEPackage pcc)
+        {
+            ReplacePackageStoredTexture(pcc.GetUExport(21), @"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\project\gaw\PV_GameManual_EmilyWong.png");
+        }
+
+        private static void SFXImages_PV(IMEPackage pcc)
+        {
+            ReplacePackageStoredTexture(pcc.GetUExport(49), @"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\project\gaw\PV_Settings_Allers.png");
+        }
+
+        private static void SFXGUI_Images_EGMShared(IMEPackage pcc)
+        {
+            ReplacePackageStoredTexture(pcc.GetUExport(5), @"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\project\gaw\GM_Wong_2048x1024.png");
         }
 
 
