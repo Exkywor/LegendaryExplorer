@@ -1,24 +1,10 @@
-﻿using LegendaryExplorer.DialogueEditor.DialogueEditorExperiments;
-using LegendaryExplorer.Tools.TlkManagerNS;
-using LegendaryExplorer.UserControls.ExportLoaderControls;
-using LegendaryExplorerCore.Dialogue;
-using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
-using LegendaryExplorerCore.Helpers;
-using LegendaryExplorerCore.Kismet;
+﻿using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Packages;
-using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
+using LegendaryExplorerCore.Textures;
 using LegendaryExplorerCore.Unreal;
-using LegendaryExplorerCore.Unreal.BinaryConverters;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows;
-using System.Xml.Linq;
 
 using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
 
@@ -112,6 +98,30 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
             int oldIdx = pcc.findName(oldName);
             if (oldIdx < 0) { throw new Exception(oldName); }
             pcc.replaceName(oldIdx, newName);
+        }
+
+        /// <summary>
+        /// Replaces a package stored texture in the export with the one in the provided imagePath.
+        /// WARNING: This method does not catch issues with image sizes, as it's intended for already manually tested processes. Make sure to check beforehand.
+        /// </summary>
+        /// <param name="export">Export to replace on.</param>
+        /// <param name="imagePath">Path to the image to use.</param>
+        public static void ReplacePackageStoredTexture(ExportEntry export, string imagePath)
+        {
+
+            var props = export.GetProperties();
+            var listedWidth = props.GetProp<IntProperty>("SizeX")?.Value ?? 0;
+            var listedHeight = props.GetProp<IntProperty>("SizeY")?.Value ?? 0;
+
+            Image image;
+#if WINDOWS
+                image = Image.LoadFromFile(imagePath, LegendaryExplorerCore.Textures.PixelFormat.ARGB);
+#else
+                    image = new Image(selectDDS.FileName);
+#endif
+
+            var texture = new LegendaryExplorerCore.Unreal.Classes.Texture2D(export);
+            texture.Replace(image, props, imagePath, null, isPackageStored: true);
         }
     }
 }
