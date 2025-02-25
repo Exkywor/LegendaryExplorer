@@ -369,13 +369,23 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
         /// <param name="destPath">Path to copy files to.</param>
         /// <param name="game">ME game.</param>
         /// <param name="overwrite">Whether to overwrite files or not.</param>
+        /// <param name="suffix">Suffix to attach to the filename, if any.</param>
         /// <returns>Paths of the copied files.</returns>
-        public static List<string> CopyCleanFiles(List<string> fileNames, string destPath, MEGame game, bool overwrite = true)
+        public static List<string> CopyCleanFiles(List<string> fileNames, string destPath, MEGame game, bool overwrite = true, string suffix = null)
         {
             List<string> paths = new();
-            foreach (string fileName in fileNames)
+            foreach (string name in fileNames)
             {
+                string fileName = name;
+
                 if (!MELoadedFiles.GetFilesLoadedInGame(game, true).TryGetValue(fileName, out string filePath)) continue;
+
+                // Insert the suffix between the filename and the extension
+                if (!string.IsNullOrEmpty(suffix))
+                {
+                    fileName = $"{Path.GetFileNameWithoutExtension(fileName)}{suffix}{Path.GetExtension(fileName)}";
+                }
+
                 paths.Add(filePath);
                 File.Copy(filePath, $"{destPath}{fileName}", overwrite);
             }
