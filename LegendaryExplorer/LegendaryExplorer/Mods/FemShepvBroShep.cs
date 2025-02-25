@@ -16,9 +16,19 @@ namespace LegendaryExplorer.Mods
 {
     public static class FemShepvBroShep
     {
+        public static readonly string ModPath = $@"G:\My Drive\Modding\Mass Effect\mods\Counter Clone\delivery\FemShep v BroShep Duel of the Shepards LE\DLC_MOD_FSvBSLE\CookedPCConsole";
+
         public static void Patch(IMEPackage pcc)
         {
-            switch (pcc.FileNameNoExtension)
+            string fileName = pcc.FileNameNoExtension;
+
+            // Remove the suffix to _Clean files so they can be automatically patched too
+            if (fileName.EndsWith("_Clean"))
+            {
+                fileName = fileName.Replace("_Clean", "");
+            }
+
+            switch (fileName)
             {
                 case "BioD_Cit002_000Global":
                     BioD_Cit002_000Global(pcc);
@@ -133,11 +143,12 @@ namespace LegendaryExplorer.Mods
             }
         }
 
-        public static void BatchPatch()
+        public static void BatchPatch(string path = null)
         {
-            string path = $@"G:\My Drive\Modding\Mass Effect\mods\Counter Clone\delivery\FemShep v BroShep Duel of the Shepards LE\DLC_MOD_FSvBSLE\CookedPCConsole";
+            if (string.IsNullOrEmpty(path)) { path = ModPath; }
 
             string[] files = Directory.GetFiles(path);
+
             foreach (string file in files)
             {
                 if (Path.GetExtension(file) != ".pcc") { continue; }
