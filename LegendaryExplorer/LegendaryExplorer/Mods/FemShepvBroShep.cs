@@ -18,7 +18,7 @@ namespace LegendaryExplorer.Mods
     {
         public static readonly string ModPath = $@"G:\My Drive\Modding\Mass Effect\mods\Counter Clone\delivery\FemShep v BroShep Duel of the Shepards LE\DLC_MOD_FSvBSLE\CookedPCConsole";
 
-        public static void Patch(IMEPackage pcc)
+        public static void Patch(IMEPackage pcc, string modName = "base")
         {
             string fileName = pcc.FileNameNoExtension;
 
@@ -118,10 +118,10 @@ namespace LegendaryExplorer.Mods
                     BioD_Cit004_270ShuttleBay1_LOC_INT(pcc);
                     break;
                 case "BioD_Cit004_272MaleClone":
-                    BioD_Cit004_272MaleClone(pcc);
+                    BioD_Cit004_272MaleClone(pcc, modName);
                     break;
                 case "BioD_Cit004_273FemClone":
-                    BioD_Cit004_273FemClone(pcc);
+                    BioD_Cit004_273FemClone(pcc, modName);
                     break;
                 case "BioD_Cit004_290FightScene":
                     BioD_Cit004_290FightScene(pcc);
@@ -143,7 +143,7 @@ namespace LegendaryExplorer.Mods
             }
         }
 
-        public static void BatchPatch(string path = null)
+        public static void BatchPatch(string path = null, string modName = "base")
         {
             if (string.IsNullOrEmpty(path)) { path = ModPath; }
 
@@ -153,7 +153,7 @@ namespace LegendaryExplorer.Mods
             {
                 if (Path.GetExtension(file) != ".pcc") { continue; }
                 using MEPackage pcc = (MEPackage)MEPackageHandler.OpenMEPackage(file);
-                Patch(pcc);
+                Patch(pcc, modName);
                 pcc.Save();
             }
         }
@@ -164,7 +164,7 @@ namespace LegendaryExplorer.Mods
             {
                 string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\Patches\\{modName}\\";
 
-                BatchPatch(destPath);
+                BatchPatch(destPath, modName);
             }
         }
 
@@ -452,14 +452,14 @@ namespace LegendaryExplorer.Mods
             Cit004_normandyfly_c(pcc.GetUExport(1));
         }
 
-        private static void BioD_Cit004_272MaleClone(IMEPackage pcc)
+        private static void BioD_Cit004_272MaleClone(IMEPackage pcc, string modName)
         {
-            Edit_BioD_Cit004_27XClone(pcc, 12128, 12127, 12124, 12125, 11731, 12129, 12664, false);
+            Edit_BioD_Cit004_27XClone(pcc, 12128, 12127, 12124, 12125, 11731, 12129, 12664, false, modName);
         }
 
-        private static void BioD_Cit004_273FemClone(IMEPackage pcc)
+        private static void BioD_Cit004_273FemClone(IMEPackage pcc, string modName)
         {
-            Edit_BioD_Cit004_27XClone(pcc, 12128, 12127, 12125, 12124, 11731, 12129, 12665, true);
+            Edit_BioD_Cit004_27XClone(pcc, 12128, 12127, 12125, 12124, 11731, 12129, 12665, true, modName);
         }
 
         private static void BioD_Cit004_290FightScene(IMEPackage pcc)
@@ -904,8 +904,10 @@ namespace LegendaryExplorer.Mods
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 18, false), true, 71173001, -1);
         }
 
-        private static void Edit_BioD_Cit004_27XClone(IMEPackage pcc, int tint0Idx, int tint1Idx, int copyActor0Idx, int copyActor1Idx, int pawnObjIdx, int levelIsLiveIdx, int clonePawnIdx, bool isFemale)
+        private static void Edit_BioD_Cit004_27XClone(IMEPackage pcc, int tint0Idx, int tint1Idx, int copyActor0Idx, int copyActor1Idx, int pawnObjIdx, int levelIsLiveIdx, int clonePawnIdx, bool isFemale, string modName)
         {
+            if (modName == "CAT6") { clonePawnIdx = isFemale ? 12665 : 12138; }
+
             ExportEntry sequence = pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence");
 
             // Remove the armor tinting and cloning for enemy spawning and replace with event handshake
@@ -973,11 +975,14 @@ namespace LegendaryExplorer.Mods
             }
             else
             {
-                pcc.GetUExport(12763).RemoveProperty("SkeletalMesh");
-                pcc.GetUExport(12763).RemoveProperty("SkeletalMesh"); // For some reason, this needs to be done twice on them
-                pcc.GetUExport(12767).RemoveProperty("SkeletalMesh");
-                pcc.GetUExport(12767).RemoveProperty("SkeletalMesh");
-                pcc.GetUExport(12766).RemoveProperty("SkeletalMesh");
+                if (modName != "CAT6")
+                {
+                    pcc.GetUExport(12763).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12763).RemoveProperty("SkeletalMesh"); // For some reason, this needs to be done twice on them
+                    pcc.GetUExport(12767).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12767).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12766).RemoveProperty("SkeletalMesh");
+                }
             }
         }
 
@@ -1192,16 +1197,12 @@ namespace LegendaryExplorer.Mods
             {"ReducedPlot", [FN.BioD_Cit004_290FightScene]},
             //{"ReducedPlot_MiriMod", [FN.BioD_Cit004_290FightScene]},
             {"Squad", [FN.BioD_Cit003_900Trap]},
-            {"SquadEGM", [FN.BioD_Cit003_900Trap]},
             //{"Squad_MiriMod", [FN.BioD_Cit003_900Trap]},
-            //{"SquadEGM_MiriMod", [FN.BioD_Cit003_900Trap]},
             {"Thane", [FN.BioD_Cit004_220CIC_LOC_INT]},
             {"VirSav", [FN.BioD_Cit003, FN.BioD_Cit003_900Trap]},
             //{"VirSav_MiriMod", [FN.BioD_Cit003, FN.BioD_Cit003_900Trap]},
             //{"VirSav_MiriMod_Squad", [FN.BioD_Cit003_900Trap]},
-            //{"VirSav_MiriMod_SquadEGM", [FN.BioD_Cit003_900Trap]},
             //{"VirSav_Squad", [FN.BioD_Cit003_900Trap]},
-            //{"VirSav_SquadEGM", [FN.BioD_Cit003_900Trap]},
         };
 
         public static readonly Dictionary<string, string> ModPaths = new()
@@ -1216,7 +1217,6 @@ namespace LegendaryExplorer.Mods
             {"PV2", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety2\\CookedPCConsole\\"},
             {"ReducedPlot", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Reduced Plot Armor\\DLC_MOD_ReducedPlotArmor\\CookedPCConsole\\"},
             {"Squad", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\EGM Squadmate Pack (Standalone)\\DLC_MOD_EGM_Squad\\CookedPCConsole\\"},
-            {"SquadEGM", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Expanded Galaxy Mod (LE)\\Squadmate\\Full\\"},
             {"Thane", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Thane Lives\\DLC_MOD_Thane\\CookedPCConsole\\" },
             {"VirSav", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\DLC_MOD_VirmireSavior\\CookedPCConsole\\"},
 
@@ -1233,15 +1233,12 @@ namespace LegendaryExplorer.Mods
             //{"PV_MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\Patches\\17_MirandaMod\\"}, ???
             //{"ReducedPlot_MiriMod", ""},
             //{"Squad_MiriMod", ""},
-            //{"SquadEGM_MiriMod", ""},
             //{"Thane_Kelly", ""}, // NATIVE
             //{"Thane_Kelly_MiriMod", ""}, // NATIVE
             //{"Thane_MiriMod", ""}, // NATIVE
             //{"VirSav_MiriMod", ""},
             //{"VirSav_MiriMod_Squad", ""},
-            //{"VirSav_MiriMod_SquadEGM", ""},
             //{"VirSav_Squad", ""},
-            //{"VirSav_SquadEGM", ""}
         };
 
         public static class FN
