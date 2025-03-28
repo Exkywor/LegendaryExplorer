@@ -18,14 +18,18 @@
             <MenuItem Header="Emily Returns" Click="EmilyReturns_Click" ToolTip="Applies the changes required for this file to work with the Emily Returns mod, if it's used."/>
         </MenuItem>
         <MenuItem Header="FemShep v BroShep (LE)">
-            <MenuItem Header="Get Clean FemShep v BroShep (LE) files" Click="FemShepvBroshep_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS (LE)."/>
-            <MenuItem Header="Batch FemShep v BroShep (LE)" Click="BatchFemShepvBroshep_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep mod."/>
-            <MenuItem Header="FemShep v BroShep (LE)" Click="FemShepvBroshep_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep mod, if it's used."/>
+            <MenuItem Header="Get Clean FemShep v BroShep (LE) files" Click="FemShepvBroShep_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS (LE)."/>
+            <MenuItem Header="Get Clean FemShep v BroShep (LE) patch files" Click="FemShepvBroShep_CleanPatchFiles_Click" ToolTip="Get the clean basegame files for FemShep v BroShep Patches (LE)."/>
+            <MenuItem Header="Batch FemShep v BroShep (LE)" Click="BatchFemShepvBroShep_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep mod."/>
+            <MenuItem Header="Batch FemShep v BroShep (LE) Patches" Click="BatchFemShepvBroShepPatches_Click" ToolTip="Applies the changes required for the patch files to work with the FemShep v BroShep (LE) mod."/>
+            <MenuItem Header="FemShep v BroShep (LE)" Click="FemShepvBroShep_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep mod, if it's used."/>
         </MenuItem>
         <MenuItem Header="FemShep v BroShep Vanilla VS (LE)">
-            <MenuItem Header="Get Clean FemShep v BroShep  Vanilla VS (LE) files" Click="FemShepvBroshep_V_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS Vanilla VS (LE)."/>
-            <MenuItem Header="Batch FemShep v BroShep Vanilla VS (LE)" Click="BatchFemShepvBroshep_V_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep Vanilla VS mod."/>
-            <MenuItem Header="FemShep v BroShep Vanilla VS (LE)" Click="FemShepvBroshep_V_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep Vanilla VS mod, if it's used."/>
+            <MenuItem Header="Get Clean FemShep v BroShep  Vanilla VS (LE) files" Click="FemShepvBroShep_V_CleanFiles_Click" ToolTip="Get the clean basegame files for FSvBS Vanilla VS (LE)."/>
+            <MenuItem Header="Get Clean FemShep v BroShep Vanilla VS (LE) patch files" Click="FemShepvBroShep_V_CleanPatchFiles_Click" ToolTip="Get the clean basegame files for FemShep v BroShep Vanilla VS (LE) Patches."/>
+            <MenuItem Header="Batch FemShep v BroShep Vanilla VS (LE)" Click="BatchFemShepvBroShep_V_Click" ToolTip="Applies the changes required for files to work with the FemShep v BroShep Vanilla VS mod."/>
+            <MenuItem Header="Batch FemShep v BroShep Vanilla VS (LE) Patches" Click="BatchFemShepvBroShep_V_Patches_Click" ToolTip="Applies the changes required for the patch files to work with the FemShep v BroShep Vanilla VS (LE) mod."/>
+            <MenuItem Header="FemShep v BroShep Vanilla VS (LE)" Click="FemShepvBroShep_V_Click" ToolTip="Applies the changes required for this file to work with the FemShep v BroShep Vanilla VS mod, if it's used."/>
         </MenuItem>
     </MenuItem>
 </MenuItem>

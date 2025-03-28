@@ -158,6 +158,16 @@ namespace LegendaryExplorer.Mods
             }
         }
 
+        public static void BatchPatchPatches()
+        {
+            foreach (var (modName, _) in FemShepvBroShep.Files_Patches)
+            {
+                string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\Patches\\{modName}\\";
+
+                BatchPatch(destPath);
+            }
+        }
+
         private static void BioD_Cit002_000Global(IMEPackage pcc)
         {
             string filename = "BioD_FSvBS_Dummies";
@@ -1111,51 +1121,167 @@ namespace LegendaryExplorer.Mods
         };
 
         public static readonly List<string> Files = [
-            "BioD_Cit002_000Global.pcc",
-            "BioD_Cit002_700Exit.pcc",
-            "BioD_Cit002_700Exit_LOC_INT.pcc",
-            "BioD_Cit003.pcc",
-            "BioD_Cit003_110Atrium_H_LOC_INT.pcc",
-            "BioD_Cit003_150AtriumConvo.pcc",
-            "BioD_Cit003_150AtriumConvo_LOC_INT.pcc",
-            "BioD_Cit003_200HallEnter_LOC_INT.pcc",
-            "BioD_Cit003_300TopMen_LOC_INT.pcc",
-            "BioD_Cit003_400Tubes_LOC_INT.pcc",
-            "BioD_Cit003_410Tubes_H_LOC_INT.pcc",
-            "BioD_Cit003_450Ladder_LOC_INT.pcc",
-            "BioD_Cit003_580MechDoor_LOC_INT.pcc",
-            "BioD_Cit003_600MechEvent_LOC_INT.pcc",
-            "BioD_Cit003_700FinalFloor_LOC_INT.pcc",
-            "BioD_Cit003_710Final_H_LOC_INT.pcc",
-            "BioD_Cit003_800FinalBldg_LOC_INT.pcc",
-            "BioD_Cit003_815Final_RR2.pcc",
-            "BioD_Cit003_850FinalBldg_fl2_LOC_INT.pcc",
-            "BioD_Cit003_900Trap.pcc",
-            "BioD_Cit003_900Trap_LOC_INT.pcc",
-            "BioD_Cit004_100Exterior_LOC_INT.pcc",
-            "BioD_Cit004_210CICIntro.pcc",
-            "BioD_Cit004_210CICIntro_LOC_INT.pcc",
-            "BioD_Cit004_220CIC_LOC_INT.pcc",
-            "BioD_Cit004_250Elevator.pcc",
-            "BioD_Cit004_250Elevator_LOC_INT.pcc",
-            "BioD_Cit004_260CloneIntro_LOC_INT.pcc",
-            "BioD_Cit004_270ShuttleBay1_LOC_INT.pcc",
-            "BioD_Cit004_272MaleClone.pcc",
-            "BioD_Cit004_273FemClone.pcc",
-            "BioD_Cit004_290FightScene.pcc",
-            "BioD_Cit004_290FightScene_LOC_INT.pcc",
-            "BioD_Cit004_295BrooksEnd_LOC_INT.pcc",
-            "BioP_Cit003.pcc",
-            "BioP_Cit004.pcc"
+            FN.BioD_Cit002_000Global,
+            FN.BioD_Cit002_700Exit,
+            FN.BioD_Cit002_700Exit_LOC_INT,
+            FN.BioD_Cit003,
+            FN.BioD_Cit003_110Atrium_H_LOC_INT,
+            FN.BioD_Cit003_150AtriumConvo,
+            FN.BioD_Cit003_150AtriumConvo_LOC_INT,
+            FN.BioD_Cit003_200HallEnter_LOC_INT,
+            FN.BioD_Cit003_300TopMen_LOC_INT,
+            FN.BioD_Cit003_400Tubes_LOC_INT,
+            FN.BioD_Cit003_410Tubes_H_LOC_INT,
+            FN.BioD_Cit003_450Ladder_LOC_INT,
+            FN.BioD_Cit003_580MechDoor_LOC_INT,
+            FN.BioD_Cit003_600MechEvent_LOC_INT,
+            FN.BioD_Cit003_700FinalFloor_LOC_INT,
+            FN.BioD_Cit003_710Final_H_LOC_INT,
+            FN.BioD_Cit003_800FinalBldg_LOC_INT,
+            FN.BioD_Cit003_815Final_RR2,
+            FN.BioD_Cit003_850FinalBldg_fl2_LOC_INT,
+            FN.BioD_Cit003_900Trap,
+            FN.BioD_Cit003_900Trap_LOC_INT,
+            FN.BioD_Cit004_100Exterior_LOC_INT,
+            FN.BioD_Cit004_210CICIntro,
+            FN.BioD_Cit004_210CICIntro_LOC_INT,
+            FN.BioD_Cit004_220CIC_LOC_INT,
+            FN.BioD_Cit004_250Elevator,
+            FN.BioD_Cit004_250Elevator_LOC_INT,
+            FN.BioD_Cit004_260CloneIntro_LOC_INT,
+            FN.BioD_Cit004_270ShuttleBay1_LOC_INT,
+            FN.BioD_Cit004_272MaleClone,
+            FN.BioD_Cit004_273FemClone,
+            FN.BioD_Cit004_290FightScene,
+            FN.BioD_Cit004_290FightScene_LOC_INT,
+            FN.BioD_Cit004_295BrooksEnd_LOC_INT,
+            FN.BioP_Cit003,
+            FN.BioP_Cit004
             ];
 
         public static readonly List<string> Files_Clean = [
-            "BioD_Cit002_700Exit.pcc",
-            "BioD_Cit003_815Final_RR2.pcc",
-            "BioD_Cit003.pcc",
-            "BioD_Cit004_210CICIntro.pcc",
-            "BioD_Cit004_272MaleClone.pcc",
-            "BioD_Cit004_273FemClone.pcc",
+            FN.BioD_Cit002_700Exit, // PV
+            FN.BioD_Cit003_815Final_RR2, // LE3DP
+            FN.BioD_Cit003, // LE3DP VirSur Miranda
+            FN.BioD_Cit004_210CICIntro, // Cat6
+            FN.BioD_Cit004_272MaleClone, // Cat6
+            FN.BioD_Cit004_273FemClone // Cat6
             ];
+
+        public static readonly Dictionary<string, List<string>> Files_Patches = new()
+        {
+            {"BrooksWraith", [FN.BioD_Cit004_260CloneIntro_LOC_INT, FN.BioD_Cit004_290FightScene]},
+            //{"BrooksWraith_MiriMod", [FN.BioD_Cit004_290FightScene]},
+            //{"BrooksWraith_ReducedPlot", [FN.BioD_Cit004_290FightScene]},
+            //{"BrooksWraith_ReducedPlot_MiriMod", [FN.BioD_Cit004_290FightScene]},
+            {"CAT6", [FN.BioD_Cit003_150AtriumConvo, FN.BioD_Cit004_210CICIntro, FN.BioD_Cit004_272MaleClone, FN.BioD_Cit004_273FemClone]},
+            {"CEM", [FN.BioD_Cit003_900Trap_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
+            //{"CEM_MiriMod", [FN.BioD_Cit003_900Trap_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
+            {"CEM_MiriMod", [FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
+            {"Kelly", [FN.BioD_Cit004_220CIC_LOC_INT]},
+            {"LE3DP", [FN.BioD_Cit002_000Global, FN.BioD_Cit003, FN.BioD_Cit003_815Final_RR2]},
+            //{"LE3DP_MiriMod", [FN.BioD_Cit003]},
+            //{"LE3DP_VirSav", [FN.BioD_Cit003]},
+            //{"LE3DP_VirSav_MiriMod", [FN.BioD_Cit003]},
+            {"MiriMod", [FN.BioD_Cit002_700Exit_LOC_INT, FN.BioD_Cit003, FN.BioD_Cit003_150AtriumConvo_LOC_INT, FN.BioD_Cit003_300TopMen_LOC_INT, FN.BioD_Cit003_400Tubes_LOC_INT, FN.BioD_Cit003_450Ladder_LOC_INT,
+                FN.BioD_Cit003_580MechDoor_LOC_INT, FN.BioD_Cit003_710Final_H_LOC_INT, FN.BioD_Cit003_850FinalBldg_fl2_LOC_INT, FN.BioD_Cit003_900Trap, FN.BioD_Cit003_900Trap_LOC_INT, FN.BioD_Cit004_100Exterior_LOC_INT,
+                FN.BioD_Cit004_220CIC_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_290FightScene, FN.BioD_Cit004_290FightScene_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
+            {"PV", [FN.BioD_Cit002_700Exit, FN.BioD_Cit003_150AtriumConvo_LOC_INT]},
+            //{"PV_MiriMod", [FN.BioD_Cit003_150AtriumConvo_LOC_INT]},
+            {"PV2", [FN.BioD_Cit002_000Global]},
+            {"ReducedPlot", [FN.BioD_Cit004_290FightScene]},
+            //{"ReducedPlot_MiriMod", [FN.BioD_Cit004_290FightScene]},
+            {"Squad", [FN.BioD_Cit003_900Trap]},
+            {"SquadEGM", [FN.BioD_Cit003_900Trap]},
+            //{"Squad_MiriMod", [FN.BioD_Cit003_900Trap]},
+            //{"SquadEGM_MiriMod", [FN.BioD_Cit003_900Trap]},
+            {"Thane", [FN.BioD_Cit004_220CIC_LOC_INT]},
+            {"VirSav", [FN.BioD_Cit003, FN.BioD_Cit003_900Trap]},
+            //{"VirSav_MiriMod", [FN.BioD_Cit003, FN.BioD_Cit003_900Trap]},
+            //{"VirSav_MiriMod_Squad", [FN.BioD_Cit003_900Trap]},
+            //{"VirSav_MiriMod_SquadEGM", [FN.BioD_Cit003_900Trap]},
+            //{"VirSav_Squad", [FN.BioD_Cit003_900Trap]},
+            //{"VirSav_SquadEGM", [FN.BioD_Cit003_900Trap]},
+        };
+
+        public static readonly Dictionary<string, string> ModPaths = new()
+        {
+            {"BrooksWraith", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Brooks Uses The Wraith\\DLC_MOD_FEMME_WRAITH\\CookedPCConsole\\"},
+            {"CAT6", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\CAT6 Retrofits\\DLC_MOD_CAT6Retro\\CookedPCConsole\\"},
+            {"CEM", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Citadel Epilogue Mod (FULL)\\DLC_MOD_LECEMF\\CookedPCConsole\\"},
+            {"Kelly", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Kelly Returns\\DLC_MOD_Kelly\\CookedPCConsole\\"},
+            {"LE3DP", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\LE3 Diversification Project\\DLC_MOD_CITProject\\CookedPCConsole\\"},
+            {"MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Miranda Mod (LE3)\\Citadel\\"},
+            {"PV", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety\\CookedPCConsole\\"},
+            {"PV2", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety2\\CookedPCConsole\\"},
+            {"ReducedPlot", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Reduced Plot Armor\\DLC_MOD_ReducedPlotArmor\\CookedPCConsole\\"},
+            {"Squad", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\EGM Squadmate Pack (Standalone)\\DLC_MOD_EGM_Squad\\CookedPCConsole\\"},
+            {"SquadEGM", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Expanded Galaxy Mod (LE)\\Squadmate\\Full\\"},
+            {"Thane", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Thane Lives\\DLC_MOD_Thane\\CookedPCConsole\\" },
+            {"VirSav", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\DLC_MOD_VirmireSavior\\CookedPCConsole\\"},
+
+            // Patches for mod combinations
+            // NOTE: Commented out elements mean that a patch is needed, but the mod creators have not made one between the mods
+            //{"BrooksWraith_MiriMod", ""},
+            //{"BrooksWraith_ReducedPlot", ""},
+            //{"BrooksWraith_ReducedPlot_MiriMod", ""},
+            {"CEM_MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Miranda Mod (LE3)\\Compatibility\\CEMF\\"},
+            //{"Kelly_MiriMod", ""}, NATIVE
+            //{"LE3DP_MiriMod", ""}, ???
+            //{"LE3DP_VirSav", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\Compatibility\\LE3DP\\"}, ???
+            //{"LE3DP_VirSav_MiriMod", ""}, ???
+            //{"PV_MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\Patches\\17_MirandaMod\\"}, ???
+            //{"ReducedPlot_MiriMod", ""},
+            //{"Squad_MiriMod", ""},
+            //{"SquadEGM_MiriMod", ""},
+            //{"Thane_Kelly", ""}, // NATIVE
+            //{"Thane_Kelly_MiriMod", ""}, // NATIVE
+            //{"Thane_MiriMod", ""}, // NATIVE
+            //{"VirSav_MiriMod", ""},
+            //{"VirSav_MiriMod_Squad", ""},
+            //{"VirSav_MiriMod_SquadEGM", ""},
+            //{"VirSav_Squad", ""},
+            //{"VirSav_SquadEGM", ""}
+        };
+
+        public static class FN
+        {
+            public const string BioD_Cit002_000Global = "BioD_Cit002_000Global.pcc";
+            public const string BioD_Cit002_700Exit = "BioD_Cit002_700Exit.pcc";
+            public const string BioD_Cit002_700Exit_LOC_INT = "BioD_Cit002_700Exit_LOC_INT.pcc";
+            public const string BioD_Cit003 = "BioD_Cit003.pcc";
+            public const string BioD_Cit003_110Atrium_H_LOC_INT = "BioD_Cit003_110Atrium_H_LOC_INT.pcc";
+            public const string BioD_Cit003_150AtriumConvo = "BioD_Cit003_150AtriumConvo.pcc";
+            public const string BioD_Cit003_150AtriumConvo_LOC_INT = "BioD_Cit003_150AtriumConvo_LOC_INT.pcc";
+            public const string BioD_Cit003_200HallEnter_LOC_INT = "BioD_Cit003_200HallEnter_LOC_INT.pcc";
+            public const string BioD_Cit003_300TopMen_LOC_INT = "BioD_Cit003_300TopMen_LOC_INT.pcc";
+            public const string BioD_Cit003_400Tubes_LOC_INT = "BioD_Cit003_400Tubes_LOC_INT.pcc";
+            public const string BioD_Cit003_410Tubes_H_LOC_INT = "BioD_Cit003_410Tubes_H_LOC_INT.pcc";
+            public const string BioD_Cit003_450Ladder_LOC_INT = "BioD_Cit003_450Ladder_LOC_INT.pcc";
+            public const string BioD_Cit003_580MechDoor_LOC_INT = "BioD_Cit003_580MechDoor_LOC_INT.pcc";
+            public const string BioD_Cit003_600MechEvent_LOC_INT = "BioD_Cit003_600MechEvent_LOC_INT.pcc";
+            public const string BioD_Cit003_700FinalFloor_LOC_INT = "BioD_Cit003_700FinalFloor_LOC_INT.pcc";
+            public const string BioD_Cit003_710Final_H_LOC_INT = "BioD_Cit003_710Final_H_LOC_INT.pcc";
+            public const string BioD_Cit003_800FinalBldg_LOC_INT = "BioD_Cit003_800FinalBldg_LOC_INT.pcc";
+            public const string BioD_Cit003_815Final_RR2 = "BioD_Cit003_815Final_RR2.pcc";
+            public const string BioD_Cit003_850FinalBldg_fl2_LOC_INT = "BioD_Cit003_850FinalBldg_fl2_LOC_INT.pcc";
+            public const string BioD_Cit003_900Trap = "BioD_Cit003_900Trap.pcc";
+            public const string BioD_Cit003_900Trap_LOC_INT = "BioD_Cit003_900Trap_LOC_INT.pcc";
+            public const string BioD_Cit004_100Exterior_LOC_INT = "BioD_Cit004_100Exterior_LOC_INT.pcc";
+            public const string BioD_Cit004_210CICIntro = "BioD_Cit004_210CICIntro.pcc";
+            public const string BioD_Cit004_210CICIntro_LOC_INT = "BioD_Cit004_210CICIntro_LOC_INT.pcc";
+            public const string BioD_Cit004_220CIC_LOC_INT = "BioD_Cit004_220CIC_LOC_INT.pcc";
+            public const string BioD_Cit004_250Elevator = "BioD_Cit004_250Elevator.pcc";
+            public const string BioD_Cit004_250Elevator_LOC_INT = "BioD_Cit004_250Elevator_LOC_INT.pcc";
+            public const string BioD_Cit004_260CloneIntro_LOC_INT = "BioD_Cit004_260CloneIntro_LOC_INT.pcc";
+            public const string BioD_Cit004_270ShuttleBay1_LOC_INT = "BioD_Cit004_270ShuttleBay1_LOC_INT.pcc";
+            public const string BioD_Cit004_272MaleClone = "BioD_Cit004_272MaleClone.pcc";
+            public const string BioD_Cit004_273FemClone = "BioD_Cit004_273FemClone.pcc";
+            public const string BioD_Cit004_290FightScene = "BioD_Cit004_290FightScene.pcc";
+            public const string BioD_Cit004_290FightScene_LOC_INT = "BioD_Cit004_290FightScene_LOC_INT.pcc";
+            public const string BioD_Cit004_295BrooksEnd_LOC_INT = "BioD_Cit004_295BrooksEnd_LOC_INT.pcc";
+            public const string BioP_Cit003 = "BioP_Cit003.pcc";
+            public const string BioP_Cit004 = "BioP_Cit004.pcc";
+        }
     }
 }

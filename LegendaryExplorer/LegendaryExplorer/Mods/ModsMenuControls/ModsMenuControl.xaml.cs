@@ -40,93 +40,7 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
         #region Exkywor's experiments
 
 
-        private void EmilyReturns_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow pew)
-            {
-                EmilyReturns.Patch(pew.Pcc);
-            }
-            MessageBox.Show($"Files successfully patched.");
-        }
-
-
-        private void BatchEmilyReturns_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow)
-            {
-                EmilyReturns.BatchPatch();
-            }
-
-            MessageBox.Show($"Files successfully patched.");
-        }
-
-        private void BatchEmilyReturnsPatches_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow)
-            {
-                EmilyReturns.BatchPatchPatches();
-            }
-
-            MessageBox.Show($"Files successfully patched.");
-        }
-
-        private void FemShepvBroshep_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow pew)
-            {
-                FemShepvBroShep.Patch(pew.Pcc);
-            }
-
-            MessageBox.Show($"File successfully patched.");
-        }
-
-        private void FemShepvBroshep_CleanFiles_Click(object sender, RoutedEventArgs e)
-        {
-            List<string> paths = new();
-            if (Window.GetWindow(this) is PackageEditorWindow pew)
-            {
-                paths = SharedMethods.CopyCleanFiles(FemShepvBroShep.Files,
-                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\DLC_MOD_FSvBSLE\\CookedPCConsole\\",
-                    MEGame.LE3, true);
-                SharedMethods.CopyCleanFiles(FemShepvBroShep.Files_Clean,
-                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\DLC_MOD_FSvBSLE\\CookedPCConsole\\Clean\\",
-                    MEGame.LE3, true, "_Clean");
-            }
-
-            MessageBox.Show(string.Join("\n ", paths));
-        }
-
-        private void BatchFemShepvBroshep_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow)
-            {
-                FemShepvBroShep.BatchPatch();
-                FemShepvBroShep.BatchPatch($@"{FemShepvBroShep.ModPath}\Clean");
-            }
-
-            MessageBox.Show($"Files successfully patched.");
-        }
-
-        private void FemShepvBroshep_V_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow pew)
-            {
-                FemShepvBroShep_V.Patch(pew.Pcc);
-            }
-
-            MessageBox.Show($"File successfully patched.");
-        }
-
-        private void BatchFemShepvBroshep_V_Click(object sender, RoutedEventArgs e)
-        {
-            if (Window.GetWindow(this) is PackageEditorWindow)
-            {
-                FemShepvBroShep_V.BatchPatch();
-            }
-
-            MessageBox.Show($"Files successfully patched.");
-        }
-
+        // EMILY RETURNS
         private void EmilyReturns_CleanFiles_Click(object sender, RoutedEventArgs e)
         {
             List<string> paths = new();
@@ -163,7 +77,108 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
             MessageBox.Show(string.Join("\n ", paths));
         }
 
-        private void FemShepvBroshep_V_CleanFiles_Click(object sender, RoutedEventArgs e)
+        private void BatchEmilyReturns_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                EmilyReturns.BatchPatch();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+        private void BatchEmilyReturnsPatches_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                EmilyReturns.BatchPatchPatches();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+        private void EmilyReturns_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                EmilyReturns.Patch(pew.Pcc);
+            }
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+
+        // FEMSHEP V BROSHEP
+        private void FemShepvBroShep_CleanFiles_Click(object sender, RoutedEventArgs e)
+        {
+            List<string> paths = new();
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                paths = SharedMethods.CopyCleanFiles(FemShepvBroShep.Files,
+                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\DLC_MOD_FSvBSLE\\CookedPCConsole\\",
+                    MEGame.LE3, true);
+                SharedMethods.CopyCleanFiles(FemShepvBroShep.Files_Clean,
+                    "G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\DLC_MOD_FSvBSLE\\CookedPCConsole\\Clean\\",
+                    MEGame.LE3, true, "_Clean");
+            }
+
+            MessageBox.Show(string.Join("\n ", paths));
+        }
+
+        private void FemShepvBroShep_CleanPatchFiles_Click(object sender, RoutedEventArgs e)
+        {
+            List<string> paths = new();
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                foreach (var (modName, files) in FemShepvBroShep.Files_Patches)
+                {
+                    string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\Patches\\{modName}\\";
+
+                    foreach (string fileName in files)
+                    {
+                        string filePath = $"{FemShepvBroShep.ModPaths[modName]}{fileName}";
+                        File.Copy(filePath, $"{destPath}{fileName}", true);
+                        paths.Add(filePath);
+                    }
+                }
+            }
+
+            MessageBox.Show(string.Join("\n ", paths));
+        }
+
+        private void BatchFemShepvBroShep_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                FemShepvBroShep.BatchPatch();
+                FemShepvBroShep.BatchPatch($@"{FemShepvBroShep.ModPath}\Clean");
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+        private void BatchFemShepvBroShepPatches_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                FemShepvBroShep.BatchPatchPatches();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+        private void FemShepvBroShep_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                FemShepvBroShep.Patch(pew.Pcc);
+            }
+
+            MessageBox.Show($"File successfully patched.");
+        }
+
+
+        // FEMSHEP V BROSHEP VANILLA VS
+        private void FemShepvBroShep_V_CleanFiles_Click(object sender, RoutedEventArgs e)
         {
             List<string> paths = new();
             if (Window.GetWindow(this) is PackageEditorWindow pew)
@@ -177,6 +192,57 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
             }
 
             MessageBox.Show(string.Join("\n ", paths));
+        }
+
+        private void FemShepvBroShep_V_CleanPatchFiles_Click(object sender, RoutedEventArgs e)
+        {
+            List<string> paths = new();
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                foreach (var (modName, files) in FemShepvBroShep_V.Files_Patches)
+                {
+                    string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE - Vanilla VS\\Patches\\{modName}\\";
+
+                    foreach (string fileName in files)
+                    {
+                        string filePath = $"{FemShepvBroShep_V.ModPaths[modName]}{fileName}";
+                        File.Copy(filePath, $"{destPath}{fileName}", true);
+                        paths.Add(filePath);
+                    }
+                }
+            }
+
+            MessageBox.Show(string.Join("\n ", paths));
+        }
+
+        private void BatchFemShepvBroShep_V_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                FemShepvBroShep_V.BatchPatch();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+        private void BatchFemShepvBroShep_V_Patches_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow)
+            {
+                FemShepvBroShep_V.BatchPatchPatches();
+            }
+
+            MessageBox.Show($"Files successfully patched.");
+        }
+
+        private void FemShepvBroShep_V_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is PackageEditorWindow pew)
+            {
+                FemShepvBroShep_V.Patch(pew.Pcc);
+            }
+
+            MessageBox.Show($"File successfully patched.");
         }
         #endregion
 
