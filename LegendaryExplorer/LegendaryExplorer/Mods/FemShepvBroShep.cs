@@ -4,13 +4,16 @@ using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Packages;
+using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
+using LegendaryExplorerCore.Unreal.BinaryConverters;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static LegendaryExplorer.Misc.ExperimentsTools.DialogueAutomations;
 using static LegendaryExplorer.Misc.ExperimentsTools.PackageAutomations;
 using static LegendaryExplorer.Misc.ExperimentsTools.SequenceAutomations;
+using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
 
 namespace LegendaryExplorer.Mods
 {
@@ -906,7 +909,24 @@ namespace LegendaryExplorer.Mods
 
         private static void Edit_BioD_Cit004_27XClone(IMEPackage pcc, int tint0Idx, int tint1Idx, int copyActor0Idx, int copyActor1Idx, int pawnObjIdx, int levelIsLiveIdx, int clonePawnIdx, bool isFemale, string modName)
         {
-            if (modName == "CAT6") { clonePawnIdx = isFemale ? 12665 : 12138; }
+            if (modName == "CAT6")
+            {
+                clonePawnIdx = isFemale ? 12665 : 12669;
+
+                string path = $@"G:\My Drive\Modding\Mass Effect\mods\Counter Clone\project\files for automatic patching\BioD_Cit004_272MaleClone_Clean.pcc";
+                using MEPackage patchedPCC = (MEPackage)MEPackageHandler.OpenMEPackage(path);
+                ExportEntry persistentLevel = (ExportEntry)GetPersistentLevel(pcc);
+
+                // Import my file's StuntActor, because trying to get it to work in Sil's one is a headache
+                EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.CloneAllDependencies, patchedPCC.FindExport($"TheWorld.PersistentLevel.SFXPawn_CloneM_0"), pcc,
+                    persistentLevel, true, new RelinkerOptionsPackage(), out IEntry stuntActor);
+
+                // Add the actor to the PersistentLevel
+                Level levelBinary = ObjectBinary.From<Level>(persistentLevel);
+                levelBinary.Actors.Remove(12138);
+                levelBinary.Actors.Add(stuntActor.UIndex);
+                persistentLevel.WriteBinary(levelBinary);
+            }
 
             ExportEntry sequence = pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence");
 
@@ -975,7 +995,16 @@ namespace LegendaryExplorer.Mods
             }
             else
             {
-                if (modName != "CAT6")
+                if (modName == "CAT6")
+                {
+                    pcc.GetUExport(12138).RemoveProperty("Tag"); // Remove tag from old pawn that we won't use
+                    pcc.GetUExport(12778).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12778).RemoveProperty("SkeletalMesh"); // For some reason, this needs to be done twice on them
+                    pcc.GetUExport(12779).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12779).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12737).RemoveProperty("SkeletalMesh");
+                }
+                else
                 {
                     pcc.GetUExport(12763).RemoveProperty("SkeletalMesh");
                     pcc.GetUExport(12763).RemoveProperty("SkeletalMesh"); // For some reason, this needs to be done twice on them
