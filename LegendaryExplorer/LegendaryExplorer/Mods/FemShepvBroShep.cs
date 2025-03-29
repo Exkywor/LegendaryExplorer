@@ -166,7 +166,10 @@ namespace LegendaryExplorer.Mods
             foreach (var (modName, _) in FemShepvBroShep.Files_Patches)
             {
                 string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\Patches\\{modName}\\";
+                BatchPatch(destPath, modName);
 
+                // Clean files
+                destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\Patches\\{modName}\\Clean\\";
                 BatchPatch(destPath, modName);
             }
         }
@@ -1194,12 +1197,12 @@ namespace LegendaryExplorer.Mods
             ];
 
         public static readonly List<string> Files_Clean = [
-            FN.BioD_Cit002_700Exit, // PV
-            FN.BioD_Cit003_815Final_RR2, // LE3DP
-            FN.BioD_Cit003, // LE3DP VirSur Miranda
-            FN.BioD_Cit004_210CICIntro, // Cat6
-            FN.BioD_Cit004_272MaleClone, // Cat6
-            FN.BioD_Cit004_273FemClone // Cat6
+            FN.BioD_Cit002_700Exit,
+            FN.BioD_Cit003_815Final_RR2,
+            FN.BioD_Cit003,
+            FN.BioD_Cit004_210CICIntro,
+            FN.BioD_Cit004_272MaleClone,
+            FN.BioD_Cit004_273FemClone
             ];
 
         public static readonly Dictionary<string, List<string>> Files_Patches = new()

@@ -137,6 +137,14 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
                     {
                         string filePath = $"{FemShepvBroShep.ModPaths[modName]}{fileName}";
                         File.Copy(filePath, $"{destPath}{fileName}", true);
+
+                        // Clean files
+                        if (FemShepvBroShep.Files_Clean.Contains(fileName))
+                        {
+                            string newName = $"{Path.GetFileNameWithoutExtension(fileName)}_Clean{Path.GetExtension(fileName)}";
+                            File.Copy(filePath, $"{destPath}Clean\\{newName}", true); // Clean file
+                        }
+
                         paths.Add(filePath);
                     }
                 }
@@ -207,6 +215,14 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
                     {
                         string filePath = $"{FemShepvBroShep_V.ModPaths[modName]}{fileName}";
                         File.Copy(filePath, $"{destPath}{fileName}", true);
+
+                        // Clean files
+                        if (FemShepvBroShep_V.Files_Clean.Contains(fileName))
+                        {
+                            string newName = $"{Path.GetFileNameWithoutExtension(fileName)}_Clean{Path.GetExtension(fileName)}";
+                            File.Copy(filePath, $"{destPath}Clean\\{newName}", true); // Clean file
+                        }
+
                         paths.Add(filePath);
                     }
                 }

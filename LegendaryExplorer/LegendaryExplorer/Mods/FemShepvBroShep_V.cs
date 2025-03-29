@@ -89,7 +89,10 @@ namespace LegendaryExplorer.Mods
             foreach (var (modName, _) in FemShepvBroShep_V.Files_Patches)
             {
                 string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE - Vanilla VS\\Patches\\{modName}\\";
+                BatchPatch(destPath, modName);
 
+                // Clean files
+                destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE - Vanilla VS\\Patches\\{modName}\\Clean\\";
                 BatchPatch(destPath, modName);
             }
         }
