@@ -23,7 +23,15 @@ namespace LegendaryExplorer.Mods
 
         public static void Patch(IMEPackage pcc, string modName = "base")
         {
-            switch (pcc.FileNameNoExtension)
+            string fileName = pcc.FileNameNoExtension;
+
+            // Remove the suffix to _Clean files so they can be automatically patched too
+            if (fileName.EndsWith("_Clean"))
+            {
+                fileName = fileName.Replace("_Clean", "");
+            }
+
+            switch (fileName)
             {
                 case "BioD_Cit002_000Global":
                     BioD_Cit002_000Global(pcc);
@@ -230,21 +238,24 @@ namespace LegendaryExplorer.Mods
         {
             if (modName == "CAT6")
             {
-                clonePawnIdx = isFemale ? 12665 : 12669;
+                if (!isFemale)
+                {
+                    string path = $@"G:\My Drive\Modding\Mass Effect\mods\Counter Clone\project\files for automatic patching\BioD_Cit004_272MaleClone_Clean.pcc";
+                    using MEPackage patchedPCC = (MEPackage)MEPackageHandler.OpenMEPackage(path);
+                    ExportEntry persistentLevel = (ExportEntry)GetPersistentLevel(pcc);
 
-                string path = $@"G:\My Drive\Modding\Mass Effect\mods\Counter Clone\project\files for automatic patching\BioD_Cit004_272MaleClone_Clean.pcc";
-                using MEPackage patchedPCC = (MEPackage)MEPackageHandler.OpenMEPackage(path);
-                ExportEntry persistentLevel = (ExportEntry)GetPersistentLevel(pcc);
+                    // Import my file's StuntActor, because trying to get it to work in Sil's one is a headache
+                    EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.CloneAllDependencies, patchedPCC.FindExport($"TheWorld.PersistentLevel.SFXPawn_CloneM_0"), pcc,
+                        persistentLevel, true, new RelinkerOptionsPackage(), out IEntry stuntActor);
 
-                // Import my file's StuntActor, because trying to get it to work in Sil's one is a headache
-                EntryImporter.ImportAndRelinkEntries(EntryImporter.PortingOption.CloneAllDependencies, patchedPCC.FindExport($"TheWorld.PersistentLevel.SFXPawn_CloneM_0"), pcc,
-                    persistentLevel, true, new RelinkerOptionsPackage(), out IEntry stuntActor);
+                    clonePawnIdx = stuntActor.UIndex;
 
-                // Add the actor to the PersistentLevel
-                Level levelBinary = ObjectBinary.From<Level>(persistentLevel);
-                levelBinary.Actors.Remove(12138);
-                levelBinary.Actors.Add(stuntActor.UIndex);
-                persistentLevel.WriteBinary(levelBinary);
+                    // Add the actor to the PersistentLevel
+                    Level levelBinary = ObjectBinary.From<Level>(persistentLevel);
+                    levelBinary.Actors.Remove(12138);
+                    levelBinary.Actors.Add(stuntActor.UIndex);
+                    persistentLevel.WriteBinary(levelBinary);
+                }
             }
 
             ExportEntry sequence = pcc.FindExport("TheWorld.PersistentLevel.Main_Sequence");
@@ -317,11 +328,11 @@ namespace LegendaryExplorer.Mods
                 if (modName == "CAT6")
                 {
                     pcc.GetUExport(12138).RemoveProperty("Tag"); // Remove tag from old pawn that we won't use
-                    pcc.GetUExport(12778).RemoveProperty("SkeletalMesh");
-                    pcc.GetUExport(12778).RemoveProperty("SkeletalMesh"); // For some reason, this needs to be done twice on them
-                    pcc.GetUExport(12779).RemoveProperty("SkeletalMesh");
-                    pcc.GetUExport(12779).RemoveProperty("SkeletalMesh");
-                    pcc.GetUExport(12737).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12773).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12773).RemoveProperty("SkeletalMesh"); // For some reason, this needs to be done twice on them
+                    pcc.GetUExport(12774).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12774).RemoveProperty("SkeletalMesh");
+                    pcc.GetUExport(12732).RemoveProperty("SkeletalMesh");
                 }
                 else
                 {

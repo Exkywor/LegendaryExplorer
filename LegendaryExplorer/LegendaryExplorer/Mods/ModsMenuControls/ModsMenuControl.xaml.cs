@@ -43,6 +43,8 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
         // EMILY RETURNS
         private void EmilyReturns_CleanFiles_Click(object sender, RoutedEventArgs e)
         {
+            if (MessageBoxResult.No == MessageBox.Show("Have you deleted all mods from the game before running this experiment?", "Mod check", MessageBoxButton.YesNo)) { return; }
+
             List<string> paths = new();
             if (Window.GetWindow(this) is PackageEditorWindow pew)
             {
@@ -110,6 +112,8 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
         // FEMSHEP V BROSHEP
         private void FemShepvBroShep_CleanFiles_Click(object sender, RoutedEventArgs e)
         {
+            if (MessageBoxResult.No == MessageBox.Show("Have you deleted all mods from the game before running this experiment?", "Mod check", MessageBoxButton.YesNo)) { return; }
+
             List<string> paths = new();
             if (Window.GetWindow(this) is PackageEditorWindow pew)
             {
@@ -188,6 +192,8 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
         // FEMSHEP V BROSHEP VANILLA VS
         private void FemShepvBroShep_V_CleanFiles_Click(object sender, RoutedEventArgs e)
         {
+            if (MessageBoxResult.No == MessageBox.Show("Have you deleted all mods from the game before running this experiment?", "Mod check", MessageBoxButton.YesNo)) { return; }
+
             List<string> paths = new();
             if (Window.GetWindow(this) is PackageEditorWindow pew)
             {
@@ -236,6 +242,7 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
             if (Window.GetWindow(this) is PackageEditorWindow)
             {
                 FemShepvBroShep_V.BatchPatch();
+                FemShepvBroShep_V.BatchPatch($@"{FemShepvBroShep_V.ModPath}\Clean");
             }
 
             MessageBox.Show($"Files successfully patched.");
