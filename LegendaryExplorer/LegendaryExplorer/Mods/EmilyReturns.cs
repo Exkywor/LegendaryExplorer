@@ -1,4 +1,5 @@
-﻿using LegendaryExplorer.Misc.ExperimentsTools;
+﻿using BinaryPack.Attributes;
+using LegendaryExplorer.Misc.ExperimentsTools;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Kismet;
@@ -74,6 +75,9 @@ namespace LegendaryExplorer.Mods
                 case "SFXGUI_Images_EGMShared":
                     SFXGUI_Images_EGMShared(pcc);
                     break;
+                //case "BioNPC_Allers":
+                //    BioNPC_Allers(pcc.FilePath);
+                //    break;
                 default:
                     break;
             }
@@ -521,6 +525,12 @@ namespace LegendaryExplorer.Mods
             ReplacePackageStoredTexture(pcc.GetUExport(5), @"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\project\gaw\GM_Wong_2048x1024.png");
         }
 
+        //private static void BioNPC_Allers(string oldFile)
+        //{
+        //    string newFile = Path.Combine(ModPath, "BioNPC_Allers.pcc");
+        //    File.Copy(newFile, oldFile, true);
+        //}
+
 
         public static readonly string XMLPath = @"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\project\audio";
 
@@ -595,7 +605,8 @@ namespace LegendaryExplorer.Mods
             {"LE3REB", ["BioD_Nor_100CabinConv.pcc"]},
             {"PV", ["BioD_CitHub.pcc", "BioD_CitHubPV.pcc", "BioD_End001_435CommRoom_LOC_INT.pcc", "BioD_End001_436CRAllers_LOC_INT.pcc", "SFXImages_ProjectVariety.pcc", "SFXImages_PV.pcc"]},
             {"PV2", ["BiOD_CitHub_Dock.pcc"]},
-            {"TEB", ["BioD_End001_420HubStreet1.pcc"]}
+            {"TEB", ["BioD_End001_420HubStreet1.pcc"]},
+            {"Thane", ["BioD_End001_435CommRoom_LOC_INT.pcc"]}
         };
 
         public static readonly Dictionary<string, string> ModPaths = new()
@@ -608,7 +619,8 @@ namespace LegendaryExplorer.Mods
             {"LE3REB", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Mass Effct 3 LE Re-Sculpted Buff Version\\DLC_MOD_ME3ReSculptedBuff\\CookedPCConsole\\"},
             {"PV", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety\\CookedPCConsole\\"},
             {"PV2", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety2\\CookedPCConsole\\"},
-            {"TEB", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Take Earth Back\\DLC_MOD_TEB\\CookedPCConsole\\"}
+            {"TEB", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Take Earth Back\\DLC_MOD_TEB\\CookedPCConsole\\"},
+            {"Thane", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Thane Lives\\DLC_MOD_Thane\\CookedPCConsole\\"}
         };
     }
 }
