@@ -2931,28 +2931,18 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             IEnumerable<ExportEntry> packages = pcc.Exports
                 .Where(exp => exp is ExportEntry && (exp.ObjectName.Name.EndsWith("_D", StringComparison.OrdinalIgnoreCase) || exp.ObjectName.Name.EndsWith("_N", StringComparison.OrdinalIgnoreCase)));
 
-            IEnumerable<ExportEntry> bioCreatureSoundSets = pcc.Exports.Where(exp => exp.ClassName == "BioCreatureSoundSet");
-
             foreach (ExportEntry package in packages)
             {
                 List<IEntry> entries = package.GetAllDescendants();
                 foreach (IEntry entry in entries)
                 {
                     if (entry is not ExportEntry exp) { continue; }
-                    if (exp.ClassName == "FaceFXAnimSet" || exp.ClassName == "BioConversation") { continue; }
+                    if (exp.ClassName == "FaceFXAnimSet" || exp.ClassName == "BioConversation" || exp.ClassName == "BioCreatureSoundSet") { continue; }
 
                     if (exp.ObjectFlags.Has(UnrealFlags.EObjectFlags.LocalizedResource))
                     {
                         exp.ObjectFlags &= ~UnrealFlags.EObjectFlags.LocalizedResource;
                     }
-                }
-            }
-
-            foreach (ExportEntry exp in bioCreatureSoundSets)
-            {
-                if (exp.ObjectFlags.Has(UnrealFlags.EObjectFlags.LocalizedResource))
-                {
-                    exp.ObjectFlags &= ~UnrealFlags.EObjectFlags.LocalizedResource;
                 }
             }
 
