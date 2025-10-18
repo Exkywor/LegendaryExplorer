@@ -1571,6 +1571,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsO.AddPrefabToLevel(GetPEWindow());
         }
 
+        private void RewriteBinary_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.RewriteBinaryData(GetPEWindow());
+        }
+
         private void AddStreamingKismet_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsO.AddStreamingKismetExperiment(GetPEWindow());

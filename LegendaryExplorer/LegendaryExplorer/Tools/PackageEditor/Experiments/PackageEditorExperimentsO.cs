@@ -3419,6 +3419,44 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
             }
         }
 
+        public static void RewriteBinaryData(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            // Prompt for and validate origin position
+            string chosenClass = PromptDialog.Prompt(null, "Write the class name of the objects to rewrite:");
+            if (string.IsNullOrEmpty(chosenClass))
+            {
+                ShowError("Invalid name");
+                return;
+            }
+
+            IMEPackage pcc = pew.Pcc;
+
+            using IMEPackage engine = MEPackageHandler.OpenMEPackage(Path.Combine(MEDirectories.GetCookedPath(pcc.Game), "Engine.pcc")); // Open file with default classes
+
+            // Gather exports to fix
+            List<ExportEntry> targetExports = pcc.Exports.Where(x => x.ClassName == chosenClass).ToList();
+            if (!targetExports.Any())
+            {
+                ShowError("No exports with the input class were found.");
+            }
+
+            // Get the donor export
+            // INVARIANT: If it was found in the file, it will be found in engine.
+            ExportEntry donorExport = engine.Exports.Where(x => x.ObjectName == chosenClass).FirstOrDefault();
+
+            int fixedCnt = 0;
+            foreach(ExportEntry exp in targetExports)
+            {
+                PropertyCollection tempProps = exp.GetProperties();
+                exp.WritePropertiesAndBinary(tempProps, donorExport.GetBinaryData());
+                fixedCnt++;
+            }
+
+            MessageBox.Show($"Successfully rewritten the binary of {(fixedCnt == 1 ? "1 export" : $"{fixedCnt} exports")}.", "Success", MessageBoxButton.OK);
+        }
+
         /// <summary>
         /// Adds a level streaming kismet to either TheWorld or PersistentLevel.
         /// </summary>
