@@ -1556,6 +1556,11 @@ namespace LegendaryExplorer.UserControls.PackageEditorControls
             PackageEditorExperimentsO.MakeExportsNonForced(GetPEWindow());
         }
 
+        private void RemoveLocalizedResourceFlag_Click(object sender, RoutedEventArgs e)
+        {
+            PackageEditorExperimentsO.RemoveLocalizedResourceFlag(GetPEWindow());
+        }
+
         private void CollectSMCsintoSMCA_Click(object sender, RoutedEventArgs e)
         {
             PackageEditorExperimentsO.CollectSMCsintoSMCA(GetPEWindow());

@@ -2912,6 +2912,54 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
         }
 
         /// <summary>
+        /// Remove the LocalizedResourceFlag for all exports under _D or _D packages.
+        /// </summary>
+        /// <param name="pew"></param>
+        public static void RemoveLocalizedResourceFlag(PackageEditorWindow pew)
+        {
+            if (pew.Pcc == null) { return; }
+
+            IMEPackage pcc = pew.Pcc;
+
+            if (!(pcc.Game.IsGame1() && pcc.Game.IsLEGame()))
+            {
+                MessageBox.Show("This experiment is only available for LE1 files.", "Warning", MessageBoxButton.OK);
+                return;
+            }
+
+            // Get all _D and _N exports and store their UIndexes
+            IEnumerable<ExportEntry> packages = pcc.Exports
+                .Where(exp => exp is ExportEntry && (exp.ObjectName.Name.EndsWith("_D", StringComparison.OrdinalIgnoreCase) || exp.ObjectName.Name.EndsWith("_N", StringComparison.OrdinalIgnoreCase)));
+
+            IEnumerable<ExportEntry> bioCreatureSoundSets = pcc.Exports.Where(exp => exp.ClassName == "BioCreatureSoundSet");
+
+            foreach (ExportEntry package in packages)
+            {
+                List<IEntry> entries = package.GetAllDescendants();
+                foreach (IEntry entry in entries)
+                {
+                    if (entry is not ExportEntry exp) { continue; }
+                    if (exp.ClassName == "FaceFXAnimSet" || exp.ClassName == "BioConversation") { continue; }
+
+                    if (exp.ObjectFlags.Has(UnrealFlags.EObjectFlags.LocalizedResource))
+                    {
+                        exp.ObjectFlags &= ~UnrealFlags.EObjectFlags.LocalizedResource;
+                    }
+                }
+            }
+
+            foreach (ExportEntry exp in bioCreatureSoundSets)
+            {
+                if (exp.ObjectFlags.Has(UnrealFlags.EObjectFlags.LocalizedResource))
+                {
+                    exp.ObjectFlags &= ~UnrealFlags.EObjectFlags.LocalizedResource;
+                }
+            }
+
+            MessageBox.Show("Remove the LocalizedResource flag from correct exports.");
+        }
+
+        /// <summary>
         /// Gathers all the colors in the DirectionalSamples of a the 1D LightMap in the LODData.
         /// </summary>
         /// <param name="LODData">LODs to get the samples from.</param>
@@ -3417,6 +3465,7 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             ShowSuccess($"Added loading and streaming for {filename} wherever {conditionalFile} is present");
         }
+
 
         // HELPER FUNCTIONS
         #region Helper functions
