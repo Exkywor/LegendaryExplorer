@@ -3434,17 +3434,15 @@ namespace LegendaryExplorer.Tools.PackageEditor.Experiments
 
             // Get the donor export
             // INVARIANT: If it was found in the file, it will be found in engine.
-            ExportEntry donorExport = engine.Exports.Where(x => x.ObjectName == chosenClass).FirstOrDefault();
+            ExportEntry donorExport = engine.Exports.Where(x => x.ClassName == chosenClass).FirstOrDefault();
 
-            int fixedCnt = 0;
             foreach(ExportEntry exp in targetExports)
             {
                 PropertyCollection tempProps = exp.GetProperties();
                 exp.WritePropertiesAndBinary(tempProps, donorExport.GetBinaryData());
-                fixedCnt++;
             }
 
-            MessageBox.Show($"Successfully rewritten the binary of {(fixedCnt == 1 ? "1 export" : $"{fixedCnt} exports")}.", "Success", MessageBoxButton.OK);
+            MessageBox.Show($"Successfully rewritten the binary of {chosenClass} exports.", "Success", MessageBoxButton.OK);
         }
 
         /// <summary>
