@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using LegendaryExplorer.Misc.ExperimentsTools;
+﻿using LegendaryExplorer.Misc.ExperimentsTools;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Helpers;
@@ -62,7 +61,7 @@ namespace LegendaryExplorer.Mods
                     BioD_Cit003_300TopMen_LOC_INT(pcc);
                     break;
                 case "BioD_Cit003_400Tubes_LOC_INT":
-                    BioD_Cit003_400Tubes_LOC_INT(pcc);
+                    BioD_Cit003_400Tubes_LOC_INT(pcc, modName);
                     break;
                 case "BioD_Cit003_410Tubes_H_LOC_INT":
                     BioD_Cit003_410Tubes_H_LOC_INT(pcc);
@@ -71,7 +70,7 @@ namespace LegendaryExplorer.Mods
                     BioD_Cit003_450Ladder_LOC_INT(pcc);
                     break;
                 case "BioD_Cit003_580MechDoor_LOC_INT":
-                    BioD_Cit003_580MechDoor_LOC_INT(pcc);
+                    BioD_Cit003_580MechDoor_LOC_INT(pcc, modName);
                     break;
                 case "BioD_Cit003_600MechEvent_LOC_INT":
                     BioD_Cit003_600MechEvent_LOC_INT(pcc);
@@ -80,7 +79,7 @@ namespace LegendaryExplorer.Mods
                     BioD_Cit003_700FinalFloor_LOC_INT(pcc);
                     break;
                 case "BioD_Cit003_710Final_H_LOC_INT":
-                    BioD_Cit003_710Final_H_LOC_INT(pcc);
+                    BioD_Cit003_710Final_H_LOC_INT(pcc, modName);
                     break;
                 case "BioD_Cit003_800FinalBldg_LOC_INT":
                     BioD_Cit003_800FinalBldg_LOC_INT(pcc);
@@ -89,7 +88,7 @@ namespace LegendaryExplorer.Mods
                     BioD_Cit003_815Final_RR2(pcc);
                     break;
                 case "BioD_Cit003_850FinalBldg_fl2_LOC_INT":
-                    BioD_Cit003_850FinalBldg_fl2_LOC_INT(pcc);
+                    BioD_Cit003_850FinalBldg_fl2_LOC_INT(pcc, modName);
                     break;
                 case "BioD_Cit003_900Trap":
                     BioD_Cit003_900Trap(pcc);
@@ -268,9 +267,17 @@ namespace LegendaryExplorer.Mods
             Cit003_mercs_tubes1_a(pcc, pcc.GetUExport(3), 693, 694, 695, 696);
         }
 
-        private static void BioD_Cit003_400Tubes_LOC_INT(IMEPackage pcc)
+        private static void BioD_Cit003_400Tubes_LOC_INT(IMEPackage pcc, string modName)
         {
-            Cit003_glyph_a(pcc, pcc.GetUExport(1), 484, 485);
+            if (modName == "Zaeed")
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(2233), 2257, 2258);
+            }
+            else
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(1), 484, 485);
+            }
+
             Cit003_mercs_tubes1_a(pcc, pcc.GetUExport(2), 519, 520, 521, 522);
             Cit003_tubes1_b(pcc.GetUExport(3));
         }
@@ -286,9 +293,16 @@ namespace LegendaryExplorer.Mods
             Cit003_hench_meetup_m(pcc, pcc.GetUExport(664), 1284, 1285);
         }
 
-        private static void BioD_Cit003_580MechDoor_LOC_INT(IMEPackage pcc)
+        private static void BioD_Cit003_580MechDoor_LOC_INT(IMEPackage pcc, string modName)
         {
-            Cit003_glyph_a(pcc, pcc.GetUExport(1), 487, 488);
+            if (modName == "Zaeed")
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(1655), 1679, 1680);
+            }
+            else
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(1), 487, 488);
+            }
         }
 
         private static void BioD_Cit003_600MechEvent_LOC_INT(IMEPackage pcc)
@@ -301,9 +315,16 @@ namespace LegendaryExplorer.Mods
             Cit003_glyph_a(pcc, pcc.GetUExport(1), 442, 443);
         }
 
-        private static void BioD_Cit003_710Final_H_LOC_INT(IMEPackage pcc)
+        private static void BioD_Cit003_710Final_H_LOC_INT(IMEPackage pcc, string modName)
         {
-            Cit003_glyph_a(pcc, pcc.GetUExport(1), 496, 497);
+            if (modName == "Zaeed")
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(2110), 2134, 2135);
+            }
+            else
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(1), 496, 497);
+            }
         }
 
         // NATIVE COMPATIBILITY
@@ -330,9 +351,16 @@ namespace LegendaryExplorer.Mods
             SkipAndCleanSequenceElement(pcc.GetUExport(4917), null, 0);
         }
 
-        private static void BioD_Cit003_850FinalBldg_fl2_LOC_INT(IMEPackage pcc)
+        private static void BioD_Cit003_850FinalBldg_fl2_LOC_INT(IMEPackage pcc, string modName)
         {
-            Cit003_glyph_a(pcc, pcc.GetUExport(2), 466, 467);
+            if (modName == "Zaeed")
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(1945), 1969, 1970);
+            }
+            else
+            {
+                Cit003_glyph_a(pcc, pcc.GetUExport(2), 466, 467);
+            }
         }
 
         // NATIVE COMPATIBILITY
