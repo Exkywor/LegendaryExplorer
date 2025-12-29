@@ -3,6 +3,7 @@ using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorer.UserControls.SharedToolControls.Curves;
 using LegendaryExplorerCore.Dialogue;
+using LegendaryExplorerCore.Gammtek.Extensions;
 using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
@@ -611,6 +612,31 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
             {
                 ChangeAndWriteNodePlotCheck(exp, node, firesCond, condOrBool, condParam);
             }
+        }
+
+        /// <summary>
+        /// Writes the given string reference to the node.
+        /// Does not write it to the conversation export.
+        /// </summary>
+        /// <param name="node">Node to operate on..</param>
+        /// <param name="strRef">String reference to set.</param>
+        public static void ChangeNodeStrRef(DialogueNodeExtended node, string strRef)
+        {
+            StructProperty props = node.NodeProp;
+            props.GetProp<StringRefProperty>("srText").Value = Int32.Parse(strRef);
+        }
+
+        /// <summary>
+        /// Writes the given string reference to the node.
+        /// DOES WRITE it to the conversation export.
+        /// </summary>
+        /// <param name="exp">Conversation to write the node to.</param>
+        /// <param name="node">Node to operate on..</param>
+        /// <param name="strRef">String reference to set.</param>
+        public static void ChangeAndWriteNodeStrRef(ExportEntry exp, DialogueNodeExtended node, string strRef)
+        {
+            ChangeNodeStrRef(node, strRef);
+            WriteNode(exp, node);
         }
 
         /// <summary>
