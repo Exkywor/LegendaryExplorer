@@ -1,6 +1,6 @@
-﻿using LegendaryExplorer.Dialogs;
-using LegendaryExplorer.UserControls.ExportLoaderControls;
+﻿using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
+using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Matinee;
@@ -14,10 +14,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
-using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
 using static LegendaryExplorer.Misc.ExperimentsTools.DialogueAutomations;
 using static LegendaryExplorer.Misc.ExperimentsTools.SequenceAutomations;
-using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
+using static LegendaryExplorer.Misc.ExperimentsTools.SharedMethods;
 
 namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
 {
@@ -167,7 +166,8 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
         /// <param name="oldRef">Part of the name to replace.</param>
         /// <param name="newRef">String to replace with.</param>
         /// <param name="femaleLine">Manually provided female SelectedLine. Used for ME1.</param>
-        public static void UpdateFaceFX(FaceFXAnimSetEditorControl FXAControl, string oldRef, string newRef, FaceFXLine femaleLine = null)
+        /// <param name="swap">Whether to swap the F to M, or vice-versa, or not.</param>
+        public static void UpdateFaceFX(FaceFXAnimSetEditorControl FXAControl, string oldRef, string newRef, FaceFXLine femaleLine = null, bool swap = false)
         {
             if (FXAControl == null) { return; }
 
@@ -188,6 +188,13 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             if (selectedLine.Path != null)
             {
                 selectedLine.Path = selectedLine.Path.Replace(oldRef, newRef);
+                if (swap)
+                {
+                    if (selectedLine.Path.Contains("_F_Play")) { selectedLine.Path = selectedLine.Path.Replace("_F_Play", "_M_Play"); }
+                    else if (selectedLine.Path.Contains("_f_Play")) { selectedLine.Path = selectedLine.Path.Replace("_f_Play", "_m_Play"); }
+                    else if (selectedLine.Path.Contains("_M_Play")) { selectedLine.Path = selectedLine.Path.Replace("_M_Play", "_F_Play"); }
+                    else if (selectedLine.Path.Contains("_m_Play")) { selectedLine.Path = selectedLine.Path.Replace("_m_Play", "_f_Play"); }
+                }
             }
             if (selectedLine.ID != null)
             {
@@ -198,6 +205,13 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             if (selectedLine.NameAsString != null)
             {
                 string newName = selectedLine.NameAsString.Replace(oldRef, newRef);
+                if (swap)
+                {
+                    if (newName.Contains("_F")) { newName = newName.Replace("_F", "_M"); }
+                    else if (newName.Contains("_f")) { newName = newName.Replace("_f", "_m"); }
+                    else if (newName.Contains("_M")) { newName = newName.Replace("_M", "_F"); }
+                    else if (newName.Contains("_m")) { newName = newName.Replace("_m", "_f"); }
+                }
                 if (FaceFX.Names.Contains(newName))
                 {
                     selectedLine.NameIndex = FaceFX.Names.IndexOf(newName);
@@ -1084,7 +1098,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
                 "Calculate the InterpLengths by the FXA length? If not, the audio length will be used.",
                 "Calculate by FXA", MessageBoxButton.YesNo);
 
-            DialogueNodeExtended[] nodes = [..dew.SelectedConv.EntryList, ..dew.SelectedConv.ReplyList];
+            DialogueNodeExtended[] nodes = [.. dew.SelectedConv.EntryList, .. dew.SelectedConv.ReplyList];
 
             foreach (DialogueNodeExtended node in nodes)
             {
@@ -1574,7 +1588,7 @@ namespace LegendaryExplorer.DialogueEditor.DialogueEditorExperiments
             else
             {
                 MessageBox.Show($"Could not find a matching {trackName} InterpTrack and/or {groupName} InterpGroup.", "Warning", MessageBoxButton.OK);
-            
+
             }
         }
 
