@@ -388,6 +388,7 @@ namespace LegendaryExplorer.Mods
             //{"ReducedPlot_MiriMod", [FN.BioD_Cit004_290FightScene]},
             {"VirSav", [FN.BioD_Cit003]},
             //{"VirSav_MiriMod", [FN.BioD_Cit003]},
+            {"Zaeed", [FN.BioD_Cit002_700Exit_LOC_INT, FN.BioD_Cit003, FN.BioD_Cit004_290FightScene]}
         };
 
         public static readonly Dictionary<string, string> ModPaths = new()
@@ -401,6 +402,7 @@ namespace LegendaryExplorer.Mods
             {"ReducedPlot", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Reduced Plot Armor\\DLC_MOD_ReducedPlotArmor\\CookedPCConsole\\"},
             {"Squad", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\EGM Squadmate Pack (Standalone)\\DLC_MOD_EGM_Squad\\CookedPCConsole\\"},
             {"VirSav", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\DLC_MOD_VirmireSavior\\CookedPCConsole\\"},
+            {"Zaeed", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Zaeed Returns\\DLC_MOD_Zaeed\\CookedPCConsole\\"},
 
 
             // Patches for mod combinations

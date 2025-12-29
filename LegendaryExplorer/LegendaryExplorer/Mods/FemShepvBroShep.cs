@@ -1234,6 +1234,7 @@ namespace LegendaryExplorer.Mods
             {"CEM", [FN.BioD_Cit003_900Trap_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
             //{"CEM_MiriMod", [FN.BioD_Cit003_900Trap_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
             {"CEM_MiriMod", [FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
+            {"CEM_Zaeed", [FN.BioD_Cit004_295BrooksEnd_LOC_INT]}, // This natively overrides MiriMod
             {"Kelly", [FN.BioD_Cit004_220CIC_LOC_INT]},
             {"LE3DP", [FN.BioD_Cit002_000Global, FN.BioD_Cit003, FN.BioD_Cit003_815Final_RR2]},
             //{"LE3DP_MiriMod", [FN.BioD_Cit003]},
@@ -1251,6 +1252,9 @@ namespace LegendaryExplorer.Mods
             //{"Squad_MiriMod", [FN.BioD_Cit003_900Trap]},
             {"Thane", [FN.BioD_Cit004_220CIC_LOC_INT]},
             {"VirSav", [FN.BioD_Cit003, FN.BioD_Cit003_900Trap]},
+            {"Zaeed", [FN.BioD_Cit002_700Exit_LOC_INT, FN.BioD_Cit003, FN.BioD_Cit003_150AtriumConvo_LOC_INT, FN.BioD_Cit003_300TopMen_LOC_INT, FN.BioD_Cit003_400Tubes_LOC_INT, FN.BioD_Cit003_450Ladder_LOC_INT,
+                FN.BioD_Cit003_580MechDoor_LOC_INT, FN.BioD_Cit003_600MechEvent_LOC_INT, FN.BioD_Cit003_710Final_H_LOC_INT, FN.BioD_Cit003_850FinalBldg_fl2_LOC_INT, FN.BioD_Cit003_900Trap, FN.BioD_Cit003_900Trap_LOC_INT,
+                FN.BioD_Cit004_100Exterior_LOC_INT, FN.BioD_Cit004_220CIC_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_290FightScene, FN.BioD_Cit004_290FightScene_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]}
             //{"VirSav_MiriMod", [FN.BioD_Cit003, FN.BioD_Cit003_900Trap]},
             //{"VirSav_MiriMod_Squad", [FN.BioD_Cit003_900Trap]},
             //{"VirSav_Squad", [FN.BioD_Cit003_900Trap]},
@@ -1270,6 +1274,7 @@ namespace LegendaryExplorer.Mods
             {"Squad", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\EGM Squadmate Pack (Standalone)\\DLC_MOD_EGM_Squad\\CookedPCConsole\\"},
             {"Thane", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Thane Lives\\DLC_MOD_Thane\\CookedPCConsole\\" },
             {"VirSav", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\DLC_MOD_VirmireSavior\\CookedPCConsole\\"},
+            {"Zaeed", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Zaeed Returns\\DLC_MOD_Zaeed\\CookedPCConsole\\"},
 
             // Patches for mod combinations
             // NOTE: Commented out elements mean that a patch is needed, but the mod creators have not made one between the mods
@@ -1277,6 +1282,7 @@ namespace LegendaryExplorer.Mods
             //{"BrooksWraith_ReducedPlot", ""},
             //{"BrooksWraith_ReducedPlot_MiriMod", ""},
             {"CEM_MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Miranda Mod (LE3)\\Compatibility\\CEMF\\"},
+            {"CEM_Zaeed", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Zaeed Returns\\Patches\\3_CEM\\"},
             //{"Kelly_MiriMod", ""}, NATIVE
             //{"LE3DP_MiriMod", ""}, ???
             //{"LE3DP_VirSav", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\Compatibility\\LE3DP\\"}, ???
