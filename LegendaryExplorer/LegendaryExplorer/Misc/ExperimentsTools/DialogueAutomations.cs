@@ -1,11 +1,11 @@
-﻿using ICSharpCode.AvalonEdit.Rendering;
-using LegendaryExplorer.DialogueEditor.DialogueEditorExperiments;
+﻿using LegendaryExplorer.DialogueEditor.DialogueEditorExperiments;
 using LegendaryExplorer.Tools.TlkManagerNS;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorer.UserControls.SharedToolControls.Curves;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Helpers;
+using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Matinee;
 using LegendaryExplorerCore.Misc;
 using LegendaryExplorerCore.Packages;
@@ -552,6 +552,31 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
             nConditionalParam.Value = condParam;
         }
 
+		/// <summary>
+		/// Writes the given Conditional or Boolean and the Parameter to the node in the conversation export.
+		/// </summary>
+		/// <param name="convExp">Conversation export to operate on..</param>
+		/// <param name="nodeIdx">Index of the node to operate on.</param>
+		/// <param name="isReply">True if the node is a reply, false if an entry.</param>
+		/// <param name="firesCond">True if the plot is a conditional, false if a boolean.</param>
+		/// <param name="condOrBool">Conditional or Boolean to set.</param>
+		/// <param name="condParam">Parameter to set.</param>
+		public static void ChangeNodePlotCheck(ExportEntry convExp, int nodeIdx, bool isReply, bool firesCond, int condOrBool, int condParam)
+        {
+            ArrayProperty<StructProperty> nodeList = convExp.GetProperty<ArrayProperty<StructProperty>>(isReply ? "m_ReplyList" : "m_EntryList");
+            // We get the node, but do not handle an error if it doesn't exist, as a hard error will tell us when something changes or goes wrong
+            StructProperty node = nodeList[nodeIdx];
+
+            BoolProperty bFireConditional = node.GetProp<BoolProperty>("bFireConditional");
+            bFireConditional.Value = firesCond;
+            IntProperty nConditionalFunc = node.GetProp<IntProperty>("nConditionalFunc");
+            nConditionalFunc.Value = condOrBool;
+            IntProperty nConditionalParam = node.GetProp<IntProperty>("nConditionalParam");
+            nConditionalParam.Value = condParam;
+
+            convExp.WriteProperty(nodeList);
+        }
+
         /// <summary>
         /// Writes the given Conditional or Boolean and the Parameter to the node.
         /// DOES WRITE it to the conversation export.
@@ -939,6 +964,46 @@ namespace LegendaryExplorer.Misc.ExperimentsTools
             {
                 new StrProperty(line == "No Data" ? "" : line.Length <= 32 ? line : $"{line.AsSpan(0, 29)}...")
             };
+        }
+
+		/// <summary>
+		/// Changes the ExportID of an entry or reply directly in the BioConversation, and in the Interp.
+		/// This is useful when needing to fix duplicate IDs, as working on a ConversationExtended leads to conflicts
+		/// with other methods.
+		/// </summary>
+		/// <param name="convExp">Conversation to work on.</param>
+		/// <param name="idx">Index of the node to edit.</param>
+		/// <param name="isReply">Whether the node is a reply or an entry.</param>
+        /// <param name="interp">Interp of the node.</param>
+		/// <param name="exportID">ID to set.</param>
+		public static void ChangeNodeExportIDInExport(ExportEntry convExp, int idx, bool isReply, ExportEntry interp, int exportID)
+        {
+            ArrayProperty<StructProperty> nodeList = convExp.GetProperty<ArrayProperty<StructProperty>>(isReply ? "m_ReplyList" : "m_EntryList");
+            // We get the node, but do not handle an error if it doesn't exist, as a hard error will tell us when something changes or goes wrong
+            StructProperty nodeProp = nodeList[idx];
+            nodeProp.GetProp<IntProperty>("nExportID").Value = exportID;
+            convExp.WriteProperty(nodeList);
+
+            interp.WriteProperty(new IntProperty(exportID, "m_nNodeID"));
+        }
+
+        /// <summary>
+        /// Get the highest ExportID in the conversation.
+        /// </summary>
+        /// <param name="conv">Conversation to get the ExportID from.</param>
+        /// <returns></returns>
+        public static int GetMaxExportID(ConversationExtended conv) => conv.EntryList.Concat(conv.ReplyList).Max(node => node.ExportID);
+
+        /// <summary>
+        /// Get the highest ExportID in the conversation.
+        /// </summary>
+        /// <param name="convExp">Conversation export to get the ExportID from.</param>
+        /// <returns></returns>
+        public static int GetMaxExportID(ExportEntry convExp)
+        {
+            return convExp.GetProperty<ArrayProperty<StructProperty>>("m_ReplyList")
+                .Concat<StructProperty>(convExp.GetProperty<ArrayProperty<StructProperty>>("m_EntryList"))
+                .Max(el => el.GetProp<IntProperty>("nExportID").Value);
         }
     }
 
