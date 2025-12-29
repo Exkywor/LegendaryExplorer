@@ -1,4 +1,5 @@
-﻿using LegendaryExplorer.Misc.ExperimentsTools;
+﻿using DocumentFormat.OpenXml.Packaging;
+using LegendaryExplorer.Misc.ExperimentsTools;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
 using LegendaryExplorerCore.Helpers;
@@ -94,7 +95,7 @@ namespace LegendaryExplorer.Mods
                     BioD_Cit003_900Trap(pcc);
                     break;
                 case "BioD_Cit003_900Trap_LOC_INT":
-                    BioD_Cit003_900Trap_LOC_INT(pcc);
+                    BioD_Cit003_900Trap_LOC_INT(pcc, modName);
                     break;
                 case "BioD_Cit004_100Exterior_LOC_INT":
                     BioD_Cit004_100Exterior_LOC_INT(pcc);
@@ -351,9 +352,9 @@ namespace LegendaryExplorer.Mods
                 );
         }
 
-        private static void BioD_Cit003_900Trap_LOC_INT(IMEPackage pcc)
+        private static void BioD_Cit003_900Trap_LOC_INT(IMEPackage pcc, string modName)
         {
-            Cit003_final_trap_m(pcc, pcc.GetUExport(365), 2697, 2698);
+            Cit003_final_trap_m(pcc, pcc.GetUExport(365), 2697, 2698, modName);
             Cit003_locked_door_a(pcc.GetUExport(366));
         }
 
@@ -668,8 +669,23 @@ namespace LegendaryExplorer.Mods
             ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 1, false), true, 71173000, -1);
         }
 
-        private static void Cit003_final_trap_m(IMEPackage pcc, ExportEntry convObj, int fxaPlayerFIdx, int fxaPlayerMIdx)
+        private static void Cit003_final_trap_m(IMEPackage pcc, ExportEntry convObj, int fxaPlayerFIdx, int fxaPlayerMIdx, string modName)
         {
+            if (modName == "MiriMod")
+            {
+                // In the end, we do not change the ExportID, since we just need to change the plot elements, so no need to fix the ExportID.
+                // IF the ExportID needed to be fixed, we would need to clone the Interp and the ConvNode and End objects, as they are shared by two nodes, currently.
+
+                // Change the ID, as it was cloned from nodes 85 and 86, which causes issues when changing the Plot
+                // int maxExportID = GetMaxExportID(convObj);
+                // ChangeNodeExportIDInExport(convObj, 203, false, pcc.GetUExport(), ++maxExportID);
+
+                ChangeNodePlotCheck(convObj, 203, false, true, 71173000, -1);
+                // We manually change the plot of the source of the clone node 203, in case the normal non-Miri change doesn't find it,
+                // since it shares ExportID with 203, and we don't wanna touch too much of the normal path.
+                ChangeNodePlotCheck(convObj, 85, false, true, 71173000, -1);
+            }
+
             ConversationExtended conv = GetLoadedConversation(convObj);
 
             // Prepare the FaceFX controls
