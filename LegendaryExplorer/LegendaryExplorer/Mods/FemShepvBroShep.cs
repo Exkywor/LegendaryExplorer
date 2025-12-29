@@ -1,12 +1,16 @@
-﻿using LegendaryExplorer.Misc.ExperimentsTools;
+﻿using LegendaryExplorer.DialogueEditor.DialogueEditorExperiments;
+using LegendaryExplorer.Misc.ExperimentsTools;
+using LegendaryExplorer.Tools.PackageEditor.Experiments;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
+using LegendaryExplorerCore.Gammtek.Extensions.Collections.Generic;
 using LegendaryExplorerCore.Helpers;
 using LegendaryExplorerCore.Kismet;
 using LegendaryExplorerCore.Packages;
 using LegendaryExplorerCore.Packages.CloningImportingAndRelinking;
 using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -52,7 +56,7 @@ namespace LegendaryExplorer.Mods
                     BioD_Cit003_150AtriumConvo(pcc);
                     break;
                 case "BioD_Cit003_150AtriumConvo_LOC_INT":
-                    BioD_Cit003_150AtriumConvo_LOC_INT(pcc);
+                    BioD_Cit003_150AtriumConvo_LOC_INT(pcc, modName);
                     break;
                 case "BioD_Cit003_200HallEnter_LOC_INT":
                     BioD_Cit003_200HallEnter_LOC_INT(pcc);
@@ -251,9 +255,9 @@ namespace LegendaryExplorer.Mods
             SequenceAutomations.ReplaceObject(pcc, sequence, CreateSequenceObjectWithProps(pcc, "BioSeqAct_PMCheckConditional", props), pcc.GetUExport(167));
         }
 
-        private static void BioD_Cit003_150AtriumConvo_LOC_INT(IMEPackage pcc)
+        private static void BioD_Cit003_150AtriumConvo_LOC_INT(IMEPackage pcc, string modName)
         {
-            Cit003_meet_clone_m(pcc, pcc.GetUExport(434), 2339, 2340, 2341, 2342);
+            Cit003_meet_clone_m(pcc, pcc.GetUExport(434), 2339, 2340, 2341, 2342, modName);
         }
 
         private static void BioD_Cit003_200HallEnter_LOC_INT(IMEPackage pcc)
@@ -557,7 +561,7 @@ namespace LegendaryExplorer.Mods
             WriteNodes(convObj, nodeR1, nodeR2);
         }
 
-        private static void Cit003_meet_clone_m(IMEPackage pcc, ExportEntry convObj, int fxaCloneFemFIdx, int fxaCloneFemMIdx, int fxaCloneMaleFIdx, int fxaCloneMaleMIdx)
+        private static void Cit003_meet_clone_m(IMEPackage pcc, ExportEntry convObj, int fxaCloneFemFIdx, int fxaCloneFemMIdx, int fxaCloneMaleFIdx, int fxaCloneMaleMIdx, string modName)
         {
             ConversationExtended conv = GetLoadedConversation(convObj);
 
@@ -570,6 +574,73 @@ namespace LegendaryExplorer.Mods
 
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false,
                 [1, 4, 12, 15, 29, 31, 43, 47, 51, 53, 55, 57, 69, 82, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 126, 129, 141, 145, 152, 154, 163]));
+
+            //if (modName == "Zaeed")
+            if (true)
+            {
+                ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 176, false), true, 71173000, -1);
+
+                //// The file is missing a second line for the female audio, so we need to add all the missing elements for it to separate properly
+                //// First, we gather the elements we'll be operating on
+                //string strRef = "71174570";
+                //ExportEntry femFXA_f = pcc.GetUExport(2339);
+                //ExportEntry femFXA_m = pcc.GetUExport(2340);
+                //ExportEntry maleFXA_f = pcc.GetUExport(2341);
+                //ExportEntry maleFXA_m = pcc.GetUExport(2342);
+                //ExportEntry femStream = pcc.GetUExport(8308);
+                //ExportEntry maleStream = pcc.GetUExport(8309);
+                //ExportEntry femEvt_f = pcc.GetUExport(8310);
+                //ExportEntry femEvt_m = pcc.GetUExport(8311);
+
+                //// The male event is going to have the new StrRef
+                //// We clone the male from the male femEvt, to not have to fix the stream reference in the bin
+                //ExportEntry maleEvt_f = EntryCloner.CloneEntry(femEvt_m, null, false);
+                //ExportEntry maleEvt_m = EntryCloner.CloneEntry(femEvt_m, null, false);
+                //// We fix the names of the newly cloned Entries
+                //maleEvt_f.ObjectNameString = $"VO_{strRef}_f_Play";
+                //maleEvt_m.ObjectNameString = $"VO_{strRef}_m_Play";
+
+                //// We now rename the WwiseStreams
+                //maleStream.ObjectNameString = $"VO_{strRef.PadLeft(8, '0')}_m";
+                //femStream.ObjectNameString = femStream.ObjectNameString.Replace("_f", "_m"); // This fixes the name of the female event
+
+                //// We fix the only wrong reference to streams
+                //WwiseEvent binEvt = femEvt_m.GetBinaryData<WwiseEvent>();
+                //binEvt.Links[0].WwiseStreams[0] = 8308;
+                //femEvt_m.WriteBinary(binEvt);
+
+                //// We rename and relink the FaceFXAnimSets
+                //FXA_clone_female_M_Control.SelectLineByName("FXA_14242942_F");
+                //DialogueEditorExperimentsE.UpdateFaceFX(FXA_clone_female_M_Control, 14242942.ToString(), 14242942.ToString(), null, true); // The _F needs to swap to _M
+                //FXA_clone_male_F_Control.SelectLineByName("FXA_14242942_F");
+                //DialogueEditorExperimentsE.UpdateFaceFX(FXA_clone_male_F_Control, 14242942.ToString(), strRef);
+                //FXA_clone_male_M_Control.SelectLineByName("FXA_14242942_M");
+                //DialogueEditorExperimentsE.UpdateFaceFX(FXA_clone_male_M_Control, 14242942.ToString(), strRef);
+
+                //ChangeAndWriteNodeStrRef(convObj, GetNodeByIndex(conv, 177, false), strRef);
+
+                //// Now we update the IDs, to make sure there are no conflicts
+                //PackageEditorExperimentsO.UpdateID_EXPERIMENTAL(femEvt_f, null, femEvt_f.ObjectNameString);
+                //PackageEditorExperimentsO.UpdateID_EXPERIMENTAL(femEvt_m, null, femEvt_m.ObjectNameString);
+                //PackageEditorExperimentsO.UpdateID_EXPERIMENTAL(maleEvt_f, null, maleEvt_f.ObjectNameString);
+                //PackageEditorExperimentsO.UpdateID_EXPERIMENTAL(maleEvt_m, null, maleEvt_m.ObjectNameString);
+                ////Random random = new();
+                ////Dictionary<uint, uint> idPairs = new();
+                ////ExportEntry wwiseBankEntry = pcc.GetUExport(8306);
+                ////WwiseBankParsed wwiseBank = wwiseBankEntry.GetBinaryData<WwiseBankParsed>();
+                ////idPairs.AddRange(PackageEditorExperimentsO.UpdateIDs_EXPERIMENTAL([femEvt_f, femEvt_m, maleEvt_f, maleEvt_m], random));
+                //// idPairs.AddRange(PackageEditorExperimentsO.UpdateIDs_EXPERIMENTAL([femStream, maleStream]));
+                //// string bankBinaryAsString = Convert.ToHexString(wwiseBankEntry.GetBinaryData());
+                //// Blindly replace all the IDs found in the WwiseBank
+                ////foreach (KeyValuePair<uint, uint> id in idPairs)
+                ////{
+                ////    bankBinaryAsString = bankBinaryAsString.Replace(
+                ////        BigToLittleEndian(string.Format("{0:X2}", id.Key).PadLeft(8, '0')),
+                ////        BigToLittleEndian(string.Format("{0:X2}", id.Value).PadLeft(8, '0')),
+                ////        StringComparison.OrdinalIgnoreCase);
+                ////}
+                ////wwiseBankEntry.WriteBinary(Convert.FromHexString(bankBinaryAsString));
+            }
 
             // "It's time the understudy..."
             DialogueNodeExtended nodeE53 = GetNodeByIndex(conv, 53, false);
