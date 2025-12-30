@@ -607,7 +607,9 @@ namespace LegendaryExplorer.Mods
             {"PV", ["BioD_CitHub.pcc", "BioD_CitHubPV.pcc", "BioD_End001_435CommRoom_LOC_INT.pcc", "BioD_End001_436CRAllers_LOC_INT.pcc", "SFXImages_ProjectVariety.pcc", "SFXImages_PV.pcc"]},
             {"PV2", ["BiOD_CitHub_Dock.pcc"]},
             {"TEB", ["BioD_End001_420HubStreet1.pcc"]},
-            {"Thane", ["BioD_End001_435CommRoom_LOC_INT.pcc"]}
+            {"Thane", ["BioD_End001_435CommRoom_LOC_INT.pcc"]},
+            {"VirSav", ["BioD_CitHub.pcc"]},
+            {"VirSav_LE3DP", ["BioD_CitHub.pcc"]}
         };
 
         public static readonly Dictionary<string, string> ModPaths = new()
@@ -622,7 +624,9 @@ namespace LegendaryExplorer.Mods
             {"PV", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety\\CookedPCConsole\\"},
             {"PV2", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety2\\CookedPCConsole\\"},
             {"TEB", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Take Earth Back\\DLC_MOD_TEB\\CookedPCConsole\\"},
-            {"Thane", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Thane Lives\\DLC_MOD_Thane\\CookedPCConsole\\"}
+            {"Thane", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Thane Lives\\DLC_MOD_Thane\\CookedPCConsole\\"},
+            {"VirSav", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\DLC_MOD_VirmireSavior\\CookedPCConsole\\"},
+            {"VirSav_LE3DP", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Virmire Savior Mod\\Compatibility\\LE3DP\\"},
         };
     }
 }
