@@ -277,6 +277,9 @@ namespace LegendaryExplorer.Mods
             {
                 Cit003_glyph_a(pcc, pcc.GetUExport(2233), 2257, 2258);
             }
+            else if (modName == "Kasumi") {
+                Cit003_glyph_a(pcc, pcc.GetUExport(3391), 3415, 3416);
+            }
             else
             {
                 Cit003_glyph_a(pcc, pcc.GetUExport(1), 484, 485);
@@ -303,6 +306,9 @@ namespace LegendaryExplorer.Mods
             {
                 Cit003_glyph_a(pcc, pcc.GetUExport(1655), 1679, 1680);
             }
+            else if (modName == "Kasumi") {
+                Cit003_glyph_a(pcc, pcc.GetUExport(2801), 2825, 2826);
+            }
             else
             {
                 Cit003_glyph_a(pcc, pcc.GetUExport(1), 487, 488);
@@ -324,6 +330,9 @@ namespace LegendaryExplorer.Mods
             if (modName == "Zaeed")
             {
                 Cit003_glyph_a(pcc, pcc.GetUExport(2110), 2134, 2135);
+            }
+            else if (modName == "Kasumi") {
+                Cit003_glyph_a(pcc, pcc.GetUExport(3268), 3292, 3293);
             }
             else
             {
@@ -360,6 +369,9 @@ namespace LegendaryExplorer.Mods
             if (modName == "Zaeed")
             {
                 Cit003_glyph_a(pcc, pcc.GetUExport(1945), 1969, 1970);
+            }
+            else if (modName == "Kasumi") {
+                Cit003_glyph_a(pcc, pcc.GetUExport(3349), 3373, 3374);
             }
             else
             {
@@ -575,11 +587,9 @@ namespace LegendaryExplorer.Mods
             BatchChangeAndWriteNodesPlotCheck(convObj, true, 71173000, -1, GetNodesByIndex(conv, false,
                 [1, 4, 12, 15, 29, 31, 43, 47, 51, 53, 55, 57, 69, 82, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 126, 129, 141, 145, 152, 154, 163]));
 
-            if (modName == "Zaeed")
-            {
+            void FixZaeedLine() {
                 ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 176, false), true, 71173000, -1);
 
-                ExportEntry femFXA_m = pcc.GetUExport(2340);
                 ExportEntry maleFXA_f = pcc.GetUExport(2341);
 
                 // This makes it so that the references of both male FXAs (f and m) point to the same event
@@ -592,6 +602,23 @@ namespace LegendaryExplorer.Mods
                 FXA_clone_female_M_Control.SelectLineByName("FXA_14242942_F");
                 DialogueEditorExperimentsE.UpdateFaceFX(FXA_clone_female_M_Control, 14242942.ToString(), 14242942.ToString(), null, true); // The _F needs to swap to _M
             }
+            
+            if (modName == "Zaeed")
+            {
+                FixZaeedLine();
+			}
+            else if (modName == "Kasumi") {
+                FixZaeedLine();
+
+                ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 184, false), true, 71173000, -1);
+                ExportEntry maleFXA_f = pcc.GetUExport(2341);
+
+                // This makes it so that the references of both male FXAs (f and m) point to the same event
+                ArrayProperty<ObjectProperty> cuesA = maleFXA_f.GetProperty<ArrayProperty<ObjectProperty>>("ReferencedSoundCues");
+                cuesA[39] = new ObjectProperty(8595);
+                maleFXA_f.WriteProperty(cuesA);
+            }
+
 
             // "It's time the understudy..."
             DialogueNodeExtended nodeE53 = GetNodeByIndex(conv, 53, false);
@@ -1283,8 +1310,12 @@ namespace LegendaryExplorer.Mods
             {"CAT6", [FN.BioD_Cit003_150AtriumConvo, FN.BioD_Cit004_210CICIntro, FN.BioD_Cit004_272MaleClone, FN.BioD_Cit004_273FemClone]},
             {"CEM", [FN.BioD_Cit003_900Trap_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
             //{"CEM_MiriMod", [FN.BioD_Cit003_900Trap_LOC_INT, FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
+            {"CEM_Kasumi", [FN.BioD_Cit004_250Elevator_LOC_INT, FN.BioD_Cit004_295BrooksEnd_LOC_INT]}, // This natively overrides MiriMod and Zaeed
             {"CEM_MiriMod", [FN.BioD_Cit004_295BrooksEnd_LOC_INT]},
             {"CEM_Zaeed", [FN.BioD_Cit004_295BrooksEnd_LOC_INT]}, // This natively overrides MiriMod
+            {"Kasumi", [$"23_Cit002\\{FN.BioD_Cit002_700Exit_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003}", $"25_Cit003\\{FN.BioD_Cit003_150AtriumConvo_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003_300TopMen_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003_400Tubes_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003_450Ladder_LOC_INT}",
+                $"25_Cit003\\{FN.BioD_Cit003_580MechDoor_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003_600MechEvent_LOC_INT}",$"25_Cit003\\{FN.BioD_Cit003_710Final_H_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003_850FinalBldg_fl2_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003_900Trap}", $"25_Cit003\\{FN.BioD_Cit003_900Trap_LOC_INT}",
+                $"26_Cit004\\{FN.BioD_Cit004_100Exterior_LOC_INT}", $"26_Cit004\\{FN.BioD_Cit004_220CIC_LOC_INT}", $"26_Cit004\\{FN.BioD_Cit004_250Elevator_LOC_INT}", $"26_Cit004\\{FN.BioD_Cit004_290FightScene}", $"26_Cit004\\{FN.BioD_Cit004_290FightScene_LOC_INT}", $"26_Cit004\\{FN.BioD_Cit004_295BrooksEnd_LOC_INT}"]},
             {"Kelly", [FN.BioD_Cit004_220CIC_LOC_INT]},
             {"LE3DP", [FN.BioD_Cit002_000Global, FN.BioD_Cit003, FN.BioD_Cit003_815Final_RR2]},
             //{"LE3DP_MiriMod", [FN.BioD_Cit003]},
@@ -1315,6 +1346,7 @@ namespace LegendaryExplorer.Mods
             {"BrooksWraith", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Brooks Uses The Wraith\\DLC_MOD_FEMME_WRAITH\\CookedPCConsole\\"},
             {"CAT6", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\CAT6 Retrofits\\DLC_MOD_CAT6Retro\\CookedPCConsole\\"},
             {"CEM", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Citadel Epilogue Mod (FULL)\\DLC_MOD_LECEMF\\CookedPCConsole\\"},
+            {"Kasumi", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Kasumi Returns\\DLC_MOD_Kasumi\\CookedPCConsole\\"},
             {"Kelly", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Kelly Returns\\DLC_MOD_Kelly\\CookedPCConsole\\"},
             {"LE3DP", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\LE3 Diversification Project\\DLC_MOD_CITProject\\CookedPCConsole\\"},
             {"MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Miranda Mod (LE3)\\Citadel\\"},
@@ -1331,6 +1363,7 @@ namespace LegendaryExplorer.Mods
             //{"BrooksWraith_MiriMod", ""},
             //{"BrooksWraith_ReducedPlot", ""},
             //{"BrooksWraith_ReducedPlot_MiriMod", ""},
+            {"CEM_Kasumi", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Kasumi Returns\\Patches\\3_CEM\\"},
             {"CEM_MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Miranda Mod (LE3)\\Compatibility\\CEMF\\"},
             {"CEM_Zaeed", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Zaeed Returns\\Patches\\3_CEM\\"},
             //{"Kelly_MiriMod", ""}, NATIVE

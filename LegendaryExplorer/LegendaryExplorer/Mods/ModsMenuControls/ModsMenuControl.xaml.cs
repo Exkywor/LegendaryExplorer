@@ -137,9 +137,17 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
                 {
                     string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE\\Patches\\{modName}\\";
 
-                    foreach (string fileName in files)
+                    foreach (string file in files)
                     {
+                        string fileName = file;
+
                         string filePath = $"{FemShepvBroShep.ModPaths[modName]}{fileName}";
+
+                        // We strip the extra folders from the file name, to keep everything else working after getting the original filePath right
+                        if (modName == "Kasumi") {
+                            fileName = Path.GetFileName(fileName);
+                        }
+
                         File.Copy(filePath, $"{destPath}{fileName}", true);
 
                         // Clean files
@@ -217,9 +225,17 @@ namespace LegendaryExplorer.Mods.ModsMenuControls
                 {
                     string destPath = $"G:\\My Drive\\Modding\\Mass Effect\\mods\\Counter Clone\\delivery\\FemShep v BroShep Duel of the Shepards LE - Vanilla VS\\Patches\\{modName}\\";
 
-                    foreach (string fileName in files)
+                    foreach (string file in files)
                     {
+                        string fileName = file;
+
                         string filePath = $"{FemShepvBroShep_V.ModPaths[modName]}{fileName}";
+
+                        // We strip the extra folders from the file name, to keep everything else working after getting the original filePath right
+                        if (modName == "Kasumi") {
+                            fileName = Path.GetFileName(fileName);
+                        }
+
                         File.Copy(filePath, $"{destPath}{fileName}", true);
 
                         // Clean files

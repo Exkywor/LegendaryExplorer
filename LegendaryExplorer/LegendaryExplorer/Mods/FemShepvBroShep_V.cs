@@ -377,6 +377,7 @@ namespace LegendaryExplorer.Mods
             //{"BrooksWraith_ReducedPlot", [FN.BioD_Cit004_290FightScene]},
             //{"BrooksWraith_ReducedPlot_MiriMod", [FN.BioD_Cit004_290FightScene]},
             {"CAT6", [FN.BioD_Cit004_210CICIntro, FN.BioD_Cit004_272MaleClone, FN.BioD_Cit004_273FemClone]},
+            {"Kasumi", [$"23_Cit002\\{FN.BioD_Cit002_700Exit_LOC_INT}", $"25_Cit003\\{FN.BioD_Cit003}", $"26_Cit004\\{FN.BioD_Cit004_290FightScene}"]},
             {"LE3DP", [FN.BioD_Cit002_000Global, FN.BioD_Cit003, FN.BioD_Cit003_815Final_RR2]},
             //{"LE3DP_MiriMod", [FN.BioD_Cit003]},
             //{"LE3DP_VirSav", [FN.BioD_Cit003]},
@@ -395,6 +396,7 @@ namespace LegendaryExplorer.Mods
         {
             {"BrooksWraith", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Brooks Uses The Wraith\\DLC_MOD_FEMME_WRAITH\\CookedPCConsole\\"},
             {"CAT6", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\CAT6 Retrofits\\DLC_MOD_CAT6Retro\\CookedPCConsole\\"},
+            {"Kasumi", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Kasumi Returns\\DLC_MOD_Kasumi\\CookedPCConsole\\"},
             {"LE3DP", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\LE3 Diversification Project\\DLC_MOD_CITProject\\CookedPCConsole\\"},
             {"MiriMod", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Miranda Mod (LE3)\\Citadel\\"},
             {"PV", "D:\\Programs\\ME3TweaksModManager\\mods\\LE3\\Project Variety (LE3)\\DLC_MOD_ProjectVariety\\CookedPCConsole\\"},
