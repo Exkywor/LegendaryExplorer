@@ -1,4 +1,5 @@
 ﻿using BinaryPack.Attributes;
+using DocumentFormat.OpenXml.Bibliography;
 using LegendaryExplorer.Misc.ExperimentsTools;
 using LegendaryExplorer.UserControls.ExportLoaderControls;
 using LegendaryExplorerCore.Dialogue;
@@ -9,6 +10,7 @@ using LegendaryExplorerCore.Unreal;
 using LegendaryExplorerCore.Unreal.BinaryConverters;
 using System.Collections.Generic;
 using System.IO;
+using TerraFX.Interop.Windows;
 using static LegendaryExplorer.Misc.ExperimentsTools.DialogueAutomations;
 using static LegendaryExplorer.Misc.ExperimentsTools.PackageAutomations;
 using static LegendaryExplorer.Misc.ExperimentsTools.SequenceAutomations;
@@ -18,7 +20,20 @@ namespace LegendaryExplorer.Mods
 {
     public static class EmilyReturns
     {
-        private static readonly string ModPath = $@"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\delivery\Emily Returns\DLC_MOD_EmilyReturns\CookedPCConsole";
+        /* TO-DO: by KoshVader
+    	[IMPORTANT] This is a potential source for a game crashing type of bug:
+
+        The following TEB2 packages use the SFXSeqAct_SetStuntMeshes Kismet class:
+            BioD_End001_200AAGun
+            BioD_End001_610Trench1
+            BioD_Nor_610EndIntro
+
+        The vanilla version of this class has a bytecode-level bug that causes a variable that it uses to be misclassified as a local variable instead of an instance variable.This bug has, for example, plagued AHEM for years before it was finally fixed.
+
+        The fix is trivial: just locate the class in each package--ususually in SFXGameContentLiveKismet--and recompile the class then save the package.That's all.
+        */
+
+		private static readonly string ModPath = $@"G:\My Drive\Modding\Mass Effect\mods\Emily Returns\delivery\Emily Returns\DLC_MOD_EmilyReturns\CookedPCConsole";
 
         public static void Patch(IMEPackage pcc)
         {
