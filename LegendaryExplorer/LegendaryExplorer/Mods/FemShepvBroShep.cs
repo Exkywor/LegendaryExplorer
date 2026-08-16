@@ -611,12 +611,17 @@ namespace LegendaryExplorer.Mods
                 FixZaeedLine();
 
                 ChangeAndWriteNodePlotCheck(convObj, GetNodeByIndex(conv, 184, false), true, 71173000, -1);
+                ExportEntry femaleFXA_m = pcc.GetUExport(2340);
                 ExportEntry maleFXA_f = pcc.GetUExport(2341);
 
                 // This makes it so that the references of both male FXAs (f and m) point to the same event
-                ArrayProperty<ObjectProperty> cuesA = maleFXA_f.GetProperty<ArrayProperty<ObjectProperty>>("ReferencedSoundCues");
-                cuesA[39] = new ObjectProperty(8595);
-                maleFXA_f.WriteProperty(cuesA);
+                ArrayProperty<ObjectProperty> cues = maleFXA_f.GetProperty<ArrayProperty<ObjectProperty>>("ReferencedSoundCues");
+                cues[39] = new ObjectProperty(8595);
+                maleFXA_f.WriteProperty(cues);
+
+                cues = femaleFXA_m.GetProperty<ArrayProperty<ObjectProperty>>("ReferencedSoundCues");
+                cues[39] = new ObjectProperty(8594);
+                femaleFXA_m.WriteProperty(cues);
             }
 
 
